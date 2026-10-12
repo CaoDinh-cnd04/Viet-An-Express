@@ -6,7 +6,7 @@
   ./scripts/add-migration.ps1 -Module Shipments -Name AddShipmentEta
 #>
 param(
-    [Parameter(Mandatory)][ValidateSet('Shipments', 'Ecommerce')][string]$Module,
+    [Parameter(Mandatory)][ValidateSet('Shipments', 'Ecommerce', 'Identity')][string]$Module,
     [Parameter(Mandatory)][string]$Name
 )
 $ErrorActionPreference = 'Stop'
