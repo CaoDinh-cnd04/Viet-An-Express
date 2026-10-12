@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { getErrorMessage } from '@/shared/api/http';
 import { useI18n } from '@/shared/i18n';
+import { useTheme } from '@/shared/lib/useTheme';
 import { Button, Card, EmptyState, Icon, KeyValueList, Modal, Notice, StatusPill, Tabs, TextField } from '@/shared/ui';
 import { Stars } from '@/features/feedback/components/Stars';
 import { SurveyAnswers } from '@/features/feedback/components/SurveyAnswers';
@@ -40,9 +41,12 @@ export default function AdminPage() {
             <h1 className={styles.title}>{t('Quản trị Việt An Express')}</h1>
             <p className={styles.muted}>{t('Góp ý, sự cố của khách và thông báo gửi khách')}</p>
           </div>
-          <Button size="sm" variant="ghost" onClick={() => { adminLogout(); setSignedIn(false); }}>
-            <Icon name="arrowRight" size={14} /> {t('Đăng xuất')}
-          </Button>
+          <div className={styles.headActions}>
+            <ThemeToggle />
+            <Button size="sm" variant="ghost" onClick={() => { adminLogout(); setSignedIn(false); }}>
+              <Icon name="arrowRight" size={14} /> {t('Đăng xuất')}
+            </Button>
+          </div>
         </header>
         <Tabs
           ariaLabel="Chức năng quản trị"
@@ -69,6 +73,18 @@ export default function AdminPage() {
   );
 }
 
+/** Nút chuyển giao diện sáng / tối — dùng chung lựa chọn với portal (mặc định theo hệ điều hành). */
+function ThemeToggle() {
+  const { t } = useI18n();
+  const { theme, toggle } = useTheme();
+  const label = t(theme === 'dark' ? 'Chuyển giao diện sáng' : 'Chuyển giao diện tối');
+  return (
+    <Button size="sm" variant="ghost" iconOnly onClick={toggle} aria-label={label} title={label}>
+      <Icon name={theme === 'dark' ? 'sun' : 'moon'} size={16} />
+    </Button>
+  );
+}
+
 function AdminLogin({ onSignedIn, expired }: { onSignedIn: () => void; expired: boolean }) {
   const { t } = useI18n();
   const login = useAdminLogin();
@@ -81,6 +97,9 @@ function AdminLogin({ onSignedIn, expired }: { onSignedIn: () => void; expired: 
   return (
     <main className={styles.page}>
       <form className={styles.login} onSubmit={submit}>
+        <div className={styles.loginTheme}>
+          <ThemeToggle />
+        </div>
         <Card title="Quản trị Việt An Express">
           <div className={styles.loginBody}>
             {expired && <Notice tone="warning">{t('Phiên quản trị đã hết hạn, vui lòng đăng nhập lại.')}</Notice>}
