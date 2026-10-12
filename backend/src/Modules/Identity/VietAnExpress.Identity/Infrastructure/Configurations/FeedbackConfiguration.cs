@@ -20,6 +20,7 @@ internal sealed class FeedbackConfiguration : IEntityTypeConfiguration<Feedback>
         b.Property(x => x.Message).HasColumnName("Noi_Dung").HasMaxLength(Feedback.MessageMaxLength).IsRequired();
         b.Property(x => x.Contact).HasColumnName("Lien_He").HasMaxLength(Feedback.ContactMaxLength);
         b.Property(x => x.Rating).HasColumnName("So_Sao").HasColumnType("tinyint").HasConversion<byte?>();
+        b.Property(x => x.SurveyJson).HasColumnName("Khao_Sat"); // nvarchar(max), JSON câu trả lời khảo sát
         b.Property(x => x.IsSeen).HasColumnName("Da_Xem");
         b.Property(x => x.IsHiddenByCustomer).HasColumnName("Khach_Da_An").HasDefaultValue(false);
         b.Property(x => x.CreateDate).HasColumnName("Ngay_Gui").HasColumnType("datetime");

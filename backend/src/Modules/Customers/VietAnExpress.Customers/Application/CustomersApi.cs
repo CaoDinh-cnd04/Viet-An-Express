@@ -12,6 +12,18 @@ internal sealed class CustomersApi(CustomersDbContext db) : ICustomersApi
         return c is null ? null : ToSummary(c);
     }
 
+    public async Task<IReadOnlyList<CustomerSummary>> GetByIdsAsync(IReadOnlyCollection<long> customerIds, CancellationToken cancellationToken = default)
+    {
+        var result = new List<CustomerSummary>(customerIds.Count);
+        // Chia lô: SQL Server giới hạn ~2100 tham số mỗi câu lệnh.
+        foreach (var chunk in customerIds.Distinct().Chunk(1000))
+        {
+            var rows = await db.Customers.AsNoTracking().Where(x => chunk.Contains(x.Id)).ToListAsync(cancellationToken);
+            result.AddRange(rows.Select(ToSummary));
+        }
+        return result;
+    }
+
     /// <summary>
     /// Tên / email / SĐT: ưu tiên thông tin người liên hệ, không có thì lấy của công ty.
     /// SĐT: ContactPhone → Tel → Phone (dữ liệu cũ hay ghi lẫn tên vào cột Phone, Tel thường chỉ có số).

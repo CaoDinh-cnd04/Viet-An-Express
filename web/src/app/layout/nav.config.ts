@@ -48,8 +48,7 @@ export const NAV: ReadonlyArray<NavEntry> = [
     icon: 'box',
     children: [
       { to: '/drafts', label: 'Đơn nháp & chưa in', badge: 'drafts', permission: PERMISSIONS.shipmentsView },
-      { to: '/orders', label: 'Đơn hàng của tôi', permission: PERMISSIONS.shipmentsView },
-      { to: '/pickups', label: 'Đặt lịch Pickup' }
+      { to: '/orders', label: 'Đơn hàng của tôi', permission: PERMISSIONS.shipmentsView }
     ]
   },
   {

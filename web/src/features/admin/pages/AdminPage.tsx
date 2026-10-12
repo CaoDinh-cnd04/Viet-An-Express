@@ -1,23 +1,32 @@
 import { useState, type FormEvent } from 'react';
 import { getErrorMessage } from '@/shared/api/http';
 import { useI18n } from '@/shared/i18n';
-import { Button, Card, EmptyState, Icon, KeyValueList, Modal, Notice, StatusPill, TextField } from '@/shared/ui';
+import { Button, Card, EmptyState, Icon, KeyValueList, Modal, Notice, StatusPill, Tabs, TextField } from '@/shared/ui';
 import { Stars } from '@/features/feedback/components/Stars';
+import { SurveyAnswers } from '@/features/feedback/components/SurveyAnswers';
 import { averageRating } from '@/features/feedback/lib/images';
 import type { AdminFeedbackItem } from '@/features/feedback/types';
-import { adminLogout, getAdminToken, useAdminFeedback, useAdminFeedbackDetail, useAdminImage, useAdminLogin, useMarkSeen } from '../api';
+import { adminLogout, getAdminToken, useAdminTroubles, useAdminFeedback, useAdminFeedbackDetail, useAdminImage, useAdminLogin, useDeleteFeedback, useMarkSeen } from '../api';
+import { AdminNotifications } from '../components/AdminNotifications';
+import { AdminTroubles } from '../components/AdminTroubles';
+import { SurveyStats } from '../components/SurveyStats';
 import styles from './AdminPage.module.css';
 
 type Filter = 'all' | 'new';
+type Section = 'feedback' | 'troubles' | 'notifications';
 
 /**
  * Trang quản trị Việt An (/admin) — chỉ tài khoản quản trị cố định trong code đăng nhập được.
- * Hiện có 1 chức năng: xem góp ý khách gửi (nội dung, ảnh, người gửi), đánh dấu đã xem.
+ * Tab Góp ý: xem góp ý khách gửi (nội dung, khảo sát, ảnh, người gửi), thống kê khảo sát, đánh dấu đã xem, xóa hẳn góp ý.
+ * Tab Sự cố: sự cố khách báo, trả lời / đổi trạng thái (khách nhận thông báo riêng).
+ * Tab Thông báo: soạn thông báo gửi mọi khách (tùy chọn gửi email), xem kết quả, xóa.
  */
 export default function AdminPage() {
   const { t } = useI18n();
   const [signedIn, setSignedIn] = useState(() => !!getAdminToken());
+  const [section, setSection] = useState<Section>('feedback');
   const feedback = useAdminFeedback(signedIn);
+  const troubles = useAdminTroubles(signedIn);
   // Token hết hạn (401) → về màn đăng nhập.
   const expired = signedIn && feedback.isError && !getAdminToken();
 
@@ -29,13 +38,32 @@ export default function AdminPage() {
         <header className={styles.head}>
           <div>
             <h1 className={styles.title}>{t('Quản trị Việt An Express')}</h1>
-            <p className={styles.muted}>{t('Góp ý khách gửi từ portal')}</p>
+            <p className={styles.muted}>{t('Góp ý, sự cố của khách và thông báo gửi khách')}</p>
           </div>
           <Button size="sm" variant="ghost" onClick={() => { adminLogout(); setSignedIn(false); }}>
             <Icon name="arrowRight" size={14} /> {t('Đăng xuất')}
           </Button>
         </header>
-        <FeedbackList items={feedback.data ?? []} loading={feedback.isLoading} error={feedback.isError ? getErrorMessage(feedback.error) : null} />
+        <Tabs
+          ariaLabel="Chức năng quản trị"
+          items={[
+            { key: 'feedback', label: 'Góp ý', count: feedback.data?.filter(f => !f.seen).length || undefined },
+            { key: 'troubles', label: 'Sự cố', count: troubles.data?.filter(x => x.ticket.status === 'new').length || undefined },
+            { key: 'notifications', label: 'Thông báo' }
+          ]}
+          value={section}
+          onChange={setSection}
+        />
+        {section === 'feedback' ? (
+          <>
+            <SurveyStats items={feedback.data ?? []} />
+            <FeedbackList items={feedback.data ?? []} loading={feedback.isLoading} error={feedback.isError ? getErrorMessage(feedback.error) : null} />
+          </>
+        ) : section === 'troubles' ? (
+          <AdminTroubles />
+        ) : (
+          <AdminNotifications />
+        )}
       </div>
     </main>
   );
@@ -134,7 +162,9 @@ function FeedbackList({ items, loading, error }: { items: AdminFeedbackItem[]; l
                   )}
                 </div>
               </div>
-              <p className={`${styles.message} ${styles.preview}`}>{f.message}</p>
+              <p className={`${styles.message} ${styles.preview}`}>
+                {f.message || <span className={styles.muted}>{t('Chỉ trả lời khảo sát ({n} câu)', { n: f.survey?.length ?? 0 })}</span>}
+              </p>
               <div className={styles.itemFoot}>
                 {f.images.length > 0 && <span className={styles.muted}><Icon name="image" size={14} /> {t('{n} ảnh', { n: f.images.length })}</span>}
                 {f.contact && <span className={styles.muted}>{t('Liên hệ')}: {f.contact}</span>}
@@ -153,10 +183,29 @@ function FeedbackList({ items, loading, error }: { items: AdminFeedbackItem[]; l
 function FeedbackDetail({ id, onClose }: { id: string | null; onClose: () => void }) {
   const { t } = useI18n();
   const detail = useAdminFeedbackDetail(id);
+  const remove = useDeleteFeedback();
   const d = detail.data;
   const f = d?.feedback;
+  const close = () => {
+    remove.reset();
+    onClose();
+  };
+  const footer = f && (
+    <Button
+      variant="ghost"
+      disabled={remove.isPending}
+      onClick={() => {
+        if (window.confirm(t('Xóa hẳn góp ý này cùng ảnh đính kèm? Khách cũng không còn thấy góp ý và không khôi phục được.'))) {
+          remove.mutate(f.id, { onSuccess: close });
+        }
+      }}
+    >
+      <Icon name="trash" size={14} /> {t(remove.isPending ? 'Đang xóa…' : 'Xóa góp ý')}
+    </Button>
+  );
   return (
-    <Modal open={!!id} title="Chi tiết góp ý" onClose={onClose} size="lg">
+    <Modal open={!!id} title="Chi tiết góp ý" onClose={close} size="lg" footer={footer}>
+      {remove.isError && <Notice tone="danger">{getErrorMessage(remove.error)}</Notice>}
       {detail.isError ? (
         <Notice tone="danger">{getErrorMessage(detail.error)}</Notice>
       ) : !d || !f ? (
@@ -177,9 +226,15 @@ function FeedbackDetail({ id, onClose }: { id: string | null; onClose: () => voi
               ['Đánh giá', f.rating ? <Stars value={f.rating} size="md" /> : t('Không chấm')]
             ]}
           />
+          {!!f.survey?.length && (
+            <div>
+              <h3 className={styles.detailTitle}>{t('Khảo sát trải nghiệm')}</h3>
+              <SurveyAnswers survey={f.survey} />
+            </div>
+          )}
           <div>
             <h3 className={styles.detailTitle}>{t('Nội dung góp ý')}</h3>
-            <p className={styles.message}>{f.message}</p>
+            <p className={styles.message}>{f.message || '—'}</p>
           </div>
           {f.images.length > 0 && (
             <div>

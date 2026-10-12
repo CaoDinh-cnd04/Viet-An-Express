@@ -2,6 +2,7 @@ using System.Text.Json;
 using Microsoft.IdentityModel.JsonWebTokens;
 using VietAnExpress.Identity.Application;
 using VietAnExpress.Identity.Application.Commands;
+using VietAnExpress.Identity.Contracts;
 using VietAnExpress.Identity.Domain;
 using VietAnExpress.Identity.Infrastructure;
 using VietAnExpress.SharedKernel.Authorization;
@@ -34,7 +35,7 @@ public class StaffAccountTests
         Assert.True(login.IsSuccess);
         var user = login.Value.User;
         Assert.Equal(("staff", false, "Nguyễn Văn Kho", "SaigonbayHN"), (user.AccountType, user.IsAdmin, user.FullName, user.CustomerCode));
-        Assert.Equal(["shipments.view"], user.Permissions);
+        Assert.Equal(["shipments.view", IdentityPermissions.Feedback], user.Permissions); // + quyền luôn có
 
         var jwt = new JsonWebToken(login.Value.AccessToken);
         Assert.Equal(IdentityFixture.CustomerId.ToString(), jwt.GetClaim(VaClaimTypes.CustomerId).Value); // thấy dữ liệu của khách cha
@@ -145,7 +146,27 @@ public class StaffAccountTests
         await f.Staff.Handle(new UpdateStaffCommand(staffId, "Kho", null, null, ["shipments.view", "shipments.create"], Active: true), Ct);
 
         var refreshed = await f.Refresh.Handle(new RefreshSessionCommand(session.RefreshToken), Ct);
-        Assert.Equal(["shipments.create", "shipments.view"], refreshed.Value.User.Permissions);
+        Assert.Equal(["shipments.create", "shipments.view", IdentityPermissions.Feedback], refreshed.Value.User.Permissions);
+    }
+
+    [Fact]
+    public async Task Sua_quyen_gui_lai_quyen_luon_co_van_luu_duoc_va_danh_sach_chi_hien_quyen_da_chon()
+    {
+        await using var f = new IdentityFixture();
+        var staffId = await CreateStaffAsync(f, "kho.hn", "shipments.view", IdentityPermissions.Feedback);
+
+        // Trang quản lý chỉ thấy quyền tài khoản chính đã chọn (không có quyền luôn có như gửi góp ý).
+        Assert.Equal(["shipments.view"], Assert.Single((await f.Staff.Handle(new ListStaffQuery(), Ct)).Value).Permissions);
+
+        // Client cũ gửi kèm quyền luôn có khi sửa / khóa → vẫn lưu được, không báo quyền không hợp lệ.
+        var updated = await f.Staff.Handle(new UpdateStaffCommand(staffId, "Kho", null, null,
+            ["shipments.view", "shipments.create", IdentityPermissions.Feedback], Active: true), Ct);
+        Assert.True(updated.IsSuccess, updated.Error.Message);
+        Assert.Equal(["shipments.create", "shipments.view"], updated.Value.Permissions);
+
+        // Nhân viên đăng nhập vẫn có quyền gửi góp ý.
+        var login = await f.Login.Handle(new LoginCommand("kho.hn", StaffPassword, false), Ct);
+        Assert.Contains(IdentityPermissions.Feedback, login.Value.User.Permissions);
     }
 
     [Fact]

@@ -24,3 +24,8 @@ export function Button({ variant, size, iconOnly, className, type = 'button', ..
 export function LinkButton({ variant, size, iconOnly, className, ...rest }: StyleProps & LinkProps) {
   return <Link className={buttonClass({ variant, size, iconOnly }, className)} {...rest} />;
 }
+
+/** Liên kết ra trang ngoài mang giao diện nút — luôn mở tab mới, không lộ trang portal cho trang đích. */
+export function ExternalLinkButton({ variant, size, iconOnly, className, ...rest }: StyleProps & Omit<ComponentPropsWithRef<'a'>, 'target' | 'rel'>) {
+  return <a className={buttonClass({ variant, size, iconOnly }, className)} target="_blank" rel="noopener noreferrer" {...rest} />;
+}

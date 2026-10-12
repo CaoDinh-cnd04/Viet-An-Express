@@ -41,7 +41,8 @@ internal sealed class CustomerLoginConfiguration : IEntityTypeConfiguration<Cust
 }
 
 /// <summary>
-/// dbo.TCustomer (bảng cũ, không migration) + bảng mới người dùng đã đồng ý: dbo.TaiKhoanNhanVien (tạm), dbo.MyTrackingCauHinh, dbo.GopY + dbo.GopY_HinhAnh.
+/// dbo.TCustomer (bảng cũ, không migration) + bảng mới người dùng đã đồng ý: dbo.TaiKhoanNhanVien (tạm), dbo.MyTrackingCauHinh, dbo.GopY + dbo.GopY_HinhAnh,
+/// dbo.ThongBao + dbo.ThongBao_DaDoc, dbo.SuCo + dbo.SuCo_TraoDoi.
 /// Schema "identity" chỉ chứa lịch sử migration.
 /// </summary>
 internal sealed class IdentityDbContext(DbContextOptions<IdentityDbContext> options) : DbContext(options)
@@ -59,6 +60,14 @@ internal sealed class IdentityDbContext(DbContextOptions<IdentityDbContext> opti
     /// <summary>Góp ý khách gửi (dbo.GopY) và ảnh đính kèm (dbo.GopY_HinhAnh).</summary>
     public DbSet<Feedback> Feedbacks => Set<Feedback>();
     public DbSet<FeedbackImage> FeedbackImages => Set<FeedbackImage>();
+
+    /// <summary>Thông báo quản trị Việt An gửi khách (dbo.ThongBao) và lượt đã đọc của từng tài khoản (dbo.ThongBao_DaDoc).</summary>
+    public DbSet<Notification> Notifications => Set<Notification>();
+    public DbSet<NotificationRead> NotificationReads => Set<NotificationRead>();
+
+    /// <summary>Sự cố khách báo (dbo.SuCo) và lịch sử trao đổi (dbo.SuCo_TraoDoi).</summary>
+    public DbSet<Trouble> Troubles => Set<Trouble>();
+    public DbSet<TroubleMessage> TroubleMessages => Set<TroubleMessage>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

@@ -3,15 +3,23 @@ import { useI18n } from '@/shared/i18n';
 import { Button, Card, EmptyState, FileDrop, Icon, Notice, PageHeader, StatusPill, TextAreaField, TextField } from '@/shared/ui';
 import { feedbackImageUrl, useDeleteFeedback, useMyFeedback, useSendFeedback } from '../api';
 import { StarRating, Stars } from '../components/Stars';
+import { SurveyAnswers } from '../components/SurveyAnswers';
+import { SurveyForm } from '../components/SurveyForm';
+import { SURVEY_SECTIONS } from '../constants';
 import { addImages, FEEDBACK_LIMITS, formatSize } from '../lib/images';
+import { surveyPayload, type SurveyState } from '../lib/survey';
 import styles from './FeedbackPage.module.css';
 
-/** Tài khoản → Góp ý: khách gửi nội dung + tối đa 5 ảnh (chọn, kéo thả hoặc dán ảnh chụp màn hình), xem góp ý đã gửi. */
+/**
+ * Tài khoản → Góp ý: khách chấm sao, trả lời khảo sát trải nghiệm, gửi nội dung + tối đa 5 ảnh (chọn, kéo thả hoặc dán ảnh chụp màn hình),
+ * xem góp ý đã gửi. Có trả lời khảo sát thì nội dung không bắt buộc.
+ */
 export default function FeedbackPage() {
   const { t } = useI18n();
   const send = useSendFeedback();
   const remove = useDeleteFeedback();
   const [rating, setRating] = useState<number | null>(null);
+  const [survey, setSurvey] = useState<SurveyState>({});
   const mine = useMyFeedback();
   const [message, setMessage] = useState('');
   const [contact, setContact] = useState('');
@@ -37,17 +45,19 @@ export default function FeedbackPage() {
     }
   };
 
-  const messageError = touched && !message.trim() ? 'Nhập nội dung góp ý' : undefined;
+  const answers = surveyPayload(SURVEY_SECTIONS, survey);
+  const messageError = touched && !message.trim() && !answers.length ? 'Nhập nội dung góp ý hoặc trả lời ít nhất 1 câu khảo sát' : undefined;
   const submit = () => {
     setTouched(true);
-    if (!message.trim()) return;
+    if (!message.trim() && !answers.length) return;
     send.mutate(
-      { message: message.trim(), contact, rating, images },
+      { message: message.trim(), contact, rating, survey: answers, images },
       {
         onSuccess: () => {
           setMessage('');
           setContact('');
           setRating(null);
+          setSurvey({});
           setImages([]);
           setImageErrors([]);
           setTouched(false);
@@ -66,9 +76,10 @@ export default function FeedbackPage() {
             <span className={styles.label}>{t('Mức độ hài lòng với Việt An Express (không bắt buộc)')}</span>
             <StarRating value={rating} onChange={setRating} />
           </div>
+          <SurveyForm value={survey} onChange={setSurvey} />
           <TextAreaField
             label="Nội dung góp ý"
-            required
+            required={!answers.length}
             rows={5}
             maxLength={FEEDBACK_LIMITS.messageMax}
             aside={`${message.length}/${FEEDBACK_LIMITS.messageMax}`}
@@ -156,7 +167,8 @@ export default function FeedbackPage() {
                     </Button>
                   </span>
                 </div>
-                <p className={styles.message}>{f.message}</p>
+                <SurveyAnswers survey={f.survey} />
+                {f.message && <p className={styles.message}>{f.message}</p>}
                 {f.contact && <p className={styles.muted}>{t('Liên hệ')}: {f.contact}</p>}
                 {f.images.length > 0 && (
                   <div className={styles.sentImages}>

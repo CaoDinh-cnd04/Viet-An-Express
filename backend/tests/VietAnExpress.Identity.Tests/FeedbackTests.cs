@@ -1,6 +1,8 @@
 using VietAnExpress.Identity.Application.Commands;
 using VietAnExpress.Identity.Domain;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using VietAnExpress.SharedKernel.Application;
 using VietAnExpress.Identity.Contracts;
 using VietAnExpress.Identity.Infrastructure;
 using Xunit;
@@ -23,7 +25,7 @@ public class FeedbackTests
         await using var f = new IdentityFixture();
         var ct = TestContext.Current.CancellationToken;
         f.CurrentUser.Setup(u => u.HasPermission(IdentityPermissions.AdminFeedback)).Returns(false);
-        var customer = new CustomerFeedbackHandlers(f.Db, f.CurrentUser.Object, f.Customers.Object, f.Clock);
+        var customer = new CustomerFeedbackHandlers(f.Db, f.CurrentUser.Object, f.Customers.Object, f.Clock, f.Jobs, f.Company);
         var admin = new AdminFeedbackHandlers(f.Db, f.Tokens, f.Customers.Object, f.Clock);
         var sent = await customer.Handle(new SendFeedbackCommand("Góp ý cần giữ", "0909", 4, [Image(Png)]), ct);
         var id = long.Parse(sent.Value.Id);
@@ -42,6 +44,25 @@ public class FeedbackTests
         Assert.Equal(Png, (await customer.Handle(new GetFeedbackImageQuery(imageId), ct)).Value.Data);
     }
 
+    [Fact]
+    public async Task Admin_xoa_han_gop_y_va_anh_dinh_kem()
+    {
+        await using var f = new IdentityFixture();
+        var ct = TestContext.Current.CancellationToken;
+        var customer = new CustomerFeedbackHandlers(f.Db, f.CurrentUser.Object, f.Customers.Object, f.Clock, f.Jobs, f.Company);
+        var admin = new AdminFeedbackHandlers(f.Db, f.Tokens, f.Customers.Object, f.Clock);
+        var keep = long.Parse((await customer.Handle(new SendFeedbackCommand("Giữ lại", null, 5, []), ct)).Value.Id);
+        var id = long.Parse((await customer.Handle(new SendFeedbackCommand("Xóa đi", null, 1, [Image(Png), Image(Png)]), ct)).Value.Id);
+        f.Db.ChangeTracker.Clear();
+
+        Assert.True((await admin.Handle(new AdminDeleteFeedbackCommand(id), ct)).IsSuccess);
+
+        f.Db.ChangeTracker.Clear();
+        Assert.Equal(keep, (await f.Db.Feedbacks.SingleAsync(ct)).Id);
+        Assert.Empty(await f.Db.FeedbackImages.ToListAsync(ct));
+        Assert.Equal(FeedbackErrors.NotFound, (await admin.Handle(new AdminDeleteFeedbackCommand(id), ct)).Error);
+    }
+
     [Theory]
     [InlineData(true)]
     [InlineData(false)]
@@ -54,7 +75,7 @@ public class FeedbackTests
             "KH", "ABC", otherCustomer ? 10 : 11, "sender", "Giữ lại", null, null, [], new DateTime(2026, 10, 9));
         f.Db.Feedbacks.Add(feedback);
         await f.Db.SaveChangesAsync(ct);
-        var handler = new CustomerFeedbackHandlers(f.Db, f.CurrentUser.Object, f.Customers.Object, f.Clock);
+        var handler = new CustomerFeedbackHandlers(f.Db, f.CurrentUser.Object, f.Customers.Object, f.Clock, f.Jobs, f.Company);
         var result = await handler.Handle(new DeleteFeedbackCommand(feedback.Id), ct);
         Assert.Equal(FeedbackErrors.NotFound, result.Error);
         Assert.False(feedback.IsHiddenByCustomer);
@@ -78,6 +99,77 @@ public class FeedbackTests
         Assert.Equal(FeedbackErrors.Empty, FeedbackRules.Validate("   ", null, null, []));
         Assert.Equal(FeedbackErrors.TooLong, FeedbackRules.Validate(new string('a', Feedback.MessageMaxLength + 1), null, null, []));
         Assert.Equal(FeedbackErrors.TooManyImages, FeedbackRules.Validate("x", null, null, Enumerable.Repeat(Image(Png), 6).ToList()));
+    }
+
+    [Fact]
+    public void Khao_sat_cat_khoang_trang_bo_cau_trong_va_phuong_an_trung()
+    {
+        var survey = FeedbackRules.ParseSurvey("""
+            [
+              { "id": "feature_most", "question": " Tính năng dùng nhiều nhất? ", "answers": [" Tạo đơn ", "Tạo đơn", ""] },
+              { "id": "mobile", "question": "Dùng trên điện thoại?", "answers": [], "note": "  " },
+              { "id": "create_flow", "question": "Tạo đơn có mượt không?", "answers": [], "note": " Thiếu nút lưu nháp " }
+            ]
+            """);
+
+        Assert.True(survey.IsSuccess);
+        Assert.Equal(2, survey.Value.Count);
+        Assert.Equal(("feature_most", "Tính năng dùng nhiều nhất?", (string?)null), (survey.Value[0].Id, survey.Value[0].Question, survey.Value[0].Note));
+        Assert.Equal(["Tạo đơn"], survey.Value[0].Answers);
+        Assert.Equal("create_flow", survey.Value[1].Id);
+        Assert.Equal("Thiếu nút lưu nháp", survey.Value[1].Note);
+        Assert.Empty(FeedbackRules.ParseSurvey(null).Value);
+        Assert.Empty(FeedbackRules.ParseSurvey("[]").Value);
+    }
+
+    [Theory]
+    [InlineData("khong phai json")]
+    [InlineData("{}")]
+    [InlineData("""[{ "id": "", "question": "Q", "answers": ["A"] }]""")]
+    [InlineData("""[{ "id": "a", "question": "", "answers": ["A"] }]""")]
+    [InlineData("""[{ "id": "a", "question": "Q", "answers": ["A"] }, { "id": "a", "question": "Q", "answers": ["B"] }]""")]
+    public void Tu_choi_khao_sat_sai_cau_truc_hoac_trung_ma_cau_hoi(string json) =>
+        Assert.Equal(FeedbackErrors.Survey, FeedbackRules.ParseSurvey(json).Error);
+
+    [Fact]
+    public void Tu_choi_khao_sat_qua_gioi_han()
+    {
+        var tooManyAnswers = $$"""[{ "id": "a", "question": "Q", "answers": [{{string.Join(",", Enumerable.Range(0, Feedback.MaxSurveyAnswers + 1).Select(i => $"\"{i}\""))}}] }]""";
+        var longNote = $$"""[{ "id": "a", "question": "Q", "answers": [], "note": "{{new string('x', Feedback.SurveyNoteMaxLength + 1)}}" }]""";
+        Assert.Equal(FeedbackErrors.Survey, FeedbackRules.ParseSurvey(tooManyAnswers).Error);
+        Assert.Equal(FeedbackErrors.Survey, FeedbackRules.ParseSurvey(longNote).Error);
+    }
+
+    [Fact]
+    public void Tra_loi_khao_sat_thi_khong_bat_buoc_noi_dung()
+    {
+        Assert.Null(FeedbackRules.Validate("", null, null, [], hasSurvey: true));
+        Assert.Equal(FeedbackErrors.Empty, FeedbackRules.Validate("", null, null, [], hasSurvey: false));
+    }
+
+    [Fact]
+    public async Task Gui_khao_sat_luu_va_admin_doc_lai_duoc()
+    {
+        await using var f = new IdentityFixture();
+        var ct = TestContext.Current.CancellationToken;
+        var customer = new CustomerFeedbackHandlers(f.Db, f.CurrentUser.Object, f.Customers.Object, f.Clock, f.Jobs, f.Company);
+        var admin = new AdminFeedbackHandlers(f.Db, f.Tokens, f.Customers.Object, f.Clock);
+        const string survey = """[{ "id": "first_use", "question": "Người mới có hiểu ngay không?", "answers": ["Cần hướng dẫn một chút"], "note": null }]""";
+
+        var sent = await customer.Handle(new SendFeedbackCommand(null, null, 4, [], survey), ct);
+
+        Assert.True(sent.IsSuccess, sent.Error.Message);
+        Assert.Equal("", sent.Value.Message);
+        await f.Jobs.RunAllAsync(new ServiceCollection().AddSingleton<IEmailSender>(f.Email).BuildServiceProvider());
+        var mail = Assert.Single(f.Email.Sent);
+        Assert.Equal("[Góp ý portal] SGB EXPRESS HN (SaigonbayHN) — 4★", mail.Subject);
+        Assert.Contains("Người mới có hiểu ngay không?: Cần hướng dẫn một chút", mail.Body);
+        Assert.Contains("https://portal.test/admin", mail.HtmlBody);
+        f.Db.ChangeTracker.Clear();
+        var item = Assert.Single(Assert.Single(await admin.Handle(new GetAdminFeedbackQuery(), ct)).Survey);
+        Assert.Equal(("first_use", "Người mới có hiểu ngay không?"), (item.Id, item.Question));
+        Assert.Equal(["Cần hướng dẫn một chút"], item.Answers);
+        Assert.Equal(FeedbackErrors.Empty, (await customer.Handle(new SendFeedbackCommand(" ", null, null, [], "[]"), ct)).Error);
     }
 
     [Fact]

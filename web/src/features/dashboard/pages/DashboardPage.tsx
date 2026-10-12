@@ -1,13 +1,12 @@
 import { Link } from 'react-router-dom';
 import { useI18n } from '@/shared/i18n';
-import { formatIsoDate, formatNumber } from '@/shared/lib/format';
+import { formatNumber } from '@/shared/lib/format';
 import { Card, DataTable, EmptyState, Icon, LinkButton, PageHeader, StatCard, StatGrid, StatusPill, type Column, type IconName } from '@/shared/ui';
 import { useDrafts } from '@/features/drafts/api';
 import { useNotifications } from '@/features/notifications';
 import { useOrders } from '@/features/orders/api';
 import { DEFAULT_FILTERS, ORDER_STATUS } from '@/features/orders/constants';
 import type { Order } from '@/features/orders/types';
-import { usePickups } from '@/features/pickups/api';
 import { useTroubles } from '@/features/troubles';
 import styles from './DashboardPage.module.css';
 
@@ -17,7 +16,7 @@ const QUICK_ACTIONS: ReadonlyArray<{ to: string; label: string; icon: IconName }
   { to: '/orders/new', label: 'Tạo đơn mới', icon: 'filePlus' },
   { to: '/orders/import', label: 'Tạo đơn từ Excel', icon: 'upload' },
   { to: '/pricing', label: 'Tra cứu giá', icon: 'tag' },
-  { to: '/pickups', label: 'Đặt lịch pickup', icon: 'truck' }
+  { to: '/troubles', label: 'Báo sự cố', icon: 'alert' }
 ];
 
 const columns = (t: (text: string) => string): ReadonlyArray<Column<Order>> => [
@@ -34,12 +33,10 @@ export default function DashboardPage() {
   const drafts = useDrafts();
   const troubles = useTroubles();
   const notifications = useNotifications();
-  const pickups = usePickups();
 
   const counts = orders.data?.summary.statusCounts;
   const openTroubles = (troubles.data ?? []).filter(x => x.status !== 'done').length;
   const readyDrafts = (drafts.data ?? []).filter(d => d.stt === 'ready').length;
-  const upcoming = (pickups.data ?? []).filter(p => p.st === 'wait').slice(0, 3);
   const latestNotices = (notifications.data?.data ?? []).slice(0, 4);
 
   return (
@@ -82,20 +79,6 @@ export default function DashboardPage() {
                 </ul>
               ) : (
                 <EmptyState title="Không có thông báo mới" />
-              )}
-            </Card>
-            <Card title="Pickup sắp tới" actions={<LinkButton to="/pickups" size="sm" variant="ghost">{t('Đặt lịch')}</LinkButton>}>
-              {upcoming.length ? (
-                <ul className={styles.list}>
-                  {upcoming.map(p => (
-                    <li key={p.id} className={styles.listItem}>
-                      <strong>{formatIsoDate(p.date)} · {p.slot}</strong>
-                      <span>{t('{n} kiện', { n: p.pcs })}{p.branch ? ` · ${p.branch}` : ''}</span>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className={styles.muted}>{t('Chưa có lịch pickup chờ xác nhận.')}</p>
               )}
             </Card>
           </div>

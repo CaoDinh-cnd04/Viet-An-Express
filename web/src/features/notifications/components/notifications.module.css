@@ -72,6 +72,18 @@
   line-height: 1.65;
 }
 
+.linkRow {
+  margin-top: var(--space-4);
+}
+
+.popLink {
+  display: inline-block;
+  margin-top: 4px;
+  color: var(--color-brand-strong);
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+
 /* ---------- Popup quan trọng ---------- */
 .popList {
   display: flex;

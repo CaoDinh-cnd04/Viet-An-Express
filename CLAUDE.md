@@ -4,7 +4,7 @@
 
 ## 1. Tổng quan
 
-Portal khách hàng của Việt An Express: tạo đơn, quản lý vận đơn, giá cước, e-commerce, sự cố, pickup.
+Portal khách hàng của Việt An Express: tạo đơn, quản lý vận đơn, giá cước, e-commerce, sự cố, thông báo.
 Repo gồm website trong `web/`, Zalo Mini App độc lập trong `mini-app/` (React 19 + TypeScript + Vite) và backend trong `backend/` (.NET 10, modular monolith, SQL Server database `vietan_app`). Backend phải tuân theo hợp đồng API trong `web/docs/API_CONTRACT.md`; kiến trúc, quy tắc module và cách chạy backend: `backend/README.md`.
 
 Ngôn ngữ giao tiếp & giao diện: **Tiếng Việt**.
@@ -33,9 +33,9 @@ backend/
 └── tests/                                  # xUnit v3 + Moq, Architecture.Tests kiểm tra ranh giới module
 ```
 
-Backend: `cd backend && dotnet run --project src/VietAnExpress.API --launch-profile http` · test: `dotnet test --solution VietAnExpress.slnx`. Bí mật (connection string, `Jwt:Secret`) chỉ để trong user-secrets / biến môi trường.
+Backend: `cd backend && dotnet run --project src/VietAnExpress.API --launch-profile http` · test: `dotnet test --solution VietAnExpress.slnx`. Bí mật (connection string, `Jwt:Secret`, `Email:Password` — mật khẩu ứng dụng Gmail gửi thông báo / nhận góp ý) chỉ để trong user-secrets / biến môi trường.
 
-**Database:** không tự tạo bảng / schema mới. Portal chỉ dùng bảng có sẵn (`dbo.TCustomer` cho đăng nhập và hồ sơ khách, `dbo.MaVanDon` + `MaVanDon_PCS_DIM` + `MaVanDon_ChiTietHang` cho vận đơn); ngoại lệ tạm giữ `shipments.OrderDrafts`; bảng mới đã được người dùng duyệt: `dbo.NhomHangHoa`, `dbo.MatHangKhachHang`, `dbo.KenhTMDT` + `dbo.KetNoiTMDT` + `dbo.DonTMDT` (kênh bán e-com, shop đã kết nối, đơn e-com), `dbo.MyTrackingCauHinh` (trang MyTracking của khách), `dbo.VungXauVungXa` (bảng vùng sâu vùng xa của hệ thống cũ, chỉ đọc — nạp từ script người dùng cung cấp), `dbo.GopY` + `dbo.GopY_HinhAnh` (góp ý khách gửi + ảnh, xem ở trang quản trị /admin) bảng tạm `dbo.TaiKhoanNhanVien` (tài khoản con của nhân viên — sau này ráp vào bảng chính thức) và `dbo.VanDonNguoiTao` (vận đơn do tài khoản con nào tạo). Cột portal thêm vào bảng cũ (người dùng đã duyệt): `dbo.MaVanDon.ConsigneeIossNo`, `ConsigneeEoriNo`, `VA_Bill` (mã bill hiển thị VAHCM6003585US). Chức năng cần bảng mới thì hỏi người dùng trước.
+**Database:** không tự tạo bảng / schema mới. Portal chỉ dùng bảng có sẵn (`dbo.TCustomer` cho đăng nhập và hồ sơ khách, `dbo.MaVanDon` + `MaVanDon_PCS_DIM` + `MaVanDon_ChiTietHang` cho vận đơn); ngoại lệ tạm giữ `shipments.OrderDrafts`; bảng mới đã được người dùng duyệt: `dbo.NhomHangHoa`, `dbo.MatHangKhachHang`, `dbo.KenhTMDT` + `dbo.KetNoiTMDT` + `dbo.DonTMDT` (kênh bán e-com, shop đã kết nối, đơn e-com), `dbo.MyTrackingCauHinh` (trang MyTracking của khách), `dbo.VungXauVungXa` (bảng vùng sâu vùng xa của hệ thống cũ, chỉ đọc — nạp từ script người dùng cung cấp), `dbo.GopY` + `dbo.GopY_HinhAnh` (góp ý khách gửi + ảnh, xem ở trang quản trị /admin), `dbo.ThongBao` + `dbo.ThongBao_DaDoc` (thông báo quản trị soạn ở /admin gửi khách + lượt đã đọc từng tài khoản; `ThongBao.CustomerID` có giá trị = thông báo riêng 1 khách), `dbo.SuCo` + `dbo.SuCo_TraoDoi` (sự cố khách báo cho vận đơn + lịch sử trao đổi, xử lý ở /admin) bảng tạm `dbo.TaiKhoanNhanVien` (tài khoản con của nhân viên — sau này ráp vào bảng chính thức) và `dbo.VanDonNguoiTao` (vận đơn do tài khoản con nào tạo). Cột portal thêm vào bảng cũ (người dùng đã duyệt): `dbo.MaVanDon.ConsigneeIossNo`, `ConsigneeEoriNo`, `VA_Bill` (mã bill hiển thị VAHCM6003585US); cột `dbo.GopY.Khao_Sat` (JSON câu trả lời khảo sát). Chức năng cần bảng mới thì hỏi người dùng trước.
 
 ## 3. Lệnh thường dùng (chạy trong `web/`)
 

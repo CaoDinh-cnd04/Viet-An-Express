@@ -11,9 +11,17 @@ public static class IdentityPermissions
     public const string Feedback = "account.feedback";
     /// <summary>Xem góp ý của mọi khách — chỉ quản trị Việt An (vai trò va_admin), khách không bao giờ có.</summary>
     public const string AdminFeedback = "admin.feedback";
+    /// <summary>Xem / đánh dấu đã đọc thông báo của Việt An (khách và tài khoản con).</summary>
+    public const string Notifications = "account.notifications";
+    /// <summary>Soạn, gửi, xóa thông báo cho khách — chỉ quản trị Việt An.</summary>
+    public const string AdminNotifications = "admin.notifications";
+    /// <summary>Báo sự cố vận đơn, xem / trả lời sự cố của mình (khách và tài khoản con).</summary>
+    public const string Troubles = "account.troubles";
+    /// <summary>Xem, trả lời, đổi trạng thái sự cố của mọi khách — chỉ quản trị Việt An.</summary>
+    public const string AdminTroubles = "admin.troubles";
 
     public static readonly IReadOnlySet<string> AdminOnly = new HashSet<string>(StringComparer.Ordinal) { ManageStaff, MyTracking, ChangePassword };
 
     /// <summary>Tài khoản con luôn có (không cần tài khoản chính chọn, không hiện trong danh sách quyền để chọn).</summary>
-    public static readonly IReadOnlySet<string> StaffAlways = new HashSet<string>(StringComparer.Ordinal) { Feedback };
+    public static readonly IReadOnlySet<string> StaffAlways = new HashSet<string>(StringComparer.Ordinal) { Feedback, Notifications, Troubles };
 }

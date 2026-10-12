@@ -1,4 +1,4 @@
-export { Button, LinkButton } from './Button';
+export { Button, ExternalLinkButton, LinkButton } from './Button';
 export { Card } from './Card';
 export { DataTable, type Column } from './DataTable';
 export { DropdownMenu, type MenuItem } from './DropdownMenu';

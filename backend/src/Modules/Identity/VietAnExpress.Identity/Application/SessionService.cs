@@ -71,14 +71,18 @@ internal sealed class SessionService(ITokenService tokens, ICustomersApi custome
     public bool IsAssignable(string code) =>
         (_assignableCodes ??= AssignablePermissions.Select(p => p.Code).ToHashSet(StringComparer.Ordinal)).Contains(code.Trim());
 
-    /// <summary>Quyền thực tế của tài khoản con: (quyền đã lưu ∩ quyền chọn được) + quyền luôn có (vd gửi góp ý).</summary>
-    public IReadOnlyList<string> StaffPermissions(StaffAccount staff)
+    /// <summary>Quyền tài khoản chính đã chọn cho tài khoản con (quyền đã lưu ∩ quyền chọn được) — trang quản lý nhân viên hiện và gửi lại đúng danh sách này.</summary>
+    public IReadOnlyList<string> GrantedPermissions(StaffAccount staff)
     {
         var granted = staff.PermissionList.ToHashSet(StringComparer.Ordinal);
-        return AssignablePermissions.Select(p => p.Code).Where(granted.Contains)
+        return AssignablePermissions.Select(p => p.Code).Where(granted.Contains).ToList();
+    }
+
+    /// <summary>Quyền thực tế của tài khoản con khi đăng nhập: quyền đã chọn + quyền luôn có (vd gửi góp ý).</summary>
+    public IReadOnlyList<string> StaffPermissions(StaffAccount staff) =>
+        GrantedPermissions(staff)
             .Concat(_customerPermissions.Select(p => p.Code).Where(IdentityPermissions.StaffAlways.Contains))
             .ToList();
-    }
 
     /// <summary>Null nếu tài khoản không còn đăng nhập được (hồ sơ khách không còn / chưa có mật khẩu).</summary>
     public async Task<AuthSession?> StartAsync(CustomerLogin login, bool persistent, CancellationToken ct)

@@ -29,3 +29,9 @@ services:
         sync: false
       - key: Ecommerce__TokenEncryptionKey
         sync: false
+      - key: Email__UserName
+        sync: false
+      - key: Email__Password
+        sync: false
+      - key: Email__InboxAddress
+        sync: false

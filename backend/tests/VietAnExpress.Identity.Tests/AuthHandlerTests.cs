@@ -26,6 +26,9 @@ internal sealed class IdentityFixture : IAsyncDisposable
     public JwtTokenService Tokens { get; }
     public Mock<ICustomersApi> Customers { get; } = new();
     public Mock<ICurrentUser> CurrentUser { get; } = new();
+    public RecordingJobQueue Jobs { get; } = new();
+    public FakeEmailSender Email { get; } = new();
+    public EmailCompany Company { get; } = new("Việt An Express", "14 Sâm Sơn, Tân Bình", "+84 909 805 845", "www.vietanexpress.com.vn", "https://portal.test");
 
     public IdentityFixture()
     {
@@ -67,6 +70,7 @@ internal sealed class IdentityFixture : IAsyncDisposable
             new("shipments.create", "Tạo", SystemRoles.Customer),
             new(IdentityPermissions.ManageStaff, "Quản lý nhân viên", SystemRoles.Customer),
             new(IdentityPermissions.MyTracking, "MyTracking", SystemRoles.Customer),
+            new(IdentityPermissions.Feedback, "Gửi góp ý", SystemRoles.Customer),
             new("internal.only", "Không cấp cho khách")
         ];
     }
@@ -92,7 +96,7 @@ public class AuthHandlerTests
         Assert.True(result.IsSuccess);
         var s = result.Value;
         Assert.Equal(("SaigonbayHN", "SGB EXPRESS HN", "Đức Anh"), (s.User.CustomerCode, s.User.CompanyName, s.User.ContactName));
-        Assert.Equal(["account.mytracking", "account.staff", "shipments.create", "shipments.view"], s.User.Permissions);
+        Assert.Equal(["account.feedback", "account.mytracking", "account.staff", "shipments.create", "shipments.view"], s.User.Permissions);
         Assert.True(s.User.IsAdmin);
         Assert.True(s.IsPersistent);
 

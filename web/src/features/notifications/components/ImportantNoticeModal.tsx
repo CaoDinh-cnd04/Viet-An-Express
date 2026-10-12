@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useI18n } from '@/shared/i18n';
 import { Button, Modal } from '@/shared/ui';
 import { useNotifications } from '../api';
+import { safeLink } from '../lib/link';
 import styles from './notifications.module.css';
 
 const HIDE_KEY = 'va.importantNotice.hiddenOn';
@@ -57,6 +58,11 @@ export function ImportantNoticeModal() {
           <article key={n.id} className={styles.popItem}>
             <h3>{n.title}</h3>
             <p>{n.body.split('\n')[0]}</p>
+            {safeLink(n.link) && (
+              <a className={styles.popLink} href={safeLink(n.link)!} target="_blank" rel="noopener noreferrer">
+                {t('Xem tại đây')} →
+              </a>
+            )}
             <time>{n.date}</time>
           </article>
         ))}

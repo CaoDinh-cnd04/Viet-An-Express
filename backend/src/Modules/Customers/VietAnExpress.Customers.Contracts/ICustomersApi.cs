@@ -8,6 +8,9 @@ public interface ICustomersApi
 {
     /// <param name="customerId">dbo.TCustomer.CustomerID.</param>
     Task<CustomerSummary?> GetByIdAsync(long customerId, CancellationToken cancellationToken = default);
+
+    /// <summary>Nhiều khách một lần (bỏ mã không tồn tại) — vd lấy email để gửi thông báo.</summary>
+    Task<IReadOnlyList<CustomerSummary>> GetByIdsAsync(IReadOnlyCollection<long> customerIds, CancellationToken cancellationToken = default);
 }
 
 /// <summary>Thông tin khách đủ dùng cho module khác. <see cref="Id"/> = CustomerID, cũng là CustomerID trong dbo.MaVanDon.</summary>

@@ -75,6 +75,13 @@ try
     builder.Services.AddScoped<AuditableEntityInterceptor>();
     builder.Services.AddScoped<DomainEventsInterceptor>();
 
+    // Email (Gmail SMTP — Email:UserName / Email:Password trong user-secrets) + việc nền (gửi email sau khi trả request).
+    builder.Services.Configure<EmailOptions>(builder.Configuration.GetSection(EmailOptions.Section));
+    builder.Services.AddSingleton<IEmailSender, SmtpEmailSender>();
+    builder.Services.AddSingleton<BackgroundJobQueue>();
+    builder.Services.AddSingleton<IBackgroundJobQueue>(sp => sp.GetRequiredService<BackgroundJobQueue>());
+    builder.Services.AddHostedService<BackgroundJobWorker>();
+
     builder.Services.AddMediatR(cfg =>
     {
         cfg.RegisterServicesFromAssemblies(moduleAssemblies);

@@ -56,7 +56,6 @@ src/
 | order-import | Tạo đơn từ Excel | `/orders/import` |
 | orders | Đơn hàng của tôi | `/orders` |
 | drafts | Đơn nháp & chưa in | `/drafts` |
-| pickups | Đặt lịch Pickup | `/pickups` |
 | pricing | Giá & gợi ý dịch vụ | `/pricing?tab=lookup\|tables\|manage` |
 | ecommerce | Kênh bán hàng | `/ecommerce?tab=overview\|push\|orders\|conn` |
 | troubles | Quản lý sự cố | `/troubles` (`?bill=` mở sẵn hộp báo sự cố) |

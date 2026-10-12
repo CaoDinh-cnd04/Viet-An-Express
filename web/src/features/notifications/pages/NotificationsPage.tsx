@@ -2,8 +2,9 @@ import { isNotImplemented } from '@/shared/api/http';
 import { useState } from 'react';
 import { useI18n } from '@/shared/i18n';
 import { cx } from '@/shared/lib/cx';
-import { Button, Card, EmptyState, Modal, PageHeader, StatusPill } from '@/shared/ui';
+import { Button, Card, EmptyState, ExternalLinkButton, Icon, Modal, PageHeader, StatusPill } from '@/shared/ui';
 import { useMarkAllRead, useMarkRead, useNotifications, type Notification } from '../api';
+import { safeLink } from '../lib/link';
 import styles from '../components/notifications.module.css';
 
 export default function NotificationsPage() {
@@ -63,6 +64,13 @@ export default function NotificationsPage() {
           <>
             <p className={styles.meta}>{open.date}</p>
             <div className={styles.body}>{open.body}</div>
+            {safeLink(open.link) && (
+              <div className={styles.linkRow}>
+                <ExternalLinkButton variant="primary" href={safeLink(open.link)!}>
+                  {t('Xem tại đây')} <Icon name="arrowRight" size={15} />
+                </ExternalLinkButton>
+              </div>
+            )}
           </>
         )}
       </Modal>

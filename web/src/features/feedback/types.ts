@@ -5,6 +5,14 @@ export interface FeedbackImage {
   size: number;
 }
 
+/** 1 câu trả lời khảo sát — lưu dbo.GopY.Khao_Sat (kèm nội dung câu hỏi lúc gửi). */
+export interface SurveyAnswer {
+  id: string;
+  question: string;
+  answers: string[];
+  note?: string | null;
+}
+
 /** GET /account/feedback — góp ý khách đã gửi. */
 export interface FeedbackItem {
   id: string;
@@ -16,6 +24,8 @@ export interface FeedbackItem {
   createdAt: string;
   seen: boolean;
   images: FeedbackImage[];
+  /** Câu trả lời khảo sát (rỗng nếu khách không trả lời). */
+  survey?: SurveyAnswer[];
 }
 
 /** GET /admin/feedback — góp ý của mọi khách (trang quản trị). */

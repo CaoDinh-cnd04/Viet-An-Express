@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ApiError, apiUrl, toError } from '@/shared/api/http';
 import type { AdminFeedbackDetail, AdminFeedbackItem } from '@/features/feedback/types';
+import type { TroubleStatus, TroubleTicket } from '@/features/troubles';
 
 /**
  * Trang quản trị Việt An (/admin): token riêng giữ trong sessionStorage, gửi bằng header Authorization —
@@ -87,6 +88,111 @@ export function useMarkSeen() {
   return useMutation({
     mutationFn: (id: string) => adminFetch(`/admin/feedback/${encodeURIComponent(id)}/seen`, { method: 'POST' }),
     onSuccess: () => void qc.invalidateQueries({ queryKey: adminKey })
+  });
+}
+
+/** Xóa hẳn góp ý và ảnh đính kèm — không khôi phục được. */
+export function useDeleteFeedback() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => adminFetch(`/admin/feedback/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: adminKey, exact: true })
+  });
+}
+
+/** Thông báo gửi khách — GET /admin/notifications. */
+export interface AdminNotification {
+  id: string;
+  title: string;
+  body: string;
+  link?: string | null;
+  important: boolean;
+  /** 'dd/MM/yyyy HH:mm' */
+  createdAt: string;
+  createdBy: string;
+  emailStatus: 'none' | 'sending' | 'sent' | 'partial' | 'failed' | 'no_recipients';
+  emailRecipients: number;
+  emailSent: number;
+  emailError?: string | null;
+  /** Số tài khoản (chính / con) đã đọc. */
+  readCount: number;
+}
+
+export interface NewNotification {
+  title: string;
+  body: string;
+  /** Trống = không có nút "Xem tại đây". */
+  link: string;
+  important: boolean;
+  sendEmail: boolean;
+}
+
+const notificationKey = ['admin', 'notifications'] as const;
+
+export function useAdminNotifications(enabled: boolean) {
+  return useQuery({
+    queryKey: notificationKey,
+    queryFn: async () => ((await (await adminFetch('/admin/notifications')).json()) as { data: AdminNotification[] }).data,
+    enabled,
+    // Đang gửi email ở nền → tải lại để thấy kết quả.
+    refetchInterval: q => (q.state.data?.some(n => n.emailStatus === 'sending') ? 5000 : false)
+  });
+}
+
+export function useCreateNotification() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (body: NewNotification) =>
+      ((await (await adminFetch('/admin/notifications', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      })).json()) as { message: string }).message,
+    onSuccess: () => void qc.invalidateQueries({ queryKey: notificationKey })
+  });
+}
+
+export function useDeleteNotification() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => adminFetch(`/admin/notifications/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: notificationKey })
+  });
+}
+
+/** Sự cố ở trang quản trị — GET /admin/troubles. */
+export interface AdminTrouble {
+  ticket: TroubleTicket;
+  customerCode: string;
+  companyName: string;
+  userName: string;
+  isStaff: boolean;
+  /** 'dd/MM/yyyy HH:mm' — lần trao đổi gần nhất. */
+  updatedAt: string;
+}
+
+const troubleKey = ['admin', 'troubles'] as const;
+
+export function useAdminTroubles(enabled: boolean) {
+  return useQuery({
+    queryKey: troubleKey,
+    queryFn: async () => ((await (await adminFetch('/admin/troubles')).json()) as { data: AdminTrouble[] }).data,
+    enabled,
+    refetchInterval: 60_000
+  });
+}
+
+/** Trả lời và / hoặc đổi trạng thái — khách nhận thông báo riêng trên portal. */
+export function useReplyAdminTrouble() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, reply, status }: { id: string; reply: string; status?: TroubleStatus }) =>
+      ((await (await adminFetch(`/admin/troubles/${encodeURIComponent(id)}/reply`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reply: reply.trim() || null, status: status ?? null })
+      })).json()) as { message: string; data: AdminTrouble }),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: troubleKey })
   });
 }
 

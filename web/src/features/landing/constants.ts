@@ -57,7 +57,7 @@ export const PORTAL_FEATURES: ReadonlyArray<{ icon: IconName; title: string; des
   { icon: 'upload', title: 'Tạo đơn từ Excel', desc: 'Nhập hàng loạt tới 100 đơn mỗi lần theo file mẫu có sẵn.' },
   { icon: 'printer', title: 'In bill & nhãn', desc: 'In khổ A4 hoặc A6, mã vận đơn được cấp ngay khi in.' },
   { icon: 'chart', title: 'Giá & gợi ý dịch vụ', desc: 'Tra cước theo cân và điểm đến, chọn dịch vụ phù hợp.' },
-  { icon: 'truck', title: 'Đặt lịch pickup', desc: 'Hẹn khung giờ lấy hàng tận nơi theo chi nhánh.' },
+  { icon: 'alert', title: 'Báo & theo dõi sự cố', desc: 'Báo sự cố theo mã vận đơn, trao đổi và nhận phản hồi của CS ngay trên portal.' },
   { icon: 'bag', title: 'E-commerce', desc: 'Kết nối Shopify, TikTok Shop hoặc đưa đơn E-commerce lên bằng file CSV.' }
 ];
 

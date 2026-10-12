@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useI18n } from '@/shared/i18n';
-import { Button, KeyValueList, Modal, Notice, StatusPill, TextAreaField } from '@/shared/ui';
+import { Button, KeyValueList, Modal, StatusPill, TextAreaField } from '@/shared/ui';
 import { useReplyTrouble } from '../api';
 import { TROUBLE_PRIORITY, TROUBLE_STATUS } from '../constants';
 import type { TroubleTicket } from '../types';
+import { TroubleThread } from './TroubleThread';
 import styles from './troubles.module.css';
 
-/** Chi tiết ticket: thông tin, phản hồi của CS, gửi thêm thông tin / nhắc CS / đóng ticket. */
+/** Chi tiết ticket: thông tin, lịch sử trao đổi với CS, gửi thêm thông tin / nhắc CS / đóng ticket. */
 export function TroubleDetailDialog({ ticket, onClose }: { ticket: TroubleTicket | null; onClose: () => void }) {
   const { t } = useI18n();
   const reply = useReplyTrouble();
@@ -56,8 +57,8 @@ export function TroubleDetailDialog({ ticket, onClose }: { ticket: TroubleTicket
           <p className={styles.desc}>{ticket.desc}</p>
         </section>
         <section>
-          <h4 className={styles.subTitle}>{t('Phản hồi từ CS Việt An')}</h4>
-          {ticket.reply ? <Notice tone="success">{ticket.reply}</Notice> : <p className={styles.muted}>{t('Chưa có phản hồi.')}</p>}
+          <h4 className={styles.subTitle}>{t('Trao đổi với CS Việt An')}</h4>
+          <TroubleThread messages={ticket.messages ?? []} side="customer" />
         </section>
         {!done && (
           <TextAreaField label="Gửi thêm thông tin cho CS" rows={3} value={message} onChange={e => setMessage(e.target.value)} placeholder="Bổ sung chứng từ, thay đổi yêu cầu…" />

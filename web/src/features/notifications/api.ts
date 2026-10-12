@@ -11,6 +11,8 @@ export interface Notification {
   date: string;
   /** Nội dung nhiều dòng (\n). */
   body: string;
+  /** Đường link "Xem tại đây" (http / https), không bắt buộc. */
+  link?: string | null;
 }
 
 interface NotificationListResponse {

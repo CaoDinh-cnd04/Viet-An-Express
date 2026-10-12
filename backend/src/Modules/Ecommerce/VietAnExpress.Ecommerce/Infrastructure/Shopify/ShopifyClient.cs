@@ -91,6 +91,12 @@ internal sealed class ShopifyClient(HttpClient http, IOptions<ShopifyOptions> op
                 return (orders, errors);
             }
 
+            // Có data nhưng kèm errors: thường là app chưa được duyệt "Protected customer data" → Shopify trả null cho
+            // shippingAddress / email / phone (đơn về thiếu người nhận). Ghi log để thấy lý do.
+            if (root.TryGetProperty("errors", out var partial) && partial.ValueKind == JsonValueKind.Array && partial.GetArrayLength() > 0)
+                logger.LogWarning("Shopify GraphQL trả đơn của {Shop} kèm lỗi (có thể thiếu dữ liệu người nhận): {Errors}", shop,
+                    string.Join("; ", partial.EnumerateArray().Select(x => x.TryGetProperty("message", out var m) ? m.GetString() : null).OfType<string>()));
+
             orders.AddRange(conn.Value.GetProperty("nodes").EnumerateArray().Select(n => n.Clone()));
             var info = conn.Value.GetProperty("pageInfo");
             if (!info.GetProperty("hasNextPage").GetBoolean()) break;

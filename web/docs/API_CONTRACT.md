@@ -251,18 +251,16 @@ Chủ shop gỡ app → kết nối chuyển `status: "revoked"` (frontend hiệ
 
 ---
 
-## 6. Sự cố, Pickup, Thông báo
+## 6. Sự cố, Thông báo
 
 | Method | Path | Trạng thái | Mô tả |
 |---|---|---|---|
-| GET | `/troubles` | **Chưa làm** | `TroubleTicket[]` |
-| POST | `/troubles` | **Chưa làm** | `{ bill, cnee?, ct?, type, lv: "low"\|"mid"\|"high", desc, req, contact }` |
-| POST | `/troubles/:id/reply` | **Chưa làm** | `{ reply, status? }` — khách bổ sung thông tin / nhắc CS / đóng ticket (`status: "done"`) |
-| GET | `/pickups` | **Chưa làm** | `PickupBooking[]` |
-| POST | `/pickups` | **Chưa làm** | `{ date (yyyy-mm-dd), slot, branch, address, contact, phone, pcs, weightKg?, note? }` — backend hiện chưa lưu `weightKg`, `note` |
-| GET | `/notifications` | **Chưa làm** | `{ data: Notification[], unreadCount }` — `imp: true` hiện popup khi mở portal |
-| POST | `/notifications/:id/read` | **Chưa làm** | Đánh dấu đã đọc |
-| POST | `/notifications/mark-all-read` | **Chưa làm** | Đánh dấu tất cả |
+| GET | `/troubles` | **Mới** | `{ data: TroubleTicket[] }` — 200 sự cố cập nhật gần nhất; tài khoản con chỉ thấy sự cố mình báo. `TroubleTicket` = `{ id: "TRB-12", bill, cnee, ct, type, lv, desc, req, contact, date, status, reply (phản hồi gần nhất của CS), messages: [{ from: "customer" \| "vietan", author, message, date, status? }] }`. Lưu `dbo.SuCo` + `dbo.SuCo_TraoDoi`. Quyền `account.troubles` (tài khoản con luôn có) |
+| POST | `/troubles` | **Mới** | `{ bill, cnee?, ct?, type, lv: "low"\|"mid"\|"high", desc (10–4000), req, contact }` → `{ data: TroubleTicket, message }`. `bill` phải là vận đơn của khách (VA Bill, số VA hoặc mã hãng; không có → 400 `TROUBLE_BILL_NOT_FOUND`); `cnee` / `ct` trống thì lấy từ vận đơn. Gửi email báo về hộp thư nhận (ở nền) |
+| POST | `/troubles/:id/reply` | **Mới** | `{ reply, status? }` — khách bổ sung thông tin / nhắc CS / đóng ticket (`status` chỉ nhận `"done"`). Đang `waitc` thì chuyển lại `doing`; sự cố đã `done` → 422 `TROUBLE_CLOSED` |
+| GET | `/notifications` | **Mới** | 50 thông báo mới nhất → `{ data: [{ id, imp, unread, title, date: "dd/MM/yyyy HH:mm", body, link }], unreadCount }` (`link`: nút "Xem tại đây", null nếu không có) — `imp: true` hiện popup khi mở portal. Gồm thông báo chung (`CustomerID` trống) và thông báo riêng của khách (vd phản hồi sự cố). Quyền `account.notifications` (tài khoản con luôn có). Đã đọc lưu riêng từng tài khoản (chính / con) ở `dbo.ThongBao_DaDoc` |
+| POST | `/notifications/:id/read` | **Mới** | Đánh dấu đã đọc → `{ message }`; không có → 404 `NOTIFICATION_NOT_FOUND` |
+| POST | `/notifications/mark-all-read` | **Mới** | Đánh dấu đã đọc 50 thông báo mới nhất → `{ message }` |
 
 `TroubleTicket`: `{ id, bill, cnee, ct, type, lv, desc, req, contact, date, status: "new"|"doing"|"waitc"|"done", reply? }`. Nên chuyển `reply` thành danh sách tin nhắn `messages: [{ from: "customer"|"cs", text, at }]` — frontend sẽ đổi sang hiển thị hội thoại.
 
@@ -296,7 +294,7 @@ Chủ shop gỡ app → kết nối chuyển `status: "revoked"` (frontend hiệ
 
 | Method | Path | Trạng thái | Mô tả |
 |---|---|---|---|
-| GET | `/account/staff` | Có sẵn | Quyền `account.staff`. `{ data: StaffAccount[] }` của khách đang đăng nhập |
+| GET | `/account/staff` | Có sẵn | Quyền `account.staff`. `{ data: StaffAccount[] }` của khách đang đăng nhập. `permissions` chỉ gồm quyền tài khoản chính đã chọn (không có quyền tài khoản con luôn có như `account.feedback`; gửi kèm khi tạo / sửa thì backend bỏ qua) |
 | GET | `/account/staff/permissions` | Có sẵn | `{ data: [{ code, description }] }` — quyền admin cấp được cho nhân viên (mọi quyền của khách trừ `account.*`) |
 | POST | `/account/staff` | Có sẵn | `{ userName, password, fullName, email?, phone?, permissions: string[] }` → `{ data: StaffAccount, message }`. `userName` 3–50 ký tự `[A-Za-z0-9._@-]`; mật khẩu ≥ 8 ký tự có chữ và số. Trùng tên → 409 `USERNAME_TAKEN`; quyền không cấp được → 400 `UNKNOWN_PERMISSION`; tối đa 100 tài khoản / khách |
 | PUT | `/account/staff/:id` | Có sẵn | `{ fullName, email?, phone?, permissions, active }` → `{ data: StaffAccount, message }` — `active: false` = khóa |
@@ -343,14 +341,20 @@ Liên hệ để trống thì không hiện nút trong preview. Cấu hình ản
 | Method | Path | Trạng thái | Mô tả |
 |---|---|---|---|
 | POST | `/auth/change-password` | **Mới** | `{ currentPassword, newPassword }` — sai mật khẩu hiện tại trả 400 + `message`. Quy tắc: ≥ 8 ký tự, có chữ và số. Ghi vào `dbo.TCustomer.Login_Password` (dạng như hệ thống cũ); các thiết bị khác phải đăng nhập lại |
-| GET | `/account/feedback` | **Mới** | Góp ý đã gửi (Tài khoản → Góp ý; tài khoản con chỉ thấy góp ý của mình, tối đa 50) → `[{ id, message, contact, rating, createdAt: "dd/MM/yyyy HH:mm", seen, images: [{ id, fileName, size }] }]` (`rating` 1–5 hoặc null). Quyền `account.feedback` (tài khoản con luôn có) |
-| POST | `/account/feedback` | **Mới** | `multipart/form-data`: `message` (bắt buộc, ≤ 4000), `contact?` (≤ 200), `rating?` (1–5 sao), `images` (0–5 ảnh JPG / PNG / WEBP / GIF, mỗi ảnh ≤ 5 MB; backend kiểm đầu file) → `{ data: FeedbackItem, message }`. Lưu dbo.GopY + dbo.GopY_HinhAnh |
+| GET | `/account/feedback` | **Mới** | Góp ý đã gửi (Tài khoản → Góp ý; tài khoản con chỉ thấy góp ý của mình, tối đa 50) → `[{ id, message, contact, rating, createdAt: "dd/MM/yyyy HH:mm", seen, images: [{ id, fileName, size }], survey: [{ id, question, answers: string[], note }] }]` (`rating` 1–5 hoặc null; `survey` rỗng nếu không trả lời khảo sát). Quyền `account.feedback` (tài khoản con luôn có) |
+| POST | `/account/feedback` | **Mới** | Lưu xong gửi email báo về hộp thư nhận (`Email:InboxAddress`, ở nền — lỗi email không làm hỏng việc gửi góp ý). `multipart/form-data`: `message` (≤ 4000; bắt buộc nếu không trả lời khảo sát), `contact?` (≤ 200), `rating?` (1–5 sao), `survey?` (chuỗi JSON `[{ id, question, answers, note? }]` — tối đa 30 câu, mỗi câu ≤ 10 phương án ≤ 200 ký tự, ghi chú ≤ 500; câu không chọn và không ghi chú bị bỏ; sai → 400 `FEEDBACK_SURVEY`; lưu `dbo.GopY.Khao_Sat`), `images` (0–5 ảnh JPG / PNG / WEBP / GIF, mỗi ảnh ≤ 5 MB; backend kiểm đầu file) → `{ data: FeedbackItem, message }`. Lưu dbo.GopY + dbo.GopY_HinhAnh |
 | DELETE | `/account/feedback/:id` | **Mới** | Ẩn góp ý khỏi danh sách khách (`dbo.GopY.Khach_Da_An = 1`), giữ nội dung và ảnh cho admin; tài khoản con chỉ ẩn góp ý mình gửi → `{ message }` |
 | GET | `/account/feedback/images/:id` | **Mới** | Ảnh góp ý (khách: ảnh của góp ý mình gửi; quản trị: mọi ảnh) |
 | POST | `/admin/login` | **Mới** | Trang quản trị /admin: `{ userName, password }` (tài khoản cố định trong code, chỉ lưu mã băm) → `{ data: { token, expiresAt, userName } }` — gửi lại bằng header `Authorization: Bearer`, không dùng cookie của khách |
 | GET | `/admin/feedback` | **Mới** | Góp ý mọi khách, mới nhất trước (tối đa 500) → `[{ ...FeedbackItem, customerCode, companyName, userName, isStaff }]`. Quyền `admin.feedback` (chỉ vai trò va_admin) |
 | POST | `/admin/feedback/:id/seen` | **Mới** | Đánh dấu đã xem (khách thấy "Việt An đã xem") |
-| POST | `/support/feedback` | **Chưa làm** | `multipart/form-data`: `category, subject, message, contact, attachment?` (≤ 10MB) |
+| GET | `/admin/notifications` | **Mới** | 200 thông báo chung mới nhất (không gồm thông báo riêng từ sự cố) → `[{ id, title, body, link, important, createdAt, createdBy, emailStatus, emailRecipients, emailSent, emailError, readCount }]`; `emailStatus` ∈ `none \| sending \| sent \| partial \| failed \| no_recipients`. Quyền `admin.notifications` (chỉ va_admin) |
+| POST | `/admin/notifications` | **Mới** | `{ title (≤ 200), body (≤ 4000), link? (http/https, ≤ 500 — sai → 400 `NOTIFICATION_LINK`), important, sendEmail }` → `{ data: AdminNotification, message }`. Lưu `dbo.ThongBao` (link ở cột `Duong_Dan`), hiện cho mọi khách; email kèm dòng "Xem tại đây: link". `sendEmail` → gửi email ở nền (BCC lô 50) tới email hồ sơ của khách có tài khoản portal + email tài khoản con đang hoạt động, tối đa 450 địa chỉ / lần (giới hạn Gmail); chưa cấu hình email → 400 `EMAIL_NOT_CONFIGURED` |
+| GET | `/admin/troubles` | **Mới** | 300 sự cố cập nhật gần nhất của mọi khách → `[{ ticket: TroubleTicket, customerCode, companyName, userName, isStaff, updatedAt }]`. Quyền `admin.troubles` (chỉ va_admin) |
+| POST | `/admin/troubles/:id/reply` | **Mới** | `{ reply?, status? }` (ít nhất 1; `status` ∈ `new \| doing \| waitc \| done`) → `{ data, message }`. Tạo thông báo **riêng khách đó** (`dbo.ThongBao.CustomerID`), nút "Xem tại đây" mở trang Sự cố |
+| DELETE | `/admin/notifications/:id` | **Mới** | Xóa thông báo và lượt đã đọc → `{ message }` (email đã gửi không thu hồi) |
+| DELETE | `/admin/feedback/:id` | **Mới** | Xóa hẳn góp ý: xóa dòng `dbo.GopY` và ảnh `dbo.GopY_HinhAnh` (khách cũng không còn thấy, không khôi phục được) → `{ message }`; không có → 404 `FEEDBACK_NOT_FOUND` |
+| POST | `/support/feedback` | **Mới** | Trang Trợ giúp, `multipart/form-data`: `category` (≤ 100), `subject` (5–200), `message` (20–4000), `contact` (6–200), `attachment?` (≤ 10 MB: ảnh, PDF, Excel, CSV, Word) → `{ message }`. Không lưu database: gửi email về hộp thư nhận (`Email:InboxAddress`), Reply-To = `contact` nếu là email, không thì email hồ sơ khách. Máy chủ chưa cấu hình email → 422 `EMAIL_NOT_CONFIGURED`. Quyền `account.feedback` |
 | POST | `/auth/login` | **Mới** | `{ username, password, remember }` — `username` là tên đăng nhập của khách (`dbo.TCustomer.Login_UserName`), mật khẩu so với `Login_Password`; không khớp thì thử tài khoản con của nhân viên (§7.1). Đúng: đặt cookie phiên (httpOnly; `remember: false` → cookie hết khi đóng trình duyệt) và trả `{ data: SessionUser }`. Sai: 401 + `message` |
 | GET | `/auth/session` | **Mới** | Phiên hiện tại cho web portal, **luôn 200**: đã đăng nhập → `{ data: SessionUser }`; access token hết hạn mà còn refresh cookie → làm mới (đặt lại cookie) rồi trả người dùng; chưa đăng nhập → `{ data: null }`. Frontend dùng thay `/me` để mở trang khi chưa đăng nhập không sinh lỗi 401 (Shopify review) |
 | POST | `/auth/refresh` | Có sẵn | Đổi refresh token (cookie) lấy phiên mới — frontend tự gọi 1 lần khi gặp 401 |

@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiUrl, getErrorMessage, http } from '@/shared/api/http';
 import { useToast } from '@/shared/ui';
-import type { FeedbackItem } from './types';
+import type { FeedbackItem, SurveyAnswer } from './types';
 
 const feedbackKey = ['account', 'feedback'] as const;
 
@@ -13,16 +13,17 @@ export function useMyFeedback() {
   });
 }
 
-/** Gửi góp ý: multipart (message, contact, images[]). */
+/** Gửi góp ý: multipart (message, contact, rating, survey JSON, images[]). */
 export function useSendFeedback() {
   const qc = useQueryClient();
   const toast = useToast();
   return useMutation({
-    mutationFn: (input: { message: string; contact: string; rating: number | null; images: File[] }) => {
+    mutationFn: (input: { message: string; contact: string; rating: number | null; survey: SurveyAnswer[]; images: File[] }) => {
       const form = new FormData();
       form.append('message', input.message);
       if (input.contact.trim()) form.append('contact', input.contact);
       if (input.rating) form.append('rating', String(input.rating));
+      if (input.survey.length) form.append('survey', JSON.stringify(input.survey));
       input.images.forEach(f => form.append('images', f, f.name));
       return http.post<{ message: string; data: FeedbackItem }>('/account/feedback', form);
     },

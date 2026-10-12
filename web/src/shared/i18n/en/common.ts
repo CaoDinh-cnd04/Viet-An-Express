@@ -26,7 +26,6 @@ export const common: Record<string, string> = {
   'Quản lý đơn hàng': 'Order management',
   'Đơn nháp & chưa in': 'Drafts & unprinted',
   'Đơn hàng của tôi': 'My orders',
-  'Đặt lịch Pickup': 'Schedule pickup',
   'Dịch vụ & Bán hàng': 'Services & sales',
   'Giá & gợi ý dịch vụ': 'Rates & service finder',
   'E-commerce': 'E-commerce',

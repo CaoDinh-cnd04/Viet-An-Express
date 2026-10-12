@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using VietAnExpress.Identity.Application.Dtos;
+using VietAnExpress.Identity.Contracts;
 using VietAnExpress.Identity.Domain;
 using VietAnExpress.Identity.Infrastructure;
 using VietAnExpress.SharedKernel.Application;
@@ -61,7 +62,8 @@ internal sealed class StaffHandlers(IdentityDbContext db, SessionService session
     public async Task<Result<StaffAccountDto>> Handle(CreateStaffCommand cmd, CancellationToken ct)
     {
         if (user.MainAccountCustomerId() is not { } customerId) return IdentityErrors.AdminOnly;
-        if (!PermissionsAllowed(cmd.Permissions)) return IdentityErrors.UnknownPermission;
+        var permissions = WithoutStaffAlways(cmd.Permissions);
+        if (!PermissionsAllowed(permissions)) return IdentityErrors.UnknownPermission;
 
         var userName = cmd.UserName.Trim();
         if (await UserNameTakenAsync(userName, ct)) return IdentityErrors.UserNameTaken;
@@ -69,7 +71,7 @@ internal sealed class StaffHandlers(IdentityDbContext db, SessionService session
             return IdentityErrors.TooManyStaff;
 
         var staff = new StaffAccount(customerId, userName, StaffPasswordHasher.Hash(cmd.Password), cmd.FullName, cmd.Email, cmd.Phone,
-            cmd.Permissions, Now);
+            permissions, Now);
         db.StaffAccounts.Add(staff);
         await db.SaveChangesAsync(ct);
         return ToDto(staff);
@@ -79,11 +81,12 @@ internal sealed class StaffHandlers(IdentityDbContext db, SessionService session
     {
         var found = await FindAsync(cmd.Id, ct);
         if (found.IsFailure) return found.Error;
-        if (!PermissionsAllowed(cmd.Permissions)) return IdentityErrors.UnknownPermission;
+        var permissions = WithoutStaffAlways(cmd.Permissions);
+        if (!PermissionsAllowed(permissions)) return IdentityErrors.UnknownPermission;
         var staff = found.Value;
 
         // Khóa tài khoản: phiên đang mở hết hiệu lực khi access token hết hạn (refresh bị từ chối).
-        staff.Update(cmd.FullName, cmd.Email, cmd.Phone, cmd.Permissions, cmd.Active, Now);
+        staff.Update(cmd.FullName, cmd.Email, cmd.Phone, permissions, cmd.Active, Now);
         await db.SaveChangesAsync(ct);
         return ToDto(staff);
     }
@@ -123,6 +126,10 @@ internal sealed class StaffHandlers(IdentityDbContext db, SessionService session
 
     private bool PermissionsAllowed(IEnumerable<string> permissions) => permissions.All(sessions.IsAssignable);
 
+    /// <summary>Quyền luôn có (vd gửi góp ý) không cần lưu — bỏ qua nếu client gửi kèm thay vì báo quyền không hợp lệ.</summary>
+    private static List<string> WithoutStaffAlways(IEnumerable<string> permissions) =>
+        permissions.Where(p => !IdentityPermissions.StaffAlways.Contains(p.Trim())).ToList();
+
     private StaffAccountDto ToDto(StaffAccount s) => new(
-        s.Id, s.UserName, s.FullName, s.Email, s.Phone, sessions.StaffPermissions(s), s.IsActive, s.CreateDate, s.LastLoginAt);
+        s.Id, s.UserName, s.FullName, s.Email, s.Phone, sessions.GrantedPermissions(s), s.IsActive, s.CreateDate, s.LastLoginAt);
 }

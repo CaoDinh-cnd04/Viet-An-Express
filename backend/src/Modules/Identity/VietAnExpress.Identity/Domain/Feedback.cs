@@ -9,6 +9,12 @@ internal sealed class Feedback
     public const int ImageMaxBytes = 5 * 1024 * 1024;
     public const int MinRating = 1;
     public const int MaxRating = 5;
+    public const int MaxSurveyQuestions = 30;
+    public const int SurveyIdMaxLength = 50;
+    public const int SurveyQuestionMaxLength = 300;
+    public const int MaxSurveyAnswers = 10;
+    public const int SurveyAnswerMaxLength = 200;
+    public const int SurveyNoteMaxLength = 500;
 
     /// <summary>Định dạng ảnh nhận (trình duyệt hiển thị được).</summary>
     public static readonly IReadOnlySet<string> ImageTypes =
@@ -28,6 +34,8 @@ internal sealed class Feedback
     public string? Contact { get; private set; }
     /// <summary>Khách chấm 1–5 sao (không bắt buộc).</summary>
     public int? Rating { get; private set; }
+    /// <summary>Câu trả lời khảo sát dạng JSON (<c>FeedbackSurveyAnswer[]</c>, đã kiểm tra) — null nếu khách không trả lời.</summary>
+    public string? SurveyJson { get; private set; }
     public bool IsSeen { get; private set; }
     public bool IsHiddenByCustomer { get; private set; }
     public DateTime CreateDate { get; private set; }
@@ -35,7 +43,7 @@ internal sealed class Feedback
     public List<FeedbackImage> Images { get; private set; } = [];
 
     public static Feedback Create(long customerId, string customerCode, string companyName, long? staffId, string userName,
-        string message, string? contact, int? rating, IEnumerable<FeedbackImage> images, DateTime now) => new()
+        string message, string? contact, int? rating, IEnumerable<FeedbackImage> images, DateTime now, string? surveyJson = null) => new()
     {
         CustomerId = customerId,
         CustomerCode = customerCode,
@@ -45,6 +53,7 @@ internal sealed class Feedback
         Message = message,
         Contact = string.IsNullOrWhiteSpace(contact) ? null : contact.Trim(),
         Rating = rating,
+        SurveyJson = surveyJson,
         CreateDate = now,
         Images = [.. images]
     };

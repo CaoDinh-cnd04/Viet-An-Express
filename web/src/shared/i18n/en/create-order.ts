@@ -49,6 +49,7 @@ export const createOrder: Record<string, string> = {
   'Người liên hệ (contact name)': 'Contact name',
   'Điện thoại (tel)': 'Phone',
   'Địa chỉ lấy hàng': 'Pickup address',
+  'Chưa bằng số kiện dự kiến': 'Does not match the expected number of pieces',
   'Mã số thuế / CCCD / CMND': 'Tax ID / national ID',
   'Quốc gia gửi': 'Origin country',
   'Chi nhánh gửi hàng': 'Sending branch',

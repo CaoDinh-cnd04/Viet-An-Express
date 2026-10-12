@@ -20,6 +20,7 @@ public static class ShipmentsModule
         services.AddScoped<Infrastructure.Legacy.ILegacyBillReader, Infrastructure.Legacy.LegacyBillReader>();
         services.AddScoped<ILegacyOrderNumberAllocator, LegacyOrderNumberAllocator>();
         services.AddScoped<Application.Orders.OrderAccess>();
+        services.AddScoped<IShipmentsApi, Application.ShipmentsApi>();
 
         // Tra cứu địa lý qua API ngoài (quốc gia + mã điện thoại: world-countries; mã bưu chính: GeoNames; gợi ý địa chỉ: Geoapify)
         // — có cache, timeout ngắn.

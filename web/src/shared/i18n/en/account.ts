@@ -1,4 +1,4 @@
-/** Tiếng Anh — trang chủ, tài khoản (đổi mật khẩu, API Tracking), thông báo, đặt lịch pickup. */
+/** Tiếng Anh — trang chủ, tài khoản (đổi mật khẩu, API Tracking), thông báo. */
 export const account: Record<string, string> = {
   'MyTracking cá nhân': 'Personal MyTracking',
   'Tùy chỉnh nội dung và hình ảnh trang tra cứu của bạn.': 'Customize the content and images of your tracking page.',
@@ -41,16 +41,12 @@ export const account: Record<string, string> = {
   '{n} đơn vượt ngày dự kiến': '{n} orders past the estimated date',
   'Sự cố chưa xong': 'Open issues',
   'Tra cứu giá': 'Check rates',
-  'Đặt lịch pickup': 'Schedule pickup',
   'Đơn mới nhất': 'Latest orders',
   'Xem tất cả': 'View all',
   'Chưa có đơn hàng': 'No orders yet',
   'Quan trọng': 'Important',
   'Không có thông báo mới': 'No new notifications',
-  'Pickup sắp tới': 'Upcoming pickups',
-  'Đặt lịch': 'Schedule',
   '{n} kiện': '{n} pcs',
-  'Chưa có lịch pickup chờ xác nhận.': 'No pickups awaiting confirmation.',
 
   // Đổi mật khẩu
   'Mật khẩu hiện tại': 'Current password',
@@ -99,32 +95,9 @@ export const account: Record<string, string> = {
   'Không hiện lại hôm nay': "Don't show again today",
   'Đã hiểu': 'Got it',
 
-  // Pickup
-  'Đặt lịch lấy hàng (Pickup)': 'Schedule a pickup',
-  'Nhân viên Việt An tới tận nơi lấy hàng. Bạn sẽ nhận email xác nhận lịch.':
-    'Viet An staff will collect the goods at your address. You will receive a confirmation email.',
-  'Yêu cầu lấy hàng mới': 'New pickup request',
-  'Ngày lấy hàng': 'Pickup date',
-  'Khung giờ': 'Time slot',
-  'Chọn khung giờ': 'Select a time slot',
-  'Chọn ngày': 'Select a date',
-  'Không chọn ngày trong quá khứ': 'The date cannot be in the past',
   'Địa chỉ lấy hàng': 'Pickup address',
-  'Nhập địa chỉ lấy hàng': 'Enter the pickup address',
-  'Nhập người liên hệ': 'Enter a contact person',
   'Số điện thoại': 'Phone number',
-  'Số kiện dự kiến': 'Estimated pieces',
   'Tổng số lượng dự kiến': 'Estimated total quantity',
   'kiện': 'pcs',
-  'Tổng cân dự kiến': 'Estimated total weight',
-  'Chi nhánh phụ trách': 'Handling branch',
-  'Ghi chú cho nhân viên': 'Notes for our staff',
-  'Loại hàng, lối vào kho, lưu ý…': 'Goods type, warehouse access, other notes…',
-  'Đang gửi…': 'Sending…',
-  'Gửi yêu cầu pickup': 'Send pickup request',
-  'Lịch pickup gần đây': 'Recent pickups',
-  'Chưa có lịch pickup': 'No pickups yet',
-  '{n} kiện dự kiến': '{n} pcs expected',
-  'Chờ xác nhận': 'Awaiting confirmation',
-  'Đã lấy hàng': 'Picked up'
+  'Đang gửi…': 'Sending…'
 };
