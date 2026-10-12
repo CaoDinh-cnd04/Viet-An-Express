@@ -32,7 +32,7 @@ export function Topbar({ onMenu, menuCollapsed, onStartTour }: { onMenu: () => v
     ...(user && allowed(PERMISSIONS.manageStaff) ? [{ label: 'Tài khoản nhân viên', onSelect: () => void navigate('/account/staff') }] : []),
     { label: 'Trang giới thiệu', onSelect: () => void navigate('/') },
     ...(user
-      ? [{ label: 'Đăng xuất', danger: true, onSelect: () => logout.mutate(undefined, { onSettled: () => void navigate('/login', { replace: true }) }) }]
+      ? [{ label: 'Đăng xuất', danger: true, onSelect: () => logout.mutate() }]
       : [])
   ];
 

@@ -78,12 +78,16 @@ internal sealed class AuthController(IOptions<JwtOptions> jwt) : ApiControllerBa
         return OkData<SessionUserDto?>(null);
     }
 
-    /// <summary>Xoá cookie phiên. Token không lưu DB nên không thu hồi phía server; đổi mật khẩu để huỷ mọi phiên.</summary>
+    /// <summary>
+    /// Thu hồi phiên của thiết bị này ở máy chủ (dbo.PhienThuHoi — access / refresh token của phiên bị từ chối ngay, kể cả
+    /// response làm mới phiên về muộn) rồi xoá cookie. Đổi mật khẩu để huỷ phiên trên mọi thiết bị.
+    /// </summary>
     [HttpPost("logout")]
     [AllowAnonymous]
     [ProducesResponseType<ApiMessage>(StatusCodes.Status200OK)]
-    public IActionResult Logout()
+    public async Task<IActionResult> Logout(CancellationToken ct)
     {
+        await Sender.Send(new LogoutCommand(Request.Cookies[AuthCookies.Refresh], User.FindFirst(VaClaimTypes.SessionId)?.Value), ct);
         AuthCookies.Clear(Response, jwt.Value);
         return Ok(new ApiMessage("Đã đăng xuất"));
     }

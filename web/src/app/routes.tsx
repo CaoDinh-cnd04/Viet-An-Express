@@ -1,5 +1,5 @@
 import { lazy, Suspense, type ComponentType, type LazyExoticComponent } from 'react';
-import { createBrowserRouter, Navigate, type RouteObject } from 'react-router-dom';
+import { createBrowserRouter, Navigate, useLocation, type RouteObject } from 'react-router-dom';
 import { PERMISSIONS, RequireAuth, RequirePermission } from '@/features/auth';
 import LandingPage from '@/features/landing/pages/LandingPage';
 import TrackingPage from '@/features/landing/pages/TrackingPage';
@@ -9,6 +9,12 @@ import { NotFoundPage } from './pages/NotFoundPage';
 /** Dữ liệu gắn với route — Topbar đọc `title` để hiện breadcrumb. */
 export interface RouteHandle {
   title: string;
+}
+
+/** Chuyển sang đường dẫn chuẩn, giữ nguyên query (vd ?draft=…) — cho đường dẫn cũ / gõ tay quen thuộc. */
+function RedirectKeepQuery({ to }: { to: string }) {
+  const { search, hash } = useLocation();
+  return <Navigate to={`${to}${search}${hash}`} replace />;
 }
 
 // Mỗi trang tách chunk riêng, chỉ tải khi mở.
@@ -74,6 +80,9 @@ const routes: RouteObject[] = [
       { path: 'home', element: <Navigate to="/orders" replace /> },
       { path: 'orders/new', element: create('wizard'), handle: { title: 'Tạo đơn hàng' } satisfies RouteHandle },
       { path: 'orders/new/quick', element: create('quick'), handle: { title: 'Tạo đơn 1 trang' } satisfies RouteHandle },
+      // Đường dẫn quen gõ tay — chuyển về form tạo đơn thay vì báo 404.
+      { path: 'orders/create', element: <RedirectKeepQuery to="/orders/new" /> },
+      { path: 'orders/create/quick', element: <RedirectKeepQuery to="/orders/new/quick" /> },
       page('orders/import', 'Tạo đơn từ Excel', pages.orderImport, PERMISSIONS.shipmentsCreate),
       page('orders', 'Đơn hàng của tôi', pages.orders, PERMISSIONS.shipmentsView),
       page('drafts', 'Đơn nháp & chưa in', pages.drafts, PERMISSIONS.shipmentsView),

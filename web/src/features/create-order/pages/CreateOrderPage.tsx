@@ -159,7 +159,7 @@ export default function CreateOrderPage({ mode }: { mode: CreateMode }) {
     persisting.current = true;
     const payload = buildDraftPayload(values, status);
     const onSuccess = (saved: { id: string }) => {
-      finishAutosave();
+      finishAutosave(status === 'ready' ? undefined : { keepEditing: values });
       setConfirm(null);
       toast.show(status === 'ready' ? 'Đã tạo đơn. Bấm "In & cấp bill" để cấp mã bill và in vận đơn A4.' : 'Đã lưu nháp.', 'success');
       if (status === 'ready') navigate('/drafts');

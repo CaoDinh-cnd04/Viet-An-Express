@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.JsonWebTokens;
+using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using VietAnExpress.Customers.Contracts;
 using VietAnExpress.Identity.Application;
@@ -44,7 +45,19 @@ internal sealed class IdentityFixture : IAsyncDisposable
 
     public SessionService Sessions => new(Tokens, Customers.Object, [new FakePermissions()]);
     public LoginHandler Login => new(Db, Sessions, Clock);
-    public RefreshSessionHandler Refresh => new(Db, Tokens, Sessions);
+    public RefreshSessionHandler Refresh => new(Db, Tokens, Sessions, Revocations, Microsoft.Extensions.Logging.Abstractions.NullLogger<RefreshSessionHandler>.Instance);
+    public LogoutHandler Logout => new(Tokens, Revocations, Microsoft.Extensions.Options.Options.Create(Jwt), Clock,
+        Microsoft.Extensions.Logging.Abstractions.NullLogger<LogoutHandler>.Instance);
+
+    /// <summary>Danh sách phiên đã đăng xuất dùng chung DB in-memory của fixture.</summary>
+    public SessionRevocations Revocations => _revocations ??= NewRevocations();
+    private SessionRevocations? _revocations;
+
+    /// <summary>Instance mới (như sau khi khởi động lại máy chủ) — nạp lại từ DB.</summary>
+    public SessionRevocations NewRevocations() => new(
+        new Microsoft.Extensions.DependencyInjection.ServiceCollection().AddSingleton(Db).BuildServiceProvider()
+            .GetRequiredService<Microsoft.Extensions.DependencyInjection.IServiceScopeFactory>(),
+        Clock, Microsoft.Extensions.Logging.Abstractions.NullLogger<SessionRevocations>.Instance);
     public ChangePasswordHandler ChangePassword => new(Db, Tokens, Sessions, CurrentUser.Object);
     public StaffHandlers Staff => new(Db, Sessions, CurrentUser.Object, Clock);
     public MyTrackingHandlers MyTracking => new(Db, Customers.Object, CurrentUser.Object, Clock);

@@ -52,10 +52,11 @@ public class OrderQuerySqlServerTests(SqlServerQueryFixture fixture) : IClassFix
         var counts = new Dictionary<string, int> { ["all"] = await scope.CountAsync(TestContext.Current.CancellationToken) };
         foreach (var code in LegacyOrderStatus.All)
             counts[code] = await scope.CountAsync(LegacyOrderStatus.Is(code, Today), TestContext.Current.CancellationToken);
-        var sums = await scope.GroupBy(_ => 1)
-            .Select(g => new { Pieces = g.Sum(o => o.Pieces ?? 0), Weight = g.Sum(o => o.WeightKg ?? 0) })
-            .SingleAsync(TestContext.Current.CancellationToken);
         var filtered = OrderListFilter.ApplyStatus(scope, status, Today);
+        // Tổng kiện / cân theo đúng trạng thái đang lọc (khớp danh sách đang xem).
+        var sums = await filtered.GroupBy(_ => 1)
+            .Select(g => new { Pieces = g.Sum(o => o.Pieces ?? 0), Weight = g.Sum(o => o.WeightKg ?? 0) })
+            .SingleOrDefaultAsync(TestContext.Current.CancellationToken) ?? new { Pieces = 0, Weight = 0m };
         var expectedTotal = await filtered.CountAsync(TestContext.Current.CancellationToken);
         var expectedItems = (await OrderListFilter.Sort(filtered, q.SortBy, q.SortDir).Take(3).ToListAsync(TestContext.Current.CancellationToken))
             .Select(o => LegacyOrderView.ToListDto(o, Today)).ToList();

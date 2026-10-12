@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ApiError, getErrorMessage, http, isNotImplemented } from '@/shared/api/http';
+import { ApiError, getErrorMessage, http, isNotImplemented, waitForPendingRefresh } from '@/shared/api/http';
 import { useToast } from '@/shared/ui';
 import { can } from './lib/permissions';
 import type { LoginRequest, Session, SessionUser } from './types';
@@ -43,15 +43,22 @@ export function useLogin() {
   });
 }
 
-/** Đăng xuất — xóa cookie phiên, dọn toàn bộ dữ liệu đã tải. */
+/**
+ * Đăng xuất: đợi lần làm mới phiên đang chạy xong (tránh response về muộn ghi lại cookie), máy chủ thu hồi phiên rồi xoá cookie;
+ * sau đó tải lại hẳn trang /login để xoá mọi dữ liệu còn trong bộ nhớ — bấm Back không hiện lại danh sách đơn cũ.
+ */
 export function useLogout() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: () => http.post<{ message: string }>('/auth/logout').catch(() => undefined),
+    mutationFn: async () => {
+      await waitForPendingRefresh();
+      return http.post<{ message: string }>('/auth/logout').catch(() => undefined);
+    },
     onSettled: () => {
       qc.clear();
       const session: Session = { status: 'anonymous' };
       qc.setQueryData(sessionKey, session);
+      window.location.replace('/login');
     }
   });
 }

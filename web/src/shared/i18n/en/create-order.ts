@@ -50,6 +50,8 @@ export const createOrder: Record<string, string> = {
   'Điện thoại (tel)': 'Phone',
   'Địa chỉ lấy hàng': 'Pickup address',
   'Chưa bằng số kiện dự kiến': 'Does not match the expected number of pieces',
+  'Đã khôi phục thay đổi chưa lưu của đơn nháp này.': 'Restored your unsaved changes to this draft.',
+  'Đơn nháp này không còn (đã xóa hoặc đã in bill) — chuyển sang tạo đơn mới.': 'This draft no longer exists (deleted or already billed) — switched to a new order.',
   'Mã số thuế / CCCD / CMND': 'Tax ID / national ID',
   'Quốc gia gửi': 'Origin country',
   'Chi nhánh gửi hàng': 'Sending branch',

@@ -37,6 +37,7 @@ public static class IdentityModule
         // tài khoản con + MyTracking: bảng mới dbo.TaiKhoanNhanVien, dbo.MyTrackingCauHinh (migration).
         services.AddModuleDbContext<IdentityDbContext>(configuration, IdentityDbContext.Schema);
         services.AddSingleton<ITokenService, JwtTokenService>();
+        services.AddSingleton<SessionRevocations>();
         services.AddScoped<SessionService>();
         // Chân email (tên, địa chỉ, hotline công ty) + link portal — mục cấu hình Company.
         services.AddSingleton(sp => EmailCompany.From(sp.GetRequiredService<IConfiguration>()));
@@ -61,6 +62,14 @@ public static class IdentityModule
                 bearer.Events = new JwtBearerEvents
                 {
                     // Web portal gửi token qua cookie HttpOnly; client khác gửi header Authorization.
+                    // Phiên đã đăng xuất (dbo.PhienThuHoi) → access token còn hạn cũng bị từ chối ngay.
+                    OnTokenValidated = async ctx =>
+                    {
+                        if (ctx.Principal?.FindFirst(VaClaimTypes.SessionId)?.Value is { Length: > 0 } sid
+                            && await ctx.HttpContext.RequestServices.GetRequiredService<SessionRevocations>()
+                                .IsRevokedAsync(sid, ctx.HttpContext.RequestAborted))
+                            ctx.Fail("Phiên đã đăng xuất");
+                    },
                     OnMessageReceived = ctx =>
                     {
                         if (string.IsNullOrEmpty(ctx.Token) && ctx.Request.Cookies.TryGetValue(AuthCookies.Access, out var token))

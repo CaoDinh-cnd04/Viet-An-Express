@@ -40,12 +40,14 @@ internal sealed class GetOrdersHandler(ShipmentsDbContext db, OrderAccess access
         var query = access.Apply(db.LegacyOrders.AsNoTracking(), await access.ScopeAsync(ct));
         query = OrderListFilter.Apply(query, q);
 
-        // Số đếm theo trạng thái tính trên kết quả lọc TRỪ lọc trạng thái — để số trên các tab luôn đúng.
+        // Số đếm theo trạng thái tính trên kết quả lọc TRỪ lọc trạng thái — để số trên các tab luôn đúng;
+        // tổng kiện / cân thì theo đúng trạng thái đang lọc (khớp danh sách đang xem).
         var totals = await OrderSummaryQuery.Build(query, today).FirstOrDefaultAsync(ct) ?? OrderSummaryQuery.Totals.Empty;
         var counts = totals.Counts();
         var statuses = OrderListFilter.Statuses(q.Status);
         var total = statuses.Count == 0 || statuses.Count == LegacyOrderStatus.All.Length
             ? totals.All : statuses.Sum(s => counts[s]);
+        var (pieces, weight) = totals.For(statuses);
 
         query = OrderListFilter.ApplyStatus(query, q.Status, today);
 
@@ -59,7 +61,7 @@ internal sealed class GetOrdersHandler(ShipmentsDbContext db, OrderAccess access
         return new OrderListResponse(
             items.Select(o => LegacyOrderView.ToListDto(o, today)).ToList(),
             total, page, size, (int)Math.Ceiling(total / (double)size),
-            new OrderSummaryDto(counts, totals.Pieces, totals.Weight));
+            new OrderSummaryDto(counts, pieces, weight));
     }
 }
 

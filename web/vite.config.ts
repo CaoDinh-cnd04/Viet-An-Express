@@ -16,7 +16,8 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist',
-    sourcemap: true
+    // Không xuất source map khi build production: file .map công khai làm lộ mã nguồn gốc (dev vẫn có map).
+    sourcemap: false
   },
   test: {
     environment: 'node',

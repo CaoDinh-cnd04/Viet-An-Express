@@ -193,6 +193,20 @@ try
     }
 
     app.UseCors();
+    // Dữ liệu API là dữ liệu riêng của khách: không cho trình duyệt / proxy lưu đệm (bấm Back sau đăng xuất không còn dữ liệu cũ),
+    // không cho đoán loại nội dung. Endpoint tự đặt Cache-Control (nếu có) được giữ nguyên.
+    app.Use((context, next) =>
+    {
+        context.Response.OnStarting(() =>
+        {
+            var headers = context.Response.Headers;
+            if (!headers.ContainsKey("Cache-Control")) headers.CacheControl = "no-store";
+            headers["X-Content-Type-Options"] = "nosniff";
+            headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
+            return Task.CompletedTask;
+        });
+        return next(context);
+    });
     app.UseAuthentication();
     app.UseRateLimiter();
     app.UseAuthorization();

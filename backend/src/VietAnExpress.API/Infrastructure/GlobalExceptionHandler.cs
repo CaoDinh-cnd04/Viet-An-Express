@@ -10,8 +10,20 @@ namespace VietAnExpress.API.Infrastructure;
 /// </summary>
 internal sealed class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logger) : IExceptionHandler
 {
+    /// <summary>Mã nginx "client closed request" — trình duyệt đã huỷ request (tải lại / chuyển trang), không phải lỗi máy chủ.</summary>
+    private const int ClientClosedRequest = 499;
+
     public async ValueTask<bool> TryHandleAsync(HttpContext http, Exception exception, CancellationToken cancellationToken)
     {
+        // Trình duyệt huỷ giữa chừng: SqlClient báo "Operation cancelled by user" (SqlException, không phải OperationCanceledException).
+        // Không ai nhận phản hồi — ghi Information thay vì Error 500 để log không báo lỗi giả.
+        if (http.RequestAborted.IsCancellationRequested)
+        {
+            logger.LogInformation("{Method} {Path}: trình duyệt đã huỷ request", http.Request.Method, http.Request.Path);
+            http.Response.StatusCode = ClientClosedRequest;
+            return true;
+        }
+
         var problem = ProblemDetailsMapper.FromException(http, exception);
 
         if (exception is AppException or OperationCanceledException)

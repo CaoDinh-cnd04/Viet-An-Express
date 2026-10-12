@@ -78,6 +78,11 @@ function refreshSession(): Promise<boolean> {
   return refreshing;
 }
 
+/** Đợi lần làm mới phiên đang chạy (nếu có) xong — gọi trước khi đăng xuất để response làm mới về muộn không ghi lại cookie. */
+export async function waitForPendingRefresh(): Promise<void> {
+  await refreshing;
+}
+
 /** Gọi API; gặp 401 thì làm mới phiên 1 lần rồi gọi lại (trừ các endpoint /auth/*). */
 async function send(path: string, init: RequestInit, params?: QueryParams): Promise<Response> {
   const url = buildUrl(path, params);
