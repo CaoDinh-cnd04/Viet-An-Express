@@ -17,6 +17,7 @@ dotnet ef migrations add $Name `
     --project $project `
     --startup-project (Join-Path $root 'src/VietAnExpress.API') `
     --context "${Module}DbContext" `
+    --configuration Release `
     --output-dir Infrastructure/Migrations
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 

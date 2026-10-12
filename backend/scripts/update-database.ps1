@@ -10,6 +10,7 @@ foreach ($module in @('Shipments', 'Ecommerce', 'Identity')) {  # Customers ch�
     dotnet ef database update `
         --project (Join-Path $root "src/Modules/$module/VietAnExpress.$module") `
         --startup-project (Join-Path $root 'src/VietAnExpress.API') `
-        --context "${module}DbContext"
+        --context "${module}DbContext" `
+        --configuration Release  # build Release: không đụng file Debug mà backend đang chạy khóa
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 }
