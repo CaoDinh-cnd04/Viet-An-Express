@@ -83,8 +83,7 @@ export const NAV: ReadonlyArray<NavEntry> = [
     icon: 'user',
     children: [
       { to: '/account/mytracking', label: 'MyTracking cá nhân', permission: PERMISSIONS.myTracking },
-      { to: '/account/staff', label: 'Tài khoản nhân viên', permission: PERMISSIONS.manageStaff },
-      { to: '/account/feedback', label: 'Góp ý', permission: PERMISSIONS.feedback }
+      { to: '/account/staff', label: 'Tài khoản nhân viên', permission: PERMISSIONS.manageStaff }
     ]
   }
 ];

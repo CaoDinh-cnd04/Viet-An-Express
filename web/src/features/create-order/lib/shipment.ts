@@ -1,6 +1,7 @@
 import { fill } from '@/shared/i18n';
 import { MULTI_CATEGORY, RULES } from '../constants';
 import type { CreateOrderValues, InvoiceItemValues, PackageValues } from '../schema';
+import { packageWeights, roundWeight, shipmentWeight, weightRule, type WeightService } from '@/shared/lib/shipping-weight';
 
 /** Chuỗi ô nhập → số; rỗng / sai → 0. */
 export const toNumber = (value: string | undefined): number => {
@@ -11,24 +12,28 @@ export const toNumber = (value: string | undefined): number => {
 const round = (n: number, digits = 2) => Math.round(n * 10 ** digits) / 10 ** digits;
 
 /** Trọng lượng quy đổi của một dòng kiện = D×R×C / 5000 × SL. */
-export function volumetricWeight(p: Pick<PackageValues, 'qty' | 'length' | 'width' | 'height'>): number {
-  const qty = Math.max(1, toNumber(p.qty));
-  return round((toNumber(p.length) * toNumber(p.width) * toNumber(p.height) * qty) / RULES.volumetricDivisor);
+export function volumetricWeight(p: Pick<PackageValues, 'qty' | 'length' | 'width' | 'height'>, service: WeightService = ''): number {
+  return roundWeight(packageWeights({ qty: toNumber(p.qty), length: toNumber(p.length), width: toNumber(p.width), height: toNumber(p.height), weightKg: 0 }, weightRule(service)).volume);
+}
+
+export function packageChargeableWeight(p: PackageValues, service: WeightService = ''): number {
+  return roundWeight(packageWeights({ qty: toNumber(p.qty), length: toNumber(p.length), width: toNumber(p.width), height: toNumber(p.height), weightKg: toNumber(p.weight) }, weightRule(service)).chargeable);
 }
 
 export interface PackageSummary {
   pieces: number;
   grossWeight: number;
   volumetricWeight: number;
-  /** Cân tính cước = max(cân thực, quy đổi). */
+  /** Tổng max(cân thực, quy đổi) từng kiện, làm tròn theo dịch vụ. */
   chargeableWeight: number;
 }
 
-export function summarizePackages(packages: ReadonlyArray<PackageValues>): PackageSummary {
-  const pieces = packages.reduce((s, p) => s + Math.max(0, toNumber(p.qty)), 0);
-  const grossWeight = round(packages.reduce((s, p) => s + toNumber(p.weight) * Math.max(1, toNumber(p.qty)), 0));
-  const volumetric = round(packages.reduce((s, p) => s + volumetricWeight(p), 0));
-  return { pieces, grossWeight, volumetricWeight: volumetric, chargeableWeight: Math.max(grossWeight, volumetric) };
+export function summarizePackages(packages: ReadonlyArray<PackageValues>, service: WeightService = ''): PackageSummary {
+  const rule = weightRule(service);
+  const weights = packages.map(p => packageWeights({ qty: toNumber(p.qty), length: toNumber(p.length), width: toNumber(p.width), height: toNumber(p.height), weightKg: toNumber(p.weight) }, rule));
+  return { pieces: packages.reduce((s, p) => s + Math.max(0, Math.trunc(toNumber(p.qty))), 0),
+    grossWeight: roundWeight(weights.reduce((s, w) => s + w.gross, 0)), volumetricWeight: roundWeight(weights.reduce((s, w) => s + w.volume, 0)),
+    chargeableWeight: shipmentWeight(weights.reduce((s, w) => s + w.chargeable, 0), rule) };
 }
 
 /** DocToPackRule: chứng từ vượt 2kg phải khai như hàng hóa. */
@@ -84,7 +89,7 @@ export function goodsName(v: Pick<CreateOrderValues, 'goods' | 'packages'>): str
 /** Dữ liệu gửi POST /drafts. 'ready' = đã khai đủ, chờ in; 'draft' = lưu nháp dở. */
 export function buildDraftPayload(v: CreateOrderValues, status: 'draft' | 'ready') {
   const isPack = v.shipment.type === 'PACK';
-  const weight = isPack ? summarizePackages(v.packages).chargeableWeight || toNumber(v.shipment.grossWeight) : toNumber(v.shipment.grossWeight);
+  const weight = isPack ? summarizePackages(v.packages, v.service).chargeableWeight || toNumber(v.shipment.grossWeight) : toNumber(v.shipment.grossWeight);
   return {
     stt: status,
     cnee: v.receiver.company || '(Chưa đặt tên)',

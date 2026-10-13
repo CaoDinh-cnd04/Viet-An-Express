@@ -201,7 +201,7 @@ public class SupportTests
     public async Task Gui_yeu_cau_ho_tro_xep_email_ve_hop_thu_kem_tep_va_dia_chi_tra_loi()
     {
         await using var f = new IdentityFixture();
-        var handler = new SupportHandlers(f.CurrentUser.Object, f.Customers.Object, f.Email, f.Jobs, f.Company);
+        var handler = new SupportHandlers(f.Db, f.CurrentUser.Object, f.Customers.Object, f.Email, f.Jobs, f.Company, f.Clock);
         var file = new SupportAttachment("loi.png", "image/png", [1, 2, 3]);
 
         Assert.True((await handler.Handle(Request(file), Ct)).IsSuccess);
@@ -216,12 +216,39 @@ public class SupportTests
     }
 
     [Fact]
-    public async Task Chua_cau_hinh_email_thi_bao_khach_goi_hotline()
+    public async Task Yeu_cau_ho_tro_luu_vao_gop_y_de_xem_o_trang_quan_tri()
+    {
+        await using var f = new IdentityFixture();
+        var handler = new SupportHandlers(f.Db, f.CurrentUser.Object, f.Customers.Object, f.Email, f.Jobs, f.Company, f.Clock);
+        // PNG hợp lệ (đủ chữ ký tệp) → lưu thành ảnh góp ý
+        byte[] png = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0, 0, 0, 0x0D];
+
+        Assert.True((await handler.Handle(Request(new SupportAttachment("loi.png", "image/png", png)), Ct)).IsSuccess);
+
+        var saved = Assert.Single(f.Db.Feedbacks.Include(x => x.Images));
+        Assert.StartsWith("[Hỗ trợ · Báo lỗi phần mềm] Không in được nhãn", saved.Message);
+        Assert.Contains("Bấm In & cấp bill", saved.Message);
+        Assert.Equal("khach@abc.vn", saved.Contact);
+        Assert.Equal("loi.png", Assert.Single(saved.Images).FileName);
+    }
+
+    [Fact]
+    public void Tep_khong_phai_anh_chi_ghi_ten_trong_noi_dung_gop_y()
+    {
+        var c = Request(new SupportAttachment("bang-ke.xlsx", "application/vnd.ms-excel", [1, 2, 3]));
+        Assert.False(SupportRules.IsStorableImage(c.Attachment!));
+        Assert.EndsWith("Đính kèm (xem trong email): bang-ke.xlsx", SupportRules.FeedbackMessage(c));
+    }
+
+    [Fact]
+    public async Task Chua_cau_hinh_email_van_luu_yeu_cau_o_trang_quan_tri()
     {
         await using var f = new IdentityFixture();
         f.Email.IsConfigured = false;
-        var handler = new SupportHandlers(f.CurrentUser.Object, f.Customers.Object, f.Email, f.Jobs, f.Company);
-        Assert.Equal(SupportErrors.EmailNotConfigured, (await handler.Handle(Request(), Ct)).Error);
+        var handler = new SupportHandlers(f.Db, f.CurrentUser.Object, f.Customers.Object, f.Email, f.Jobs, f.Company, f.Clock);
+
+        Assert.True((await handler.Handle(Request(), Ct)).IsSuccess);
+        Assert.Single(f.Db.Feedbacks);
         Assert.Empty(f.Jobs.Jobs);
     }
 

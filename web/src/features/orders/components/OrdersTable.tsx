@@ -8,7 +8,8 @@ import { ORDER_STATUS } from '../constants';
 import { vaTrackingLink } from '@/shared/config/domain';
 import { datePart } from '../lib/order-utils';
 import type { Order, OrderActions, OrderSortField, SortDir } from '../types';
-import { LabelButton, MoreActions, PrintButtons } from './OrderRowActions';
+import { openTroubleOf, TROUBLE_STATUS, useTroubles } from '@/features/troubles';
+import { LabelButton, PrintButtons, RowTools } from './OrderRowActions';
 import { TrackingLinks } from './TrackingLinks';
 import styles from './OrdersTable.module.css';
 
@@ -30,7 +31,8 @@ interface OrdersTableProps {
 type CopyValue = (o: Order, t: (s: string) => string) => string;
 const COPY_VALUES: ReadonlyArray<CopyValue> = [
   o => o.ref ?? '',
-  o => [o.bill, o.connect].filter(Boolean).join(' / '),
+  o => o.bill,
+  o => o.connect ?? '',
   o => [o.cnee, o.ct].filter(Boolean).join(' / '),
   (o, t) => [o.sent, t(o.route)].filter(Boolean).join(' / '),
   o => [ORDER_STATUS[o.st].label, o.pod ? `${o.pod.date} ${o.pod.time}${o.pod.signer ? `, ${o.pod.signer}` : ''}` : ''].filter(Boolean).join(' · '),
@@ -40,13 +42,14 @@ const COPY_VALUES: ReadonlyArray<CopyValue> = [
 
 /**
  * Bảng "Đơn hàng của tôi" theo bố cục hệ thống cũ (chữ / khoảng cách gọn để vừa màn hình laptop):
- * Ref No · VA Bill · Người nhận ↓ (kèm nước đến) · Ngày gửi (kèm dịch vụ) · Trạng thái / POD · Tracking · Ngày tạo · In · Nhãn A6 · thao tác.
+ * Ref No · VA Bill · Mã hãng · Người nhận ↓ (kèm nước đến) · Ngày gửi (kèm dịch vụ) · Trạng thái / POD · Tracking · Ngày tạo · In · Nhãn A6 · thao tác.
  * Cột "POD dự kiến" và "Nước đến" tạm ẩn.
  * Mũi tên ↓ ở ô Người nhận xổ người liên hệ, SĐT và địa chỉ đầy đủ (mỗi dòng xổ riêng).
  */
 const COLUMNS: ReadonlyArray<{ label: string; sort?: OrderSortField; className?: string }> = [
   { label: 'Ref No.', sort: 'ref', className: styles.colRef },
   { label: 'VA Bill', sort: 'bill', className: styles.colBill },
+  { label: 'Mã hãng', className: styles.colCarrier },
   { label: 'Người nhận', sort: 'cnee', className: styles.colCnee },
   { label: 'Ngày gửi', sort: 'sent', className: styles.colDate },
   { label: 'Trạng thái / POD', sort: 'pod', className: styles.colPod },
@@ -106,7 +109,6 @@ export function OrdersTable(props: OrdersTableProps) {
               onToggle={onToggle}
               actions={actions}
               cell={col => cells.cellProps(i, col)}
-              consumeClick={cells.consumeClick}
             />
           ))}
           {!orders.length && (
@@ -128,7 +130,6 @@ interface OrderRowProps {
   actions: OrderActions;
   /** Thuộc tính chọn ô cho cột dữ liệu thứ `col` (0 = Ref No.). */
   cell: (col: number) => ReturnType<ReturnType<typeof useCellSelection>['cellProps']>;
-  consumeClick: () => boolean;
 }
 
 /** Mũi tên ↓ xổ / thu gọn chi tiết trong ô (không mở ngăn chi tiết đơn). */
@@ -145,7 +146,7 @@ function Nil({ children = '—' }: { children?: string }) {
   return <span className={styles.nil}>{t(children)}</span>;
 }
 
-function OrderRow({ order: o, index, checked, onToggle, actions, cell, consumeClick }: OrderRowProps) {
+function OrderRow({ order: o, index, checked, onToggle, actions, cell }: OrderRowProps) {
   const { t } = useI18n();
   const status = ORDER_STATUS[o.st];
   const [showDetail, setShowDetail] = useState(false);
@@ -155,16 +156,13 @@ function OrderRow({ order: o, index, checked, onToggle, actions, cell, consumeCl
   const r = o.receiver ?? detail.data?.receiver ?? null;
   const loadingDetail = needDetail && detail.isLoading;
   const addressLines = r ? [r.addr1, r.addr2, r.addr3].filter(Boolean) : [];
+  // Sự cố chưa xong của đơn (danh sách sự cố tải 1 lần, dùng chung mọi dòng).
+  const troubles = useTroubles();
+  const trouble = openTroubleOf(troubles.data ?? [], o.bill);
 
   return (
-    <tr
-      className={cx(styles.row, checked && styles.rowChecked)}
-      onClick={e => {
-        if (consumeClick()) return; // vừa kéo chọn ô
-        if (window.getSelection()?.toString()) return; // đang bôi chữ trong ô
-        if (!(e.target as HTMLElement).closest('button, input, a')) actions.onOpen(o);
-      }}
-    >
+    // Bấm dòng không mở đơn nữa (dễ mở nhầm khi bôi chọn ô) — xem chi tiết bằng nút con mắt cuối dòng.
+    <tr className={cx(styles.row, checked && styles.rowChecked)}>
       <td className={styles.colCheck}>
         <div className={styles.no}>{index}</div>
         <input type="checkbox" aria-label={t('Chọn đơn {bill}', { bill: o.bill })} checked={checked} onChange={() => onToggle(o.bill)} />
@@ -172,14 +170,16 @@ function OrderRow({ order: o, index, checked, onToggle, actions, cell, consumeCl
       <td className={styles.colRef} {...cell(0)}>{o.ref ? <span className="tabular">{o.ref}</span> : null}</td>
       <td className={styles.colBill} {...cell(1)}>
         <div className={styles.bill}>{o.bill}</div>
-        {o.connect && (
-          <div className={styles.carrierNo} title={t('Mã tracking hãng / last-mile')}>
-            <span className={styles.carrierLabel}>{t('Mã hãng')}</span>
-            <span className={styles.connect}>{o.connect}</span>
+        {trouble && (
+          <div className={styles.troubleTag} title={t('Sự cố {id}: {type} — bấm biểu tượng con mắt để xem', { id: trouble.id, type: t(trouble.type) })}>
+            <Icon name="alert" size={12} /> {t('Sự cố')} · {t(TROUBLE_STATUS[trouble.status].label)}
           </div>
         )}
       </td>
-      <td className={styles.colCnee} {...cell(2)}>
+      <td className={styles.colCarrier} {...cell(2)} title={o.connect ? t('Mã tracking hãng / last-mile') : undefined}>
+        {o.connect && <span className={styles.connect}>{o.connect}</span>}
+      </td>
+      <td className={styles.colCnee} {...cell(3)}>
         <div className={styles.expandLine}>
           <span className={styles.cnee}>{o.cnee}</span>
           <ExpandButton open={showDetail} label={t('Xem liên hệ, địa chỉ người nhận')} onToggle={() => setShowDetail(v => !v)} />
@@ -199,11 +199,11 @@ function OrderRow({ order: o, index, checked, onToggle, actions, cell, consumeCl
           </div>
         )}
       </td>
-      <td className={styles.colDate} {...cell(3)}>
+      <td className={styles.colDate} {...cell(4)}>
         {o.sent ? <div className="tabular">{o.sent}</div> : <Nil>{'Chưa gửi'}</Nil>}
         {o.route && <div className={styles.route}>{t(o.route)}</div>}
       </td>
-      <td className={styles.colPod} {...cell(4)}>
+      <td className={styles.colPod} {...cell(5)}>
         <StatusPill tone={status.tone}>{status.label}</StatusPill>
         {o.pod ? (
           <>
@@ -215,16 +215,16 @@ function OrderRow({ order: o, index, checked, onToggle, actions, cell, consumeCl
           </>
         ) : null}
       </td>
-      <td className={styles.colTracking} {...cell(5)}><TrackingLinks bill={o.bill} /></td>
-      <td className={styles.colCreated} {...cell(6)}>
-        <div className="tabular">
-          {datePart(o.created)} ({t(o.pcs)})
-        </div>
-        <div>{o.content}</div>
+      <td className={styles.colTracking} {...cell(6)}><TrackingLinks bill={o.bill} /></td>
+      <td className={styles.colCreated} {...cell(7)}>
+        {/* 3 dòng: ngày tạo · kiện, cân · tên hàng */}
+        <div className="tabular">{datePart(o.created)}</div>
+        <div className={styles.pcs}>{t(o.pcs)}</div>
+        {o.content && <div className={styles.content}>{o.content}</div>}
       </td>
       <td className={styles.colPrint}><PrintButtons order={o} /></td>
       <td className={styles.colLabel}><LabelButton order={o} /></td>
-      <td className={styles.colMore}><MoreActions order={o} actions={actions} /></td>
+      <td className={styles.colMore}><RowTools order={o} actions={actions} /></td>
     </tr>
   );
 }

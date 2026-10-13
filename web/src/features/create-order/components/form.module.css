@@ -166,6 +166,11 @@
   text-align: right;
 }
 
+/* Tiêu đề cột Quy đổi / Tính cước canh phải cho thẳng với số bên dưới */
+.computedHeader {
+  text-align: right !important;
+}
+
 /* Ô số trong bảng invoice (ô chữ có bàn phím số — cellNavigation.decimalField): canh phải. */
 .invoiceTable input[inputmode] {
   text-align: right;
@@ -894,6 +899,14 @@
   font-size: var(--text-xs);
   color: var(--color-text-faint);
   white-space: nowrap;
+}
+
+.weightRuleHint {
+  font-size: var(--text-xs);
+  color: var(--color-text-faint);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+  margin: var(--space-2) 0 0;
 }
 
 /* Phí của từng tùy chọn dịch vụ (bên phải dòng) */

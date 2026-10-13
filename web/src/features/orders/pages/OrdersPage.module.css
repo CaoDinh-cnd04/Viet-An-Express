@@ -1,3 +1,13 @@
+/* Khung chung: tab trạng thái + tổng + thao tác, bộ lọc */
+.panel {
+  margin-bottom: var(--space-3);
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
+}
+
 .footer {
   display: flex;
   align-items: center;

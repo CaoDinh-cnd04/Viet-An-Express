@@ -11,13 +11,15 @@ interface CardProps {
   className?: string;
   /** Bỏ padding thân — dùng cho bảng tràn viền. */
   flush?: boolean;
+  /** Tiêu đề nổi bật (chữ màu) — cho các khung của form dài, dễ nhận ra từng mục. */
+  accent?: boolean;
   children: ReactNode;
 }
 
-export function Card({ title, subtitle, actions, className, flush, children }: CardProps) {
+export function Card({ title, subtitle, actions, className, flush, accent, children }: CardProps) {
   const tr = useTranslateNode();
   return (
-    <section className={cx(styles.card, className)}>
+    <section className={cx(styles.card, accent && styles.accent, className)}>
       {(title || actions) && (
         <header className={styles.header}>
           {title && (

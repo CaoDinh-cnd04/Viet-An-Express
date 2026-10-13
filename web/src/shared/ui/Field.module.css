@@ -1,6 +1,6 @@
 .grid {
   display: grid;
-  gap: var(--space-3) var(--space-3);
+  gap: var(--form-row-gap, var(--space-3)) var(--form-col-gap, var(--space-3));
 }
 
 .cols2 {
@@ -33,7 +33,7 @@
 }
 
 .label {
-  font-size: var(--text-sm);
+  font-size: var(--field-label-size, var(--text-sm));
   font-weight: 500;
   color: var(--color-text);
 }
@@ -60,7 +60,7 @@
   border: 1px solid var(--color-border-strong);
   border-radius: var(--radius-sm);
   background: var(--color-surface);
-  font-size: var(--text-md);
+  font-size: var(--field-input-size, var(--text-md));
   transition: border-color 0.12s, box-shadow 0.12s;
 }
 

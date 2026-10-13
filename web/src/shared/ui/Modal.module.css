@@ -66,6 +66,21 @@
   width: min(1120px, calc(100vw - 32px));
 }
 
+/* Gần toàn màn hình: tra cứu nhiều kết quả, đỡ phải cuộn */
+.full {
+  width: min(1320px, calc(100vw - 32px));
+  max-height: 94vh;
+}
+
+.full .box {
+  height: 94vh;
+  max-height: 94vh;
+}
+
+.full .body {
+  flex: 1;
+}
+
 .footerNote {
   margin-right: auto;
   align-self: center;

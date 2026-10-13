@@ -39,7 +39,6 @@ export function Sidebar({ collapsed, peek, mobileOpen, onNavigate, onExpand, onH
         <img src="/logo.webp" alt="" className={styles.logo} />
         <div className={styles.brandText}>
           <div className={styles.brandName}>Việt An Express</div>
-          <div className={styles.brandSub}>{t('Portal khách hàng')}</div>
         </div>
       </div>
 
@@ -49,7 +48,7 @@ export function Sidebar({ collapsed, peek, mobileOpen, onNavigate, onExpand, onH
             if (!allowed(entry.permission)) return null;
             return (
               <NavLink key={entry.to} to={entry.to} end onClick={onNavigate} className={({ isActive: a }) => cx(styles.item, styles.top, a && styles.active)} title={t(entry.label)} data-tour={`nav-${entry.to.slice(1)}`}>
-                <Icon name={entry.icon} className={styles.icon} />
+                <Icon name={entry.icon} size={16} className={styles.icon} />
                 <span className={styles.label}>{t(entry.label)}</span>
               </NavLink>
             );
@@ -74,7 +73,7 @@ export function Sidebar({ collapsed, peek, mobileOpen, onNavigate, onExpand, onH
                   } else setOpenGroups(g => ({ ...g, [entry.id]: !open }));
                 }}
               >
-                <Icon name={entry.icon} className={styles.icon} />
+                <Icon name={entry.icon} size={16} className={styles.icon} />
                 <span className={styles.label}>{t(entry.label)}</span>
                 <span className={styles.short} aria-hidden="true">{t(entry.short)}</span>
                 {!open && groupCount > 0 && <span className={styles.badge}>{groupCount}</span>}

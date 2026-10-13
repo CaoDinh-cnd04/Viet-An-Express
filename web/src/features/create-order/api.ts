@@ -4,6 +4,7 @@ import type { AddressSuggestion, Country, PostalSuggestion } from './lib/geo';
 import type { RecentReceiver } from './lib/recent-receivers';
 import type { RecentSender } from './lib/recent-senders';
 import type { RemoteAreaHit } from './lib/remote-area';
+import type { InvoiceItemValues } from './schema';
 
 /** Nhóm hàng hóa (dbo.NhomHangHoa). */
 export interface Category {
@@ -176,6 +177,46 @@ export function useRecentInvoices(enabled: boolean) {
     enabled,
     retry: false
   });
+}
+
+/** 1 mặt hàng trong tra cứu mã HS theo nước nhập khẩu — GET /catalog/hs-lookup. */
+export interface HsLookupItem {
+  nameVi: string;
+  nameEn: string;
+  /** 6 số quốc tế. */
+  hs6: string;
+  /** Mã quốc gia đầy đủ (US 10 số HTSUS, UK 10 số, AU 8/10 số) — null nếu chưa có. */
+  nationalCode?: string | null;
+  /** Mô tả dòng mã trong biểu thuế của nước đó. */
+  nationalDescription?: string | null;
+  /** Ghi chú của Việt An (chất liệu, quy cách đóng gói ảnh hưởng mã…). */
+  note?: string | null;
+}
+
+/**
+ * Tra mã HS đã xác minh theo nước nhập khẩu (`mode=verified`: mặt hàng Việt An đã gửi thực tế;
+ * `mode=catalog`: tra danh mục mã của biểu thuế nước đó). Endpoint mới — API_CONTRACT §3; chưa có thì UI dùng dữ liệu HS6 sẵn có.
+ */
+export function useHsLookup(country: string, query: string, mode: 'verified' | 'catalog') {
+  return useQuery({
+    queryKey: ['catalog', 'hs-lookup', country, mode, query],
+    queryFn: () => http.get<{ data: HsLookupItem[] }>('/catalog/hs-lookup', { country, q: query, mode }).then(r => r.data),
+    enabled: query.trim().length >= 2,
+    staleTime: 10 * 60_000,
+    retry: false
+  });
+}
+
+/** File Excel mẫu invoice (Mau_Import_Invoice.xlsx) — tải từ nút "Tải file mẫu" ở khung Hỗ trợ khách hàng. */
+export const INVOICE_TEMPLATE_URL = '/templates/Mau_Import_Invoice.xlsx';
+
+/** Đọc file Excel invoice ở backend (ClosedXML) → dòng hàng + dòng lỗi. POST /invoices/import (multipart `file`), không lưu gì. */
+export function importInvoiceFile(file: File) {
+  const form = new FormData();
+  form.append('file', file, file.name);
+  return http
+    .post<{ data: { items: InvoiceItemValues[]; skipped: string[] }; message?: string }>('/invoices/import', form)
+    .then(r => r.data);
 }
 
 const ONE_DAY = 24 * ONE_HOUR;

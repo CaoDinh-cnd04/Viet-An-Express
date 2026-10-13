@@ -1,7 +1,8 @@
 import type { CargoType } from '@/shared/config/domain';
 
 /** Trạng thái đơn — hợp đồng API: docs/API_CONTRACT.md §1. */
-export type OrderStatus = 'wait' | 'fly' | 'nd' | 'ok' | 'late';
+/** Nhóm lọc trạng thái (có thể trùng nhau): wait = chưa có ngày gửi · fly = có ngày gửi · nd = chưa có POD · ok = có POD. */
+export type OrderStatus = 'wait' | 'fly' | 'nd' | 'ok';
 
 export interface OrderPod {
   date: string;
@@ -28,6 +29,8 @@ export interface Order {
   st: OrderStatus;
   /** VD '7 kiện · 164.5 kg' */
   pcs: string;
+  /** Cân tính cước tổng đã ghi vào đơn, bao gồm làm tròn tổng lô. */
+  chargeableWeight?: number | null;
   content: string;
   pod?: OrderPod | null;
   /** Ngày giao dự kiến do hệ thống cũ ghi (POD_Est), 'dd/mm/yyyy'. */
@@ -130,6 +133,9 @@ export interface OrderPackage {
   width: number;
   height: number;
   weightKg: number;
+  /** Tổng cân quy đổi/tính cước của cả dòng đã lưu; không tính lại từ kích thước làm tròn. */
+  volumetricWeight?: number | null;
+  chargeableWeight?: number | null;
 }
 
 export interface OrderInvoiceItem {

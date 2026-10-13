@@ -1,6 +1,8 @@
 import { fill } from '@/shared/i18n';
 import { parseCsv } from '@/shared/lib/files';
-import { normalizeUnit } from './units';
+import { normalizeUnit, qtyError } from './units';
+import { hasMaxDecimals } from './cell-nav';
+import { RULES } from '../constants';
 import type { InvoiceItemValues } from '../schema';
 
 /** Cột file mẫu import dòng invoice. Đổi cột: sửa ở đây. */
@@ -37,7 +39,10 @@ export function parseInvoiceCsv(text: string): InvoiceImportResult {
     if (!item.descEn) return skipped.push(fill('Dòng {line}: thiếu DescriptionEN', { line }));
     if (!(Number(item.qty) > 0)) return skipped.push(fill('Dòng {line}: Qty không hợp lệ', { line }));
     if (item.price === '' || !(Number(item.price) >= 0)) return skipped.push(fill('Dòng {line}: UnitPrice không hợp lệ', { line }));
-    items.push({ ...item, origin: item.origin || 'VN', unit: normalizeUnit(item.unit) });
+    if (!hasMaxDecimals(item.price, RULES.priceDecimals)) return skipped.push(fill('Dòng {line}: UnitPrice tối đa 2 số lẻ', { line }));
+    const unit = normalizeUnit(item.unit);
+    if (qtyError(item.qty, unit)) return skipped.push(fill('Dòng {line}: Qty phải là số nguyên với ĐVT {unit}', { line, unit }));
+    items.push({ ...item, origin: item.origin || 'VN', unit });
   });
 
   return { items, skipped };

@@ -26,7 +26,7 @@ export function ShipmentSection({ onShipmentInput, onTypeChange, docConverted }:
   const type = useWatch({ control, name: 'shipment.type' });
 
   return (
-    <Card title="Thông tin đơn hàng" subtitle={lang === 'vi' ? '(Info shipment)' : undefined}>
+    <Card accent title="Thông tin đơn hàng" subtitle={lang === 'vi' ? '(Info shipment)' : undefined}>
       <div className={styles.typeRow}>
         <span className={styles.typeLabel}>{t('Loại hàng')} <span className={styles.required}>*</span></span>
         <Controller

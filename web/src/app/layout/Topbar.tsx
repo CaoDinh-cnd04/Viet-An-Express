@@ -1,21 +1,23 @@
-import { Link, useMatches, useNavigate } from 'react-router-dom';
+import { useMatches, useNavigate } from 'react-router-dom';
 import { initialsOf, PERMISSIONS, useCan, useLogout, useSession } from '@/features/auth';
+import { NotificationBell } from '@/features/notifications';
 import { useI18n } from '@/shared/i18n';
 import { useTheme } from '@/shared/lib/useTheme';
 import { DropdownMenu, Icon, type MenuItem } from '@/shared/ui';
 import type { RouteHandle } from '../routes';
-import { useNavBadges } from './useNavBadges';
 import styles from './Topbar.module.css';
 
 /** Mac dùng ⌘, máy khác dùng Ctrl cho phím tắt thu gọn menu. */
 const MOD_KEY = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform) ? '⌘' : 'Ctrl';
+
+/** Tên ngôn ngữ hiện bằng chính ngôn ngữ đó (không dịch). */
+const LANG_NAMES = { vi: 'Tiếng Việt', en: 'English' } as const;
 
 export function Topbar({ onMenu, menuCollapsed, onStartTour }: { onMenu: () => void; menuCollapsed: boolean; onStartTour: () => void }) {
   const matches = useMatches();
   const title = [...matches].reverse().map(m => (m.handle as RouteHandle | undefined)?.title).find(Boolean) ?? '';
   const { theme, toggle } = useTheme();
   const { t, lang, setLang } = useI18n();
-  const { notifications } = useNavBadges();
   const session = useSession();
   const logout = useLogout();
   const navigate = useNavigate();
@@ -53,29 +55,32 @@ export function Topbar({ onMenu, menuCollapsed, onStartTour }: { onMenu: () => v
         </span>
       </button>
       <nav className={styles.crumb} aria-label="Breadcrumb">
-        <span>{t('Portal khách hàng')}</span>
-        {title && <><span aria-hidden="true">/</span><strong>{t(title)}</strong></>}
+        {title && <strong>{t(title)}</strong>}
       </nav>
       <div className={styles.right}>
-        <div className={styles.lang} role="group" aria-label={t('Ngôn ngữ')}>
-          {(['vi', 'en'] as const).map(l => (
-            <button key={l} type="button" className={l === lang ? styles.langOn : undefined} aria-pressed={l === lang} onClick={() => setLang(l)}>
-              {l.toUpperCase()}
+        {/* Ngôn ngữ: nút quả địa cầu + tên ngôn ngữ đang dùng, bấm mở menu chọn */}
+        <DropdownMenu
+          items={(['vi', 'en'] as const).map(l => ({ label: LANG_NAMES[l], onSelect: () => setLang(l) }))}
+          trigger={({ open, toggle: toggleLang }) => (
+            <button type="button" className={styles.langBtn} onClick={toggleLang} aria-expanded={open} aria-haspopup="menu" aria-label={t('Ngôn ngữ')}>
+              <Icon name="globe" size={15} />
+              <span className={styles.langName}>{LANG_NAMES[lang]}</span>
+              <Icon name="chevronDown" size={14} />
             </button>
-          ))}
-        </div>
+          )}
+        />
         <button type="button" className={styles.iconBtn} onClick={toggle} aria-label={t(theme === 'dark' ? 'Chuyển giao diện sáng' : 'Chuyển giao diện tối')}>
           <Icon name={theme === 'dark' ? 'sun' : 'moon'} size={16} />
         </button>
-        <Link to="/notifications" className={styles.iconBtn} data-tour="notifications" aria-label={notifications ? t('Thông báo, {n} chưa đọc', { n: notifications }) : t('Thông báo')}>
-          <Icon name="bell" size={16} />
-          {notifications > 0 && <span className={styles.dot}>{notifications}</span>}
-        </Link>
+        {/* Chuông: bấm mở popup danh sách thông báo */}
+        <NotificationBell className={styles.iconBtn} badgeClassName={styles.dot} />
         <DropdownMenu
           items={menu}
           trigger={({ open, toggle }) => (
-            <button type="button" className={styles.avatar} data-tour="account" onClick={toggle} aria-expanded={open} aria-haspopup="menu" aria-label={t('Tài khoản')} title={accountLabel}>
-              {initials || <Icon name="user" size={16} />}
+            <button type="button" className={styles.account} data-tour="account" onClick={toggle} aria-expanded={open} aria-haspopup="menu" aria-label={t('Tài khoản')} title={accountLabel}>
+              <span className={styles.avatar}>{initials || <Icon name="user" size={15} />}</span>
+              {accountLabel && <span className={styles.accountName}>{accountLabel}</span>}
+              <Icon name="chevronDown" size={14} />
             </button>
           )}
         />

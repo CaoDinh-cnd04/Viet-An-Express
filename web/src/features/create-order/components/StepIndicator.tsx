@@ -12,30 +12,38 @@ export interface StepSection {
 
 interface StepIndicatorProps {
   steps: ReadonlyArray<WizardStep>;
-  /** Các khung con của từng bước (cùng thứ tự với `steps`). */
-  sections: ReadonlyArray<ReadonlyArray<StepSection>>;
+  /** Không còn hiện khung con (chỉ hiện bước chính) — giữ để trang gọi không phải đổi. */
+  sections?: ReadonlyArray<ReadonlyArray<StepSection>>;
   /** Bước đang làm / đang xem. */
   current: number;
-  /** Khung đang xem (theo vị trí cuộn). */
   activeSection?: string;
   onSelectStep: (step: number) => void;
-  onSelectSection: (step: number, sectionId: string) => void;
-  /** Hiện dấu tích ở bước đã qua (từng bước). Tạo đơn 1 trang tắt đi — chỉ đánh dấu phần đang xem. */
+  onSelectSection?: (step: number, sectionId: string) => void;
+  /** Hiện dấu tích ở bước đã xong. */
   showDone?: boolean;
+  /** Bước nào đã điền đủ các trường bắt buộc (theo kiểm tra form) — quyết định "Đã xong" / "Còn thiếu" và thanh tiến độ. */
+  completed?: ReadonlyArray<boolean>;
 }
 
+/** Nhãn trạng thái dưới mỗi bước: xong = đủ trường bắt buộc; còn thiếu = đã qua nhưng chưa đủ. */
+const STATE_LABEL = { passed: 'Đã xong', active: 'Đang điền', missing: 'Còn thiếu', todo: 'Chưa làm' } as const;
+
 /**
- * Dòng thời gian dọc các bước tạo đơn: vòng số nối nhau bằng 1 đường dọc (phần đã qua tô màu),
- * dưới mỗi bước là các khung con để nhảy tới. Trang tạo đơn ghim nó theo khi cuộn, trải hết chiều cao màn hình.
+ * Dòng thời gian dọc các bước tạo đơn (cao vừa nội dung): mỗi bước có tên, mô tả
+ * và trạng thái (Đã xong / Đang điền / Chưa làm); đáy khung là thanh tiến độ.
+ * Bấm bước để chuyển bước (từng bước) hoặc cuộn tới phần đó (1 trang).
  */
-export function StepIndicator({ steps, sections, current, activeSection, onSelectStep, onSelectSection, showDone = true }: StepIndicatorProps) {
+export function StepIndicator({ steps, current, onSelectStep, showDone = true, completed = [] }: StepIndicatorProps) {
   const { t } = useI18n();
+  const doneCount = steps.filter((_, i) => completed[i] === true).length;
   return (
     <nav className={styles.panel} aria-label={t('Các bước tạo đơn')}>
       <ol className={styles.timeline}>
         {steps.map((s, i) => {
-          const state = i === current ? 'active' : i < current ? 'passed' : 'todo';
-          const done = showDone && i < current;
+          // Trạng thái theo dữ liệu thật: bước đang xem = Đang điền; bước khác đủ trường = Đã xong, đã qua mà thiếu = Còn thiếu
+          const complete = completed[i] === true;
+          const state = i === current ? 'active' : complete ? 'passed' : i < current ? 'missing' : 'todo';
+          const done = showDone && complete && i !== current;
           return (
             <li key={s.title} className={cx(styles.step, styles[state])}>
               <button type="button" className={styles.head} onClick={() => onSelectStep(i)} aria-current={state === 'active' ? 'step' : undefined}>
@@ -43,28 +51,19 @@ export function StepIndicator({ steps, sections, current, activeSection, onSelec
                 <span className={styles.text}>
                   <strong>{t(s.title)}</strong>
                   <small>{t(s.description)}</small>
+                  <span className={styles.state}>{t(STATE_LABEL[state])}</span>
                 </span>
               </button>
-              {(sections[i]?.length ?? 0) > 0 && (
-                <ul className={styles.subs}>
-                  {sections[i]!.map(sec => (
-                    <li key={sec.id}>
-                      <button
-                        type="button"
-                        className={cx(styles.sub, sec.id === activeSection && styles.subActive)}
-                        aria-current={sec.id === activeSection ? 'location' : undefined}
-                        onClick={() => onSelectSection(i, sec.id)}
-                      >
-                        {t(sec.label)}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
             </li>
           );
         })}
       </ol>
+      <div className={styles.progress}>
+        <span>{t('Hoàn thành {done}/{total} bước', { done: doneCount, total: steps.length })}</span>
+        <span className={styles.track} aria-hidden="true">
+          <i style={{ width: `${Math.max(4, (doneCount / steps.length) * 100)}%` }} />
+        </span>
+      </div>
     </nav>
   );
 }

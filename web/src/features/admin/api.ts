@@ -26,7 +26,7 @@ function setAdminToken(token: string | null) {
   }
 }
 
-async function adminFetch(path: string, init: RequestInit = {}): Promise<Response> {
+export async function adminFetch(path: string, init: RequestInit = {}): Promise<Response> {
   const token = getAdminToken();
   const res = await fetch(apiUrl(path), {
     ...init,

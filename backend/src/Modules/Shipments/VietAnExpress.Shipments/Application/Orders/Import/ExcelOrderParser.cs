@@ -31,6 +31,9 @@ internal static partial class ExcelOrderParser
     public const int AddressMax = 30;
     public const int DescriptionMax = 50;
     public const int MaxProducts = 50;
+
+    /// <summary>ĐVT có sẵn của portal (đếm được) — số lượng phải là số nguyên; khớp PRESET_UNITS ở frontend (lib/units.ts).</summary>
+    private static readonly IReadOnlySet<string> CountableUnits = new HashSet<string>(StringComparer.Ordinal) { "PCS", "SET", "BOX", "BAG" };
     public const int MaxPackageLines = 20;
 
     /// <summary>Cột phải có trong dòng tiêu đề — thiếu thì báo file sai mẫu, không xét từng dòng.</summary>
@@ -104,7 +107,7 @@ internal static partial class ExcelOrderParser
 
         // ---------- Kiện hàng ----------
         var packages = new List<OrderPayload.PackagePart>();
-        decimal gross = 0, volumetric = 0;
+        decimal gross = 0;
         var pieces = 0;
         foreach (var n in Indexes(row, "qty_pack_", "pack_type_", "l_", "w_", "h_", "gw_"))
         {
@@ -120,7 +123,6 @@ internal static partial class ExcelOrderParser
             var count = (int)qty;
             pieces += count;
             gross += gw;
-            volumetric += count * l * w * h / ShippingRules.VolumetricDivisor;
             // GW_n là tổng cân của dòng kiện; form đơn lưu cân 1 kiện.
             packages.Add(new OrderPayload.PackagePart
             {
@@ -143,8 +145,12 @@ internal static partial class ExcelOrderParser
         {
             if (n > MaxProducts) { errors.Add($"Tối đa {MaxProducts} mặt hàng"); break; }
             if (row[$"product_en_{n}"].Length == 0) errors.Add($"Thiếu Product_en_{n}");
-            var qty = Number(row, $"qty_{n}", errors, required: true);
+            // ĐVT có sẵn (đếm được) → số lượng phải là số nguyên; ĐVT khác (KG, M…) được số thực.
+            var unit = Coalesce(row[$"unit_{n}"], "PCS").ToUpperInvariant();
+            var qty = Number(row, $"qty_{n}", errors, required: true, integer: CountableUnits.Contains(unit));
             var price = Number(row, $"unit_price_{n}", errors, required: true, allowZero: true);
+            // Đơn giá invoice quốc tế chỉ 2 số lẻ.
+            if (decimal.Round(price, 2) != price) errors.Add($"Unit_Price_{n} \"{row[$"unit_price_{n}"]}\" tối đa 2 số lẻ");
             var hs = row[$"hs_code_{n}"].Replace(".", "").Replace(" ", "");
             if (hs.Length > 0 && !HsCodePattern().IsMatch(hs)) errors.Add($"HS_Code_{n} \"{row[$"hs_code_{n}"]}\" phải gồm 6, 8 hoặc 10 chữ số");
             var origin = row[$"org_country_{n}"].ToUpperInvariant();
@@ -154,7 +160,7 @@ internal static partial class ExcelOrderParser
             {
                 DescEn = row[$"product_en_{n}"], DescVi = row[$"product_vn_{n}"], Manufacturer = row[$"manufacturer_{n}"],
                 Origin = origin.Length > 0 ? origin : "VN", Hs = hs, Qty = Text(qty),
-                Unit = Coalesce(row[$"unit_{n}"], "PCS").ToUpperInvariant(), Price = Text(price)
+                Unit = unit, Price = Text(price)
             });
         }
         if (!isDoc && items.Count == 0) errors.Add("Hàng hoá (Type P) cần ít nhất 1 sản phẩm: Product_en_1, Qty_1, Unit_Price_1");
@@ -191,7 +197,7 @@ internal static partial class ExcelOrderParser
         return new ImportedRow(row.Line, payload, errors.Distinct().ToList(), warnings)
         {
             GrossKg = ShippingRules.Round(gross),
-            ChargeableKg = ShippingRules.Round(isDoc ? gross : ShippingRules.ChargeableWeight(gross, volumetric)),
+            ChargeableKg = isDoc ? ShippingRules.Round(gross) : ShippingRules.Round(LegacyOrderFactory.ChargeableWeight(packages, gross, service, hub)),
             Value = ShippingRules.Round(value),
             CountryCode = country?.Code ?? code
         };

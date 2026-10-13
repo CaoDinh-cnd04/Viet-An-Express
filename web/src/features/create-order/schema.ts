@@ -2,7 +2,8 @@ import { z } from 'zod';
 import { fill } from '@/shared/i18n';
 import { isPhone, PHONE_MESSAGE } from '@/shared/lib/phone';
 import { DEFAULT_SERVICE, MULTI_CATEGORY, RULES } from './constants';
-import { DEFAULT_UNIT, UNIT_MAX } from './lib/units';
+import { DEFAULT_UNIT, qtyError, UNIT_MAX } from './lib/units';
+import { hasMaxDecimals } from './lib/cell-nav';
 import { euCountryCode } from '@/shared/config/eu';
 import { EORI_MESSAGE, IOSS_MESSAGE, validateEoriNo, validateIossNo } from './lib/eu-tax';
 
@@ -157,10 +158,12 @@ export const createOrderSchema = z
     v.invoice.items.forEach((it, i) => {
       if (!it.descEn.trim()) issue(['invoice', 'items', i, 'descEn'], 'Nhập tên hàng (EN)');
       if (!it.descVi.trim()) issue(['invoice', 'items', i, 'descVi'], 'Nhập tên hàng (VN)');
-      if (!isNumber(it.qty) || Number(it.qty) <= 0) issue(['invoice', 'items', i, 'qty'], 'SL > 0');
+      const qtyIssue = qtyError(it.qty, it.unit);
+      if (qtyIssue) issue(['invoice', 'items', i, 'qty'], qtyIssue);
       if (!it.unit.trim()) issue(['invoice', 'items', i, 'unit'], 'Nhập đơn vị tính');
       else if (it.unit.trim().length > UNIT_MAX) issue(['invoice', 'items', i, 'unit'], maxLen(UNIT_MAX));
       if (!isNumber(it.price) || Number(it.price) < 0) issue(['invoice', 'items', i, 'price'], 'Nhập đơn giá');
+      else if (!hasMaxDecimals(it.price, RULES.priceDecimals)) issue(['invoice', 'items', i, 'price'], 'Đơn giá tối đa 2 số lẻ');
     });
   }, {
     // Chạy cả khi ô khác còn lỗi — để lỗi mô tả hàng / kiện / invoice hiện ngay khi rời ô, không đợi sửa hết ô trên.

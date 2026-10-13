@@ -121,37 +121,18 @@ public class OrderDocumentRendererTests
     }
 
     [Fact]
-    public void Nhan_A6_in_3_lien_va_moi_kien_mot_shipping_mark()
+    public void Nhan_A6_chi_in_shipping_mark_moi_kien_mot_nhan()
     {
         var html = System.Net.WebUtility.HtmlDecode(Render(PrintDocs.LabelA6, new OrderPrintModel(Order(pieces: 3), [])));
 
-        Assert.Equal(3, html.Split("class=\"page a6\"").Length - 1);      // liên 1, 2, 3
         Assert.Equal(3, html.Split("class=\"page a6 mark\"").Length - 1); // 1 shipping mark / kiện
-        Assert.Contains("Liên 1: người gửi lưu", html);
-        Assert.Contains("Liên 3: lưu bưu cục Phát", html);
-        Assert.Contains("Quét QR để tracking", html);
+        Assert.DoesNotContain("Liên 1", html);
+        Assert.DoesNotContain("Liên 3", html);
         Assert.Contains("1 / 3", html);
         Assert.Contains("3 / 3", html);
         Assert.Contains("90000001/3", html);
         Assert.Contains("DHL-Singapore", html);
         Assert.Contains("size: 100mm 150mm", html);
-    }
-
-    [Theory]
-    [InlineData("4.52", "5.0")]
-    [InlineData("5.0", "5.0")]
-    [InlineData("5.01", "5.5")]
-    [InlineData("0.1", "0.5")]
-    public void Can_quy_doi_tren_nhan_A6_lam_tron_len_0_5_kg(string kg, string expected) =>
-        Assert.Equal(expected, LabelA6.RoundUpHalf(decimal.Parse(kg, System.Globalization.CultureInfo.InvariantCulture))
-            .ToString("0.0", System.Globalization.CultureInfo.InvariantCulture));
-
-    [Fact]
-    public void Dong_kich_thuoc_A6_theo_mau_he_thong_cu()
-    {
-        Assert.Equal("7.0 | 1*(31*27*27)=<b>5.0</b>", LabelA6.DimensionLine(new PrintPackage(1, 31, 27, 27, 7)));
-        Assert.Equal("CT-Taiwan", LabelA6.RouteLabel("Chuyên tuyến|Taiwan"));
-        Assert.Equal("DHL", LabelA6.RouteLabel("DHL"));
     }
 
     [Fact]
@@ -180,6 +161,74 @@ public class OrderDocumentRendererTests
         Assert.Contains("Reason for Export: <b>GIFT</b>", html);
         Assert.Contains("<b>SCS CO., LTD</b>", html); // I (name) … certify
         Assert.Contains("Signature/Title/Stamp", html);
+    }
+
+    [Fact]
+    public void Invoice_in_shipping_fee_thanh_dong_rieng_va_cong_vao_tong()
+    {
+        var order = Order();
+        order.ShippingFee = 5;
+        var items = new[] { new PrintItem("Dress", 2, "PCS", 20, "6204", "Vietnam") };
+        var html = System.Net.WebUtility.HtmlDecode(Render(PrintDocs.Invoice, new OrderPrintModel(order, items)));
+
+        Assert.Contains("Shipping fee (in USD)", html);
+        Assert.Contains("5.00 USD", html);
+        Assert.Contains("45.00 USD", html); // 2 × 20 + 5
+    }
+
+    [Fact]
+    public void Invoice_khong_khai_shipping_fee_thi_khong_in_dong_phi()
+    {
+        var html = Render(PrintDocs.Invoice, new OrderPrintModel(Order(), [new PrintItem("Dress", 2, "PCS", 20, null, "Vietnam")]));
+
+        Assert.DoesNotContain("Shipping fee", html);
+    }
+
+    [Fact]
+    public void Bill_A4_in_shipping_fee_canh_gia_tri_invoice()
+    {
+        var order = Order();
+        order.ShippingFee = 12.5m;
+
+        Assert.Equal("40.00 USD · Shipping fee: 12.50 USD", BillA4.ValueWithFee(order));
+        Assert.Equal("40.00 USD", BillA4.ValueWithFee(Order()));
+        Assert.Contains("Shipping fee: 12.50 USD", System.Net.WebUtility.HtmlDecode(Render(PrintDocs.BillA4, new OrderPrintModel(order, []))));
+    }
+
+    [Fact]
+    public void In_nhieu_loai_1_lan_gop_moi_loai_1_khung_va_in_lan_luot()
+    {
+        var model = new OrderPrintModel(Order(), [new PrintItem("Dress", 2, "PCS", 20, null, "Vietnam")]);
+        var html = OrderDocumentRenderer.RenderMany(PrintDocs.Parse("label-a6,bill-a4,invoice"), [model], Company, Now);
+
+        Assert.Equal(3, html.Split("<iframe").Length - 1);
+        // Theo thứ tự chuẩn: Bill A4 → Invoice → nhãn A6
+        Assert.True(html.IndexOf("In Vận đơn", StringComparison.Ordinal) < html.IndexOf("In Commercial invoice", StringComparison.Ordinal));
+        Assert.True(html.IndexOf("In Commercial invoice", StringComparison.Ordinal) < html.IndexOf("In Shipping mark", StringComparison.Ordinal));
+        Assert.Contains("In lần lượt tất cả", html);
+        Assert.Contains("afterprint", html);
+        // Trang con không tự in / không có thanh công cụ riêng (trang gộp điều khiển)
+        Assert.DoesNotContain("setTimeout(function () { window.focus(); window.print(); }", html);
+    }
+
+    [Fact]
+    public void In_1_loai_van_ra_trang_in_cu()
+    {
+        var html = OrderDocumentRenderer.RenderMany(PrintDocs.Parse("invoice"), [new OrderPrintModel(Order(), [])], Company, Now);
+
+        Assert.DoesNotContain("<iframe", html);
+        Assert.Contains("window.print()", html);
+    }
+
+    [Theory]
+    [InlineData("bill-a4,invoice", true)]
+    [InlineData(" invoice , invoice ", true)]
+    [InlineData("bill-a4,abc", false)]
+    [InlineData("", false)]
+    public void Validator_nhan_nhieu_loai_ngan_dau_phay(string doc, bool valid)
+    {
+        var result = new VietAnExpress.Shipments.Application.Validators.PrintOrdersQueryValidator().Validate(new PrintOrdersQuery(["1"], doc));
+        Assert.Equal(valid, result.IsValid);
     }
 
     [Fact]

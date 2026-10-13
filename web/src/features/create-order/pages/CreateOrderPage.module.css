@@ -6,6 +6,12 @@
   --text-md: 12px;
   --text-lg: 13.5px;
   --control-h: 28px;
+  /* Nhãn ô nhập 11px, chữ gõ trong ô 10,5px */
+  --field-label-size: var(--text-xs);
+  --field-input-size: 10.5px;
+  /* Khoảng cách giữa các ô nhập (hàng và cột) — thưa cho dễ nhìn */
+  --form-row-gap: var(--space-6);
+  --form-col-gap: var(--space-6);
   --control-h-sm: 26px;
   --space-2: 6px;
   --space-3: 7px;
@@ -41,20 +47,24 @@
 
 /*
  * THỬ NGHIỆM giao diện dọc: dòng thời gian các bước bên trái (ghim theo khi cuộn, cao bằng màn hình)
- * + form 1 cột rộng tối đa 1000px theo thứ tự khai bill; cả khối căn giữa.
+ * + form 1 cột rộng tối đa 900px theo thứ tự khai bill; cả khối căn giữa.
  */
 .layout {
   display: grid;
-  grid-template-columns: 240px minmax(0, 1000px);
+  grid-template-columns: 220px minmax(0, 900px);
   justify-content: center;
   align-items: start;
   gap: var(--space-5);
 }
 
+/* Cột trái ghim theo khi cuộn: khung các bước + khung Hỗ trợ khách hàng, mỗi khung cao vừa nội dung */
 .nav {
   position: sticky;
   top: calc(var(--topbar-h) + var(--space-4));
   z-index: 4;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
 }
 
 /* Mỗi khung có id để dòng thời gian nhảy tới — chừa chỗ cho thanh trên cùng khi cuộn tới */
@@ -71,6 +81,7 @@
 
   .nav {
     top: var(--topbar-h);
+    height: auto;
     padding-block: var(--space-2);
     background: var(--color-bg);
   }

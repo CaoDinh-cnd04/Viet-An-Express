@@ -45,7 +45,12 @@ internal static class CommercialInvoice
                 </tr>
                 """);
         }
-        var total = lines.Sum(l => l.Amount);
+        // Shipping fee khách khai (nếu có) in thành 1 dòng riêng và cộng vào Total Value — khớp tổng invoice lúc tạo đơn.
+        var fee = o.ShippingFee is > 0 ? o.ShippingFee.Value : 0m;
+        var feeRow = fee > 0
+            ? $"<tr class=\"fee\"><td colspan=\"5\">Shipping fee (in {currency})</td><td class=\"num\">{Doc.Money(fee)} {currency}</td></tr>"
+            : "";
+        var total = lines.Sum(l => l.Amount) + fee;
         var gross = m.TotalGrossKg;
         var pieces = m.TotalPieces;
         var dims = string.Join("<br>", m.Packages.Select(p =>
@@ -97,6 +102,7 @@ internal static class CommercialInvoice
                   <th class="money">Subtotal<br>(in {{currency}})</th>
                 </tr>
                 {{rows}}
+                {{feeRow}}
                 <tr class="total"><td colspan="5">Total Value (in {{currency}})</td><td class="num">{{Doc.Money(total)}} {{currency}}</td></tr>
               </table>
 
@@ -147,6 +153,8 @@ internal static class CommercialInvoice
         .goods .num { text-align: right; white-space: nowrap; }
         .goods tr.total td { font-weight: 700; text-align: center; }
         .goods tr.total td.num { text-align: right; }
+        .goods tr.fee td { text-align: center; }
+        .goods tr.fee td.num { text-align: right; }
         .inv-foot { font-size: 8.5px; line-height: 1.6; }
         .inv-foot p { margin: 0 0 2mm; }
         .inv-sign { text-align: right; font-size: 8.5px; padding-right: 1.5mm; margin-top: 2mm; }

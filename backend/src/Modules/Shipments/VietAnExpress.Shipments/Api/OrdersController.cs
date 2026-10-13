@@ -32,7 +32,8 @@ internal sealed class OrdersController : ApiControllerBase
             page, pageSize, sortBy, sortDir), ct));
 
     /// <summary>
-    /// Trang in chứng từ (HTML, tự mở hộp thoại in): doc = bill-a4 | invoice | cvck | label-a6;
+    /// Trang in chứng từ (HTML, tự mở hộp thoại in): doc = bill-a4 | invoice | cvck | label-a6, hoặc nhiều loại
+    /// ngăn bằng dấu phẩy (trang gộp, in lần lượt từng loại);
     /// bills = danh sách số vận đơn ngăn bằng dấu phẩy (tối đa 100).
     /// </summary>
     [HttpGet("print")]

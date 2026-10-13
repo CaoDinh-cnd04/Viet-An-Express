@@ -30,14 +30,14 @@ export function onCellArrows(e: KeyboardEvent<HTMLElement>) {
  * Ô số dạng chữ có bàn phím số: trình duyệt không cho biết vị trí con trỏ trong ô type="number", nên ô số trong bảng dùng
  * type="text" + inputMode; gõ / dán thì bỏ ký tự không phải số trước khi react-hook-form nhận giá trị.
  */
-export function decimalField<P extends { onChange: (e: ChangeEvent<HTMLInputElement>) => unknown }>(props: P, integer = false) {
+export function decimalField<P extends { onChange: (e: ChangeEvent<HTMLInputElement>) => unknown }>(props: P, integer = false, maxDecimals?: number) {
   return {
     ...props,
     type: 'text',
     inputMode: integer ? ('numeric' as const) : ('decimal' as const),
     autoComplete: 'off',
     onChange: (e: ChangeEvent<HTMLInputElement>) => {
-      const clean = sanitizeDecimal(e.target.value, integer);
+      const clean = sanitizeDecimal(e.target.value, integer, maxDecimals);
       if (clean !== e.target.value) e.target.value = clean;
       return props.onChange(e);
     }

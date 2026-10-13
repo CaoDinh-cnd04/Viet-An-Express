@@ -548,6 +548,50 @@ namespace VietAnExpress.Identity.Infrastructure.Migrations
                     b.ToTable("SuCo_TraoDoi", "dbo");
                 });
 
+            modelBuilder.Entity("VietAnExpress.Identity.Domain.UsageEvent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Audience")
+                        .IsRequired()
+                        .HasMaxLength(12)
+                        .HasColumnType("nvarchar(12)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("FlowId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(24)
+                        .HasColumnType("nvarchar(24)");
+
+                    b.Property<string>("Mode")
+                        .HasMaxLength(8)
+                        .HasColumnType("nvarchar(8)");
+
+                    b.Property<string>("Path")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)");
+
+                    b.Property<string>("Visitor")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedAt", "Audience", "Kind");
+
+                    b.HasIndex("FlowId", "Mode", "Kind");
+
+                    b.ToTable("ThongKeSuDung", "dbo");
+                });
+
             modelBuilder.Entity("VietAnExpress.Identity.Infrastructure.CustomerLogin", b =>
                 {
                     b.Property<long>("CustomerId")

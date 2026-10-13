@@ -6,22 +6,19 @@ using static VietAnExpress.Shipments.Application.Orders.Documents.Doc;
 namespace VietAnExpress.Shipments.Application.Orders.Documents;
 
 /// <summary>
-/// Nhãn A6 (100 × 150 mm) theo mẫu hệ thống cũ (VietAnExpress - Bill Online 2.pdf): mỗi đơn 3 liên
-/// (người gửi lưu, bưu cục gốc, bưu cục phát) rồi 1 shipping mark cho từng kiện — mỗi phần 1 trang A6.
+/// Nhãn A6 (100 × 150 mm): chỉ in shipping mark — 1 nhãn / kiện để dán lên thùng, mỗi nhãn 1 trang A6
+/// (cùng nội dung shipping mark của bill A4). 3 liên kiểu hệ thống cũ đã bỏ theo yêu cầu (xem lịch sử git nếu cần lại).
 /// </summary>
 internal static class LabelA6
 {
-    private enum Slip { Shipper = 1, Origin = 2, Destination = 3 }
-
-    /// <summary>QR tracking + mã vạch số bill của 1 đơn — dùng lại cho 3 liên và mọi shipping mark, không tạo lại mỗi trang.</summary>
-    private sealed record OrderArt(string Qr, string HeadBarcode, string FootBarcode);
+    /// <summary>QR tracking của 1 đơn — dùng lại cho mọi shipping mark, không tạo lại mỗi trang.</summary>
+    private sealed record OrderArt(string Qr);
 
     public static string Render(OrderPrintModel m, CompanyInfo c, DateTime printedAt)
     {
-        var art = new OrderArt(BillA4.Qr(BillA4.TrackingUrl(c, m.Bill)), Code128.Svg(m.Bill, 36), Code128.Svg(m.Bill, 30));
-        var sb = new StringBuilder();
-        foreach (var slip in Enum.GetValues<Slip>()) sb.Append(SlipHtml(m, c, slip, art));
+        var art = new OrderArt(BillA4.Qr(BillA4.TrackingUrl(c, m.Bill)));
         var pieces = BillA4.PieceList(m.Packages, m.Order.Pieces ?? 1);
+        var sb = new StringBuilder();
         for (var i = 0; i < pieces.Count; i++) sb.Append(Mark(m, c, printedAt, i + 1, pieces.Count, pieces[i], art));
         return sb.ToString();
     }
@@ -33,100 +30,6 @@ internal static class LabelA6
         if (parts.Length == 0) return "";
         var short3 = BillA4.RouteCode(parts[0]);
         return parts.Length == 1 ? short3 : $"{short3}-{parts[1].Replace(" ", "")}";
-    }
-
-    /// <summary>Cân quy đổi in trên nhãn như hệ thống cũ: D×R×C / 5000, làm tròn lên 0,5 kg (4,52 → 5,0).</summary>
-    public static decimal RoundUpHalf(decimal kg) => Math.Ceiling(kg * 2) / 2;
-
-    /// <summary>1 dòng kích thước: "7.0 | 1*(31*27*27)=5.0" = cân thực | số kiện*(D*R*C)=cân quy đổi.</summary>
-    public static string DimensionLine(PrintPackage p) =>
-        string.Create(CultureInfo.InvariantCulture,
-            $"{p.GrossKg:0.0} | {p.Qty}*({Qty(p.Length)}*{Qty(p.Width)}*{Qty(p.Height)})=<b>{RoundUpHalf(p.VolumeKg):0.0}</b>");
-
-    // ---------------- 1 liên ----------------
-
-    private static string SlipHtml(OrderPrintModel m, CompanyInfo c, Slip slip, OrderArt art)
-    {
-        var o = m.Order;
-        var (addr1, addr2) = BillA4.SplitAddress(o.SenderAddress);
-        var qrCaption = slip == Slip.Shipper ? "Quét QR để tracking" : m.Bill;
-        var phone = BillA4.PhoneWithCode(o.ConsigneePhoneCode, o.ConsigneePhone);
-        var tel = string.IsNullOrWhiteSpace(o.ConsigneeEmail) ? H(phone) : $"{H(phone)} | {H(o.ConsigneeEmail)}";
-
-        var signs = slip == Slip.Destination
-            ? $"""
-              <div class="sign"><div>Nhân Viên Giao hàng <i>(Delivered by)</i></div><div class="sign-date"><b>Ngày, giờ</b> <i>(Date /time)</i>:</div></div>
-              <div class="sign"><div>Chữ ký người nhận <i>(Signed By Receiver)</i></div><div class="sign-date"><b>Ngày, giờ</b>:<br><i>NV kinh doanh</i> :</div></div>
-              """
-            : $"""
-              <div class="sign"><div>Chữ ký người gửi</div><div class="sign-date"><b>Ngày, giờ</b> <i>(Date /time)</i>: {Date(o.CreateDate)}</div></div>
-              <div class="sign"><div>Nhân viên nhận hàng</div><div class="sign-date"><b>Ngày, giờ</b>:<br><i>NV kinh doanh</i> :</div></div>
-              """;
-        var slipName = slip switch
-        {
-            Slip.Shipper => "Liên 1: người gửi lưu",
-            Slip.Origin => "Liên 2: lưu bưu cục gốc",
-            _ => "Liên 3: lưu bưu cục Phát"
-        };
-
-        return $"""
-            <section class="page a6">
-              <div class="box">
-                {Head(m, c, art.HeadBarcode, Code128.FitText(m.Bill, m.Bill))}
-                <div class="bar">1. <i>(Sender's information)</i>:</div>
-                <div class="sender">
-                  <div class="qr"><div class="qr-frame">{art.Qr}</div><div class="qr-cap">{H(qrCaption)}</div></div>
-                  <div class="lines">
-                    <div class="ln">{H(o.SenderName)}</div>
-                    <div class="ln">{H(addr1)}</div>
-                    <div class="ln">{m.SenderCountryText}</div>
-                    <div class="ln">{H(o.SenderContactName)}</div>
-                    <div class="ln">{H(o.SenderPhone)}</div>
-                    <div class="ln last">{H(addr2)}</div>
-                  </div>
-                </div>
-                <div class="bar">2. (Consignee's information):</div>
-                <div class="party">
-                  <div><i>Co.</i> <b>: {H(o.ConsigneeName)}</b></div>
-                  <div class="addr"><i>Add</i> <b>: {H(ConsigneeAddress(o))}</b></div>
-                  <div class="indent"><b>{H(CityLine(o))}</b></div>
-                  <div><i>Att</i> <b>: {H(o.ConsigneeContactName)}</b></div>
-                  <div><i>Tel</i> <b>: {tel}</b></div>
-                </div>
-                <div class="bar">3. <i>(Shipment information)</i>:</div>
-                <div class="ship"><span>(Content):</span><b>{H(o.GoodsName)}</b></div>
-                <div class="ship"><span>(value invoice):</span><b>{H(BillA4.Value(o))}</b></div>
-                {Packages(m)}
-                <div class="signs">{signs}</div>
-              </div>
-              <div class="foot">
-                <div>{(slip == Slip.Origin ? "<div class=\"total\">Tổng cước:</div>" : "")}<div class="slip-name">{slipName}</div></div>
-                <div class="foot-awb">{art.FootBarcode}<div>{H(m.Bill)}</div></div>
-              </div>
-            </section>
-            """;
-    }
-
-    private static string Packages(OrderPrintModel m)
-    {
-        var o = m.Order;
-        var pk = m.Packages;
-        var pieces = m.TotalPieces;
-        var gross = m.TotalGrossKg;
-        var vol = pk.Count > 0 ? pk.Sum(p => RoundUpHalf(p.VolumeKg)) : 0;
-        const int maxLines = 3;
-        // Kiện không khai D×R×C → không in dòng kích thước toàn số 0.
-        var measured = pk.Where(p => p.Length * p.Width * p.Height > 0).ToList();
-        var dims = measured.Take(maxLines).Select(DimensionLine).ToList();
-        if (measured.Count > maxLines) dims.Add($"… +{measured.Count - maxLines}");
-
-        return $"""
-            <table class="pkg">
-              <tr><th>Số kiện<br><i>(PCS)</i></th><th>TL thực<br><i>(G.W)</i></th><th>TL Qui Đổi<br><i>(Vol.W)</i></th>
-                <th rowspan="2" class="dims"><div class="dims-title">(Dimensions)</div>{string.Concat(dims.Select(d => $"<div class=\"dim\">{d}</div>"))}</th></tr>
-              <tr><td class="big">{pieces}</td><td class="big">{Kg1(gross)}</td><td class="big">{(pk.Count > 0 ? Kg1(vol) : "")}</td></tr>
-            </table>
-            """;
     }
 
     // ---------------- Shipping mark (1 / kiện) ----------------
@@ -213,8 +116,9 @@ internal static class LabelA6
         .brand .k { display: inline-block; min-width: 7mm; font-size: 8px; }
         .awb { text-align: center; line-height: 1.1; }
         .awb .barcode { display: block; width: 100%; height: 7mm; }
-        .awb .awb-text { display: block; width: 100%; height: 3.2mm; margin-top: .5mm; }
-        .awb-no { font-size: 9px; font-weight: 700; white-space: nowrap; }
+        /* Mã bill dưới mã vạch: chữ thường, cỡ tự nhiên, căn giữa (không kéo giãn bằng mã vạch) */
+        .awb-code { margin-top: .5mm; font-size: 10px; font-weight: 400; white-space: nowrap; }
+        .awb-no { font-size: 9px; font-weight: 400; white-space: nowrap; }
         .awb-no small { font-size: 9px; }
         .route { font-size: 8px; font-weight: 700; }
         .bar { background: none; font-weight: 700; padding: .3mm 1.5mm; border-top: 1px solid #000; border-bottom: 1px solid #000; }

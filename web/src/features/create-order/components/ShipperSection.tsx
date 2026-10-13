@@ -62,7 +62,7 @@ export function ShipperSection() {
   }, [profile, getValues, setValue]);
 
   return (
-    <Card
+    <Card accent
       title="Thông tin người gửi"
       subtitle={lang === 'vi' ? '(Shipper)' : undefined}
       actions={

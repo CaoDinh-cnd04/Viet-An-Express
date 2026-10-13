@@ -16,7 +16,7 @@ export const FAQ: ReadonlyArray<{ q: string; a: string }> = [
   },
   {
     q: 'Cước được tính theo cân thực hay cân quy đổi?',
-    a: 'Cước tính theo số lớn hơn giữa cân thực và cân quy đổi. Cân quy đổi = Dài × Rộng × Cao (cm) ÷ 5000.'
+    a: 'Cân quy đổi = Dài × Rộng × Cao (cm) ÷ 5000. Cân tính cước lấy số lớn hơn giữa cân thực và quy đổi của từng kiện, nhân số lượng rồi cộng lại; làm tròn theo hãng và dịch vụ.'
   },
   {
     q: 'Chứng từ (DOC) nặng hơn 2kg thì sao?',

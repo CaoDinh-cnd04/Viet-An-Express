@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import { FormProvider, useWatch, type FieldErrors } from 'react-hook-form';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { getErrorMessage } from '@/shared/api/http';
 import { useI18n } from '@/shared/i18n';
+import { orderUsage } from '@/shared/lib/usage';
 import { Button, Card, LinkButton, PageHeader, SegmentedControl, useToast } from '@/shared/ui';
 import { DraftsTable, useSaveDraft, useUpdateDraft } from '@/features/drafts';
 import { useSession } from '@/features/auth';
@@ -15,6 +16,7 @@ import { ReceiverSection } from '../components/ReceiverSection';
 import { ServiceSection } from '../components/ServiceSection';
 import { ShipmentSection } from '../components/ShipmentSection';
 import { ShipperSection } from '../components/ShipperSection';
+import { QuickLookup } from '../components/QuickLookup';
 import { StepIndicator, type StepSection } from '../components/StepIndicator';
 import { SurchargeConfirmDialog } from '../components/SurchargeConfirmDialog';
 import { WIZARD_STEPS, WIZARD_STEPS_DOC } from '../constants';
@@ -23,6 +25,7 @@ import { autosaveKey, readAutosave, useOrderPrefill } from '../hooks/useOrderPre
 import { useShipmentSync } from '../hooks/useShipmentSync';
 import { evaluatePackages, hasCritical, type PackageWarning } from '../lib/carrier-limits';
 import { buildDraftPayload, summarizePackages, toNumber } from '../lib/shipment';
+import { stepProgress } from '../lib/step-progress';
 import { STEP_FIELDS, type CreateOrderValues } from '../schema';
 import styles from './CreateOrderPage.module.css';
 
@@ -106,6 +109,10 @@ export default function CreateOrderPage({ mode }: { mode: CreateMode }) {
   const { t } = useI18n();
   const session = useSession();
   const storageKey = autosaveKey(session.data?.status === 'authenticated' ? session.data.user : null);
+  const editingExisting = useRef(new URLSearchParams(search).has('draft'));
+  const recordUsage = (kind: 'order_start' | 'order_complete') => {
+    if (!editingExisting.current && session.data?.status === 'authenticated') orderUsage(storageKey, mode, kind);
+  };
   const [initial] = useState(() => (search ? undefined : readAutosave(storageKey)));
   const form = useCreateOrderForm(initial);
   const { draftId, finishAutosave, retainDraft } = useOrderPrefill(form, storageKey);
@@ -129,6 +136,9 @@ export default function CreateOrderPage({ mode }: { mode: CreateMode }) {
   const activeSection = useActiveSection(sections.flat().map(sec => sec.id));
   // 1 trang: bước đang xem = bước chứa khung đang xem
   const viewingStep = Math.max(0, sections.findIndex(list => list.some(sec => sec.id === activeSection)));
+  // Bước nào đã điền đủ (kiểm tra theo schema, trễ 1 nhịp để gõ không bị khựng)
+  const watched = useDeferredValue(useWatch({ control: form.control }) as CreateOrderValues);
+  const completed = useMemo(() => stepProgress(watched, steps.length), [watched, steps.length]);
   const scrollToId = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   const selectSection = async (i: number, id: string) => {
     if (isWizard && i !== current) {
@@ -159,6 +169,7 @@ export default function CreateOrderPage({ mode }: { mode: CreateMode }) {
     persisting.current = true;
     const payload = buildDraftPayload(values, status);
     const onSuccess = (saved: { id: string }) => {
+      if (status === 'ready') recordUsage('order_complete');
       finishAutosave(status === 'ready' ? undefined : { keepEditing: values });
       setConfirm(null);
       toast.show(status === 'ready' ? 'Đã tạo đơn. Bấm "In & cấp bill" để cấp mã bill và in vận đơn A4.' : 'Đã lưu nháp.', 'success');
@@ -191,7 +202,7 @@ export default function CreateOrderPage({ mode }: { mode: CreateMode }) {
       try {
         const rates = await quote.mutateAsync({
           country: values.receiver.country,
-          weight: summarizePackages(values.packages).grossWeight || toNumber(values.shipment.grossWeight),
+          weight: summarizePackages(values.packages, values.service).chargeableWeight || toNumber(values.shipment.grossWeight),
           type: 'PACK',
           length: toNumber(biggest?.length),
           width: toNumber(biggest?.width),
@@ -243,12 +254,14 @@ export default function CreateOrderPage({ mode }: { mode: CreateMode }) {
           current={isWizard ? current : viewingStep}
           activeSection={activeSection}
           showDone={isWizard}
+          completed={completed}
           onSelectStep={i => (isWizard ? void goToStep(i) : scrollToId(sections[i]![0]!.id))}
           onSelectSection={(i, id) => void selectSection(i, id)}
         />
+        <QuickLookup />
       </aside>
 
-      <form className={styles.form} onSubmit={e => void submit(e)} noValidate>
+      <form className={styles.form} onChangeCapture={() => recordUsage('order_start')} onSubmit={e => void submit(e)} noValidate>
         {/* Giao diện dọc: mỗi khung 1 hàng theo thứ tự khai bill, có id để mục lục nhảy tới */}
         {showStep(0) && (
           <>

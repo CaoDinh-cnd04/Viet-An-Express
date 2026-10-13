@@ -7,11 +7,11 @@ using VietAnExpress.Shipments.Infrastructure.Legacy;
 namespace VietAnExpress.Shipments.Application.Orders.Documents;
 
 /// <summary>1 dòng kiện (từ form đơn portal): số kiện cùng kích thước, D×R×C (cm), cân 1 kiện (kg).</summary>
-internal sealed record PrintPackage(int Qty, decimal Length, decimal Width, decimal Height, decimal WeightKg)
+internal sealed record PrintPackage(int Qty, decimal Length, decimal Width, decimal Height, decimal WeightKg, decimal? StoredVolumeKg = null)
 {
     public decimal GrossKg => Qty * WeightKg;
     /// <summary>Cân quy đổi = D×R×C / 5000 cho mỗi kiện.</summary>
-    public decimal VolumeKg => Qty * Length * Width * Height / BillA4.VolumeDivisor;
+    public decimal VolumeKg => StoredVolumeKg ?? Qty * Length * Width * Height / BillA4.VolumeDivisor;
 }
 
 /// <summary>
@@ -37,7 +37,7 @@ internal static class BillA4
     /// </summary>
     public static IReadOnlyList<PrintPackage?> PieceList(IReadOnlyList<PrintPackage> packages, int pieces) =>
         packages.Count > 0
-            ? packages.SelectMany(p => Enumerable.Repeat<PrintPackage?>(p with { Qty = 1 }, p.Qty)).ToList()
+            ? packages.SelectMany(p => Enumerable.Repeat<PrintPackage?>(p with { Qty = 1, StoredVolumeKg = p.Qty > 0 ? p.StoredVolumeKg / p.Qty : null }, p.Qty)).ToList()
             : Enumerable.Repeat<PrintPackage?>(null, Math.Max(1, pieces)).ToList();
 
     /// <summary>Tên nước tiếng Anh → mã ISO 2 ký tự (vd "Singapore" → "SG"); không nhận ra thì trả tên viết hoa.</summary>
@@ -213,7 +213,7 @@ internal static class BillA4
                     <div><b class="k">Hotline</b> : <b>{H(c.Hotline)}</b></div>
                     <div><b class="k">Website</b> : <i>{H(c.Website)}</i></div>
                   </div>
-                  <div class="awb">{Code128.Svg(m.Bill, 40)}{Code128.FitText(m.Bill, m.Bill)}<div class="route">{H(RouteCode(o.ServiceName))}</div></div>
+                  <div class="awb">{Code128.Svg(m.Bill, 40)}<div class="awb-code">{H(m.Bill)}</div><div class="route">{H(RouteCode(o.ServiceName))}</div></div>
                 </div>
 
                 <div class="bar">1. Thông tin người gửi <i>(Sender's information)</i>:</div>
@@ -248,7 +248,7 @@ internal static class BillA4
                 <div class="bar">3. Thông tin Đơn Hàng <i>(Shipment information)</i>:</div>
                 <div class="rows ship">
                   {Row("Tên hàng (Content):", o.GoodsName, underline: false)}
-                  {Row("Giá trị (value invoice):", Value(o), underline: false)}
+                  {Row("Giá trị (value invoice):", ValueWithFee(o), underline: false)}
                 </div>
                 <div class="gap"></div>
                 {Packages(m)}
@@ -311,6 +311,15 @@ internal static class BillA4
     private static string Row2(string labelHtml, string? value, string label2Html, string? value2) =>
         $"<div class=\"row\"><div class=\"lbl\">{labelHtml}</div><div class=\"val split\"><span class=\"ln ln-main\">{H(value)}</span>" +
         $"<span class=\"lbl\">{label2Html}</span><span class=\"ln ln-in\">{H(value2)}</span></div></div>";
+
+    /// <summary>Giá trị invoice kèm shipping fee khách khai (nếu có): "40.00 USD · Shipping fee: 5.00 USD".</summary>
+    internal static string ValueWithFee(LegacyOrder o)
+    {
+        if (o.ShippingFee is not > 0) return Value(o);
+        var fee = $"Shipping fee: {o.ShippingFee.Value.ToString("0.00", CultureInfo.InvariantCulture)} {o.Currency?.Trim()}".Trim();
+        var value = Value(o);
+        return value.Length == 0 ? fee : $"{value} · {fee}";
+    }
 
     internal static string Value(LegacyOrder o) =>
         o.GoodsValue is null ? "" : $"{(o.GoodsValue ?? 0).ToString("0.00", CultureInfo.InvariantCulture)} {o.Currency?.Trim()}".Trim();
@@ -402,10 +411,10 @@ internal static class BillA4
         .brand .k { display: inline-block; min-width: 9mm; font-size: 11px; }
         .awb { text-align: center; }
         .awb .barcode { display: block; width: 100%; height: 8mm; }
-        /* Mã bill dàn đúng bằng mã vạch (Code128.FitText) */
-        .awb .awb-text { display: block; width: 100%; height: 4mm; margin-top: .6mm; }
+        /* Mã bill dưới mã vạch: chữ thường, cỡ tự nhiên, căn giữa (không kéo giãn bằng mã vạch) */
+        .awb-code { margin-top: .6mm; font-size: 13px; font-weight: 400; line-height: 1.2; white-space: nowrap; }
         /* Mã VA bill 14 ký tự (VAHCM6010840NZ) vừa cột 42mm */
-        .awb-no { font-size: 12px; font-weight: 700; line-height: 1.2; white-space: nowrap; }
+        .awb-no { font-size: 12px; font-weight: 400; line-height: 1.2; white-space: nowrap; }
         .route { font-size: 11px; font-weight: 700; }
         .bar { background: #92d050; font-weight: 700; padding: .4mm 1.5mm; border-top: 1px solid #000; border-bottom: 1px solid #000; }
         .sender { display: grid; grid-template-columns: 50mm 1fr; padding: 1mm 3mm 0 0; }

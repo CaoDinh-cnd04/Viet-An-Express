@@ -45,11 +45,22 @@ internal sealed class GetOrdersHandler(ShipmentsDbContext db, OrderAccess access
         var totals = await OrderSummaryQuery.Build(query, today).FirstOrDefaultAsync(ct) ?? OrderSummaryQuery.Totals.Empty;
         var counts = totals.Counts();
         var statuses = OrderListFilter.Statuses(q.Status);
-        var total = statuses.Count == 0 || statuses.Count == LegacyOrderStatus.All.Length
-            ? totals.All : statuses.Sum(s => counts[s]);
-        var (pieces, weight) = totals.For(statuses);
-
         query = OrderListFilter.ApplyStatus(query, q.Status, today);
+
+        int total;
+        int pieces;
+        decimal weight;
+        if (OrderSummaryQuery.Totals.NeedsRecount(statuses))
+        {
+            // Nhóm trạng thái trùng nhau (vd đã đi + đã phát) → đếm lại trên đúng tập đang xem, không cộng số từng nhóm.
+            var picked = await OrderSummaryQuery.Build(query, today).FirstOrDefaultAsync(ct) ?? OrderSummaryQuery.Totals.Empty;
+            (total, pieces, weight) = (picked.All, picked.Pieces, picked.Weight);
+        }
+        else
+        {
+            total = statuses.Count == 1 ? counts[statuses.First()] : totals.All;
+            (pieces, weight) = totals.For(statuses);
+        }
 
         var (page, size) = Paging.Normalize(q.Page, q.PageSize);
         var offset = (long)(page - 1) * size;

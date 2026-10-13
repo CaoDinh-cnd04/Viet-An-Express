@@ -83,7 +83,7 @@ export function evaluatePackages(carrier: string, packages: ReadonlyArray<Packag
     }
   });
 
-  const s = summarizePackages(packages);
+  const s = summarizePackages(packages, carrier);
   if (s.grossWeight > 0 && s.volumetricWeight > s.grossWeight + 0.01) {
     out.push({
       level: 'info',

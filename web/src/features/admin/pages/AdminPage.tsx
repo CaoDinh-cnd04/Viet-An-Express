@@ -11,10 +11,11 @@ import { adminLogout, getAdminToken, useAdminTroubles, useAdminFeedback, useAdmi
 import { AdminNotifications } from '../components/AdminNotifications';
 import { AdminTroubles } from '../components/AdminTroubles';
 import { SurveyStats } from '../components/SurveyStats';
+import { AdminUsage } from '../components/AdminUsage';
 import styles from './AdminPage.module.css';
 
 type Filter = 'all' | 'new';
-type Section = 'feedback' | 'troubles' | 'notifications';
+type Section = 'feedback' | 'troubles' | 'notifications' | 'analytics';
 
 /**
  * Trang quản trị Việt An (/admin) — chỉ tài khoản quản trị cố định trong code đăng nhập được.
@@ -53,7 +54,8 @@ export default function AdminPage() {
           items={[
             { key: 'feedback', label: 'Góp ý', count: feedback.data?.filter(f => !f.seen).length || undefined },
             { key: 'troubles', label: 'Sự cố', count: troubles.data?.filter(x => x.ticket.status === 'new').length || undefined },
-            { key: 'notifications', label: 'Thông báo' }
+            { key: 'notifications', label: 'Thông báo' },
+            { key: 'analytics', label: 'Thống kê sử dụng' }
           ]}
           value={section}
           onChange={setSection}
@@ -65,6 +67,8 @@ export default function AdminPage() {
           </>
         ) : section === 'troubles' ? (
           <AdminTroubles />
+        ) : section === 'analytics' ? (
+          <AdminUsage />
         ) : (
           <AdminNotifications />
         )}

@@ -12,7 +12,7 @@ import styles from './form.module.css';
  */
 export function UnitCell({ index, error }: { index: number; error?: string }) {
   const { t } = useI18n();
-  const { control, register, setValue } = useFormContext<CreateOrderValues>();
+  const { control, register, setValue, getValues, trigger } = useFormContext<CreateOrderValues>();
   const name = `invoice.items.${index}.unit` as const;
   const unit = useWatch({ control, name }) ?? '';
   const [custom, setCustom] = useState(() => unitChoice(unit) === OTHER_UNIT);
@@ -26,6 +26,8 @@ export function UnitCell({ index, error }: { index: number; error?: string }) {
     const other = value === OTHER_UNIT;
     setCustom(other);
     setValue(name, other ? '' : value, { shouldDirty: true, shouldValidate: !!error });
+    // Đổi ĐVT → kiểm tra lại số lượng (ĐVT có sẵn chỉ nhận số nguyên).
+    if (getValues(`invoice.items.${index}.qty`)) void trigger(`invoice.items.${index}.qty`);
   };
 
   return (

@@ -1,4 +1,5 @@
 import type { OrderInvoiceItem, OrderPackage, OrderReceiver } from '../types';
+import { packageWeights, shipmentWeight, weightRule, type WeightService } from '@/shared/lib/shipping-weight';
 
 /** Cân quy đổi = D×R×C / 5000 (cm → kg) — cùng quy tắc với tạo đơn. */
 export const VOLUME_DIVISOR = 5000;
@@ -11,20 +12,22 @@ export interface PackageSummary {
   gross: number;
   /** Tổng cân quy đổi (kg). */
   volume: number;
-  /** Cân tính cước = max(thực, quy đổi). */
+  /** Tổng cân tính cước từng kiện, làm tròn theo hãng/dịch vụ. */
   chargeable: number;
 }
 
 /** Cân quy đổi của cả dòng kiện (SL × D×R×C / 5000). */
-export function lineVolume(p: OrderPackage): number {
-  return round2((p.qty * p.length * p.width * p.height) / VOLUME_DIVISOR);
+export function lineVolume(p: OrderPackage, service: WeightService = ''): number {
+  return p.volumetricWeight ?? round2(packageWeights(p, weightRule(service)).volume);
 }
 
-export function summarizePackages(list: readonly OrderPackage[]): PackageSummary {
+export function summarizePackages(list: readonly OrderPackage[], service: WeightService = ''): PackageSummary {
   const pieces = list.reduce((s, p) => s + p.qty, 0);
   const gross = round2(list.reduce((s, p) => s + p.qty * p.weightKg, 0));
-  const volume = round2(list.reduce((s, p) => s + lineVolume(p), 0));
-  return { pieces, gross, volume, chargeable: Math.max(gross, volume) };
+  const rule = weightRule(service);
+  const volume = round2(list.reduce((s, p) => s + lineVolume(p, service), 0));
+  const chargeable = shipmentWeight(list.reduce((s, p) => s + (p.chargeableWeight ?? packageWeights(p, rule).chargeable), 0), rule);
+  return { pieces, gross, volume, chargeable };
 }
 
 export function invoiceTotal(items: readonly OrderInvoiceItem[]): number {

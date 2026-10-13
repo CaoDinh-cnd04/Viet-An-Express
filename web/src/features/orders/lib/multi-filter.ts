@@ -1,6 +1,6 @@
 import type { OrderSearchField, OrderStatus } from '../types';
 
-export const ALL_STATUSES: readonly OrderStatus[] = ['wait', 'fly', 'nd', 'ok', 'late'];
+export const ALL_STATUSES: readonly OrderStatus[] = ['wait', 'fly', 'nd', 'ok'];
 /** Số thẻ tìm tối đa mỗi lần (dán cả cột bill). */
 export const MAX_TERMS = 200;
 

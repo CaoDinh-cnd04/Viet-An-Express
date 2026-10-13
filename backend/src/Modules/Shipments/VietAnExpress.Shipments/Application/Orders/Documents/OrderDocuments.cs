@@ -11,9 +11,17 @@ internal static class PrintDocs
     public const string BillA4 = "bill-a4";
     public const string Invoice = "invoice";
     public const string Cvck = "cvck";
+    /// <summary>Nhãn A6: chỉ shipping mark (1 nhãn / kiện để dán thùng).</summary>
     public const string LabelA6 = "label-a6";
 
     public static readonly string[] All = [BillA4, Invoice, Cvck, LabelA6];
+
+    /// <summary>"bill-a4,invoice" → danh sách loại (bỏ trùng, theo thứ tự chuẩn của <see cref="All"/>); loại lạ giữ lại để validator báo lỗi.</summary>
+    public static IReadOnlyList<string> Parse(string? doc)
+    {
+        var picked = (doc ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Distinct().ToList();
+        return [.. All.Where(picked.Contains), .. picked.Where(d => !All.Contains(d))];
+    }
 }
 
 /// <summary>1 dòng hàng trên invoice / CVCK. <paramref name="Description"/> là tên tiếng Anh.</summary>
@@ -62,16 +70,69 @@ internal sealed record OrderPrintModel(LegacyOrder Order, IReadOnlyList<PrintIte
 /// </summary>
 internal static class OrderDocumentRenderer
 {
-    public static string Render(string doc, IReadOnlyList<OrderPrintModel> orders, CompanyInfo company, DateTime printedAtVn)
+    /// <summary>
+    /// In nhiều loại chứng từ 1 lần: 1 loại → trang in như cũ; từ 2 loại → trang gộp, mỗi loại 1 khung (iframe) giữ nguyên
+    /// CSS / khổ giấy riêng và tự in lần lượt từng loại (mỗi loại 1 hộp thoại in vì khổ giấy khác nhau).
+    /// </summary>
+    public static string RenderMany(IReadOnlyList<string> docs, IReadOnlyList<OrderPrintModel> orders, CompanyInfo company, DateTime printedAtVn)
     {
-        var title = doc switch
+        if (docs.Count == 1) return Render(docs[0], orders, company, printedAtVn);
+
+        var buttons = new StringBuilder();
+        var sections = new StringBuilder();
+        for (var i = 0; i < docs.Count; i++)
         {
-            PrintDocs.BillA4 => "Vận đơn",
-            PrintDocs.Invoice => "Commercial invoice",
-            PrintDocs.Cvck => "Công văn cam kết",
-            PrintDocs.LabelA6 => "Nhãn kiện hàng",
-            _ => throw new ArgumentOutOfRangeException(nameof(doc), doc, null)
-        };
+            var html = Render(docs[i], orders, company, printedAtVn, embed: true);
+            buttons.Append(CultureInfo.InvariantCulture, $"<button type=\"button\" class=\"ghost\" onclick=\"printDoc({i})\">In {H(Title(docs[i]))}</button>");
+            sections.Append(CultureInfo.InvariantCulture,
+                $"<section class=\"doc\"><h2>{H(Title(docs[i]))} <small>{H(Paper(docs[i]))}</small></h2><iframe title=\"{H(Title(docs[i]))}\" srcdoc=\"{Attr(html)}\"></iframe></section>");
+        }
+
+        var bills = string.Join(", ", orders.Select(o => o.Bill));
+        return $$"""
+            <!doctype html>
+            <html lang="vi">
+            <head>
+            <meta charset="utf-8">
+            <title>Chứng từ {{H(bills)}}</title>
+            <style>{{BundleCss}}</style>
+            </head>
+            <body>
+            <div class="toolbar">
+              <strong>Chứng từ</strong> · {{orders.Count}} đơn · {{docs.Count}} loại
+              <button type="button" onclick="printAll()">In lần lượt tất cả</button>
+              {{buttons}}
+              <span class="hint">Mỗi loại mở 1 hộp thoại in riêng — chọn đúng khổ giấy ghi ở từng mục, tắt "Headers and footers".</span>
+            </div>
+            {{sections}}
+            <script>
+            var frames = Array.prototype.slice.call(document.querySelectorAll('iframe'));
+            function fit(f) { try { f.style.height = f.contentDocument.documentElement.scrollHeight + 'px'; } catch (e) {} }
+            frames.forEach(function (f) { f.addEventListener('load', function () { fit(f); }); });
+            function printDoc(i) { var w = frames[i].contentWindow; w.focus(); w.print(); }
+            // In lần lượt: đóng hộp thoại in loại này rồi mới mở loại kế tiếp.
+            function printAll() {
+              var i = 0;
+              (function next() {
+                if (i >= frames.length) return;
+                var w = frames[i++].contentWindow;
+                var done = function () { w.removeEventListener('afterprint', done); setTimeout(next, 300); };
+                w.addEventListener('afterprint', done);
+                w.focus();
+                w.print();
+              })();
+            }
+            window.addEventListener('load', function () { frames.forEach(fit); setTimeout(printAll, 400); });
+            </script>
+            </body>
+            </html>
+            """;
+    }
+
+    /// <param name="embed">true = nằm trong trang gộp nhiều loại: bỏ thanh công cụ và lệnh tự in (trang gộp điều khiển việc in).</param>
+    public static string Render(string doc, IReadOnlyList<OrderPrintModel> orders, CompanyInfo company, DateTime printedAtVn, bool embed = false)
+    {
+        var title = Title(doc);
 
         var pages = new StringBuilder();
         foreach (var o in orders)
@@ -86,6 +147,11 @@ internal static class OrderDocumentRenderer
         }
 
         var bills = string.Join(", ", orders.Select(o => o.Bill));
+        var toolbar = embed ? "" :
+            $"<div class=\"toolbar\"><strong>{H(title)}</strong> · {orders.Count} đơn <button type=\"button\" onclick=\"window.print()\">In</button>" +
+            $"<span class=\"hint\">Chọn khổ giấy {H(Paper(doc))}, tắt \"Headers and footers\" trong hộp thoại in.</span></div>";
+        var autoPrint = embed ? "" :
+            "<script>window.addEventListener('load', function () { setTimeout(function () { window.focus(); window.print(); }, 300); });</script>";
         return $$"""
             <!doctype html>
             <html lang="vi">
@@ -95,19 +161,48 @@ internal static class OrderDocumentRenderer
             <style>{{Css(doc)}}</style>
             </head>
             <body>
-            <div class="toolbar">
-              <strong>{{H(title)}}</strong> · {{orders.Count}} đơn
-              <button type="button" onclick="window.print()">In</button>
-              <span class="hint">Chọn khổ giấy {{(doc == PrintDocs.LabelA6 ? "100 × 150 mm (A6)" : doc == PrintDocs.BillA4 ? "A4 ngang (landscape)" : "A4")}}, tắt "Headers and footers" trong hộp thoại in.</span>
-            </div>
+            {{toolbar}}
             {{pages}}
-            <script>window.addEventListener('load', function () { setTimeout(function () { window.focus(); window.print(); }, 300); });</script>
+            {{autoPrint}}
             </body>
             </html>
             """;
     }
 
     private static string H(string? value) => WebUtility.HtmlEncode(value?.Trim() ?? "");
+
+    /// <summary>Đặt cả trang HTML vào thuộc tính srcdoc: chỉ cần thoát &amp; và dấu ngoặc kép.</summary>
+    private static string Attr(string html) => html.Replace("&", "&amp;", StringComparison.Ordinal).Replace("\"", "&quot;", StringComparison.Ordinal);
+
+    private static string Title(string doc) => doc switch
+    {
+        PrintDocs.BillA4 => "Vận đơn",
+        PrintDocs.Invoice => "Commercial invoice",
+        PrintDocs.Cvck => "Công văn cam kết",
+        PrintDocs.LabelA6 => "Shipping mark",
+        _ => throw new ArgumentOutOfRangeException(nameof(doc), doc, null)
+    };
+
+    private static string Paper(string doc) => doc switch
+    {
+        PrintDocs.LabelA6 => "100 × 150 mm (A6)",
+        PrintDocs.BillA4 => "A4 ngang (landscape)",
+        _ => "A4"
+    };
+
+    /// <summary>Trang gộp: thanh công cụ + mỗi loại chứng từ 1 khung xem trước.</summary>
+    private const string BundleCss = """
+        * { box-sizing: border-box; }
+        body { margin: 0; font-family: Arial, "Segoe UI", sans-serif; font-size: 13px; color: #111; background: #e9ece9; }
+        .toolbar { position: sticky; top: 0; display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; padding: 10px 16px; background: #1e6b2c; color: #fff; z-index: 1; }
+        .toolbar button { padding: 6px 14px; border: 0; border-radius: 6px; background: #fff; color: #1e6b2c; font-weight: 700; cursor: pointer; }
+        .toolbar button.ghost { background: transparent; color: #fff; border: 1px solid rgba(255,255,255,.6); font-weight: 600; }
+        .toolbar .hint { opacity: .85; font-size: 12px; }
+        .doc { margin: 16px auto; max-width: 1180px; padding: 0 16px; }
+        .doc h2 { margin: 0 0 6px; font-size: 15px; }
+        .doc h2 small { font-weight: 400; color: #555; font-size: 12px; }
+        .doc iframe { display: block; width: 100%; height: 900px; border: 1px solid #c8cfc9; border-radius: 8px; background: #fff; }
+        """;
 
     /// <summary>Bill A4 và nhãn A6 có CSS riêng; invoice / CVCK dùng khung trang A4 dọc chung + CSS riêng của từng mẫu.</summary>
     private static string Css(string doc) => doc switch

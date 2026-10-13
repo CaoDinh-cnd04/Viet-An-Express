@@ -74,6 +74,8 @@ export const RULES = {
   docMaxWeightKg: 2,
   /** Hệ số quy đổi thể tích: D×R×C / divisor. */
   volumetricDivisor: 5000,
+  /** Đơn giá invoice: tối đa 2 chữ số sau dấu chấm (chuẩn khai báo quốc tế). */
+  priceDecimals: 2,
   shipperAddressMax: 60,
   /** Mô tả tổng quan hàng hóa (content) — độ dài cột dbo.MaVanDon.Ten_hang. */
   contentMax: 150,

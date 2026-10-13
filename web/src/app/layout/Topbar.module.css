@@ -38,13 +38,13 @@
 
 .iconBtn {
   position: relative;
-  width: 30px;
-  height: 30px;
+  width: 34px;
+  height: 34px;
   flex: none;
   display: grid;
   place-items: center;
-  border: 1px solid var(--color-border-strong);
-  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  border-radius: 50%;
   background: var(--color-surface);
   color: var(--color-text-muted);
 }
@@ -70,17 +70,46 @@
   font-weight: 700;
 }
 
+/* Tài khoản: viên thuốc gồm avatar tròn + tên công ty / nhân viên + mũi tên */
+.account {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 34px;
+  max-width: 240px;
+  padding: 0 10px 0 3px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+}
+
+.account:hover,
+.langBtn:hover {
+  border-color: var(--color-brand);
+}
+
 .avatar {
-  width: 30px;
-  height: 30px;
+  width: 28px;
+  height: 28px;
+  flex: none;
   display: grid;
   place-items: center;
-  border: 0;
   border-radius: 50%;
   background: var(--color-brand);
   color: #fff;
-  font-size: 12.5px;
+  font-size: 11px;
   font-weight: 700;
+}
+
+.accountName {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--color-text);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 @media (max-width: 720px) {
@@ -89,34 +118,27 @@
   }
 }
 
-/* Nút chuyển ngôn ngữ VI / EN */
-.lang {
+/* Ngôn ngữ: viên thuốc quả địa cầu + tên ngôn ngữ, bấm mở menu */
+.langBtn {
   display: flex;
-  height: 30px;
-  padding: 3px;
-  border: 1px solid var(--color-border-strong);
-  border-radius: var(--radius-sm);
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 10px 0 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
   background: var(--color-surface);
-}
-
-.lang button {
-  min-width: 26px;
-  padding: 0 var(--space-2);
-  border: 0;
-  border-radius: calc(var(--radius-sm) - 3px);
-  background: none;
-  color: var(--color-text-muted);
-  font-size: var(--text-xs);
+  color: var(--color-brand-deep);
+  font-size: var(--text-sm);
   font-weight: 600;
 }
 
-.lang button:hover {
-  color: var(--color-brand-strong);
-}
-
-.lang .langOn {
-  background: var(--color-brand);
-  color: #fff;
+/* Màn hình hẹp: chỉ còn biểu tượng */
+@media (max-width: 900px) {
+  .langName,
+  .accountName {
+    display: none;
+  }
 }
 
 /* Nút thu gọn / mở rộng sidebar: icon tròn không viền + tooltip kèm phím tắt */

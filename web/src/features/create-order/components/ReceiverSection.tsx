@@ -193,7 +193,7 @@ export function ReceiverSection() {
   });
 
   return (
-    <Card
+    <Card accent
       title="Thông tin người nhận"
       subtitle={lang === 'vi' ? '(Receiver)' : undefined}
       className={styles.fill}
@@ -206,14 +206,8 @@ export function ReceiverSection() {
         </div>
       }
     >
+      {/* Thứ tự: tên công ty → liên hệ → nước / mã bưu chính / thành phố / tỉnh → địa chỉ. */}
       <FormGrid>
-        <TextField label="Nước đến (country)" required list="va-countries" autoComplete="country-name" {...bind('receiver.country', { onChange: onCountryInput })} />
-        <div className={styles.suggestCell}>
-          <TextField label="Mã bưu chính (postal code)" hint={postalHint} {...postalBox.inputProps} {...bind('receiver.postal', { onChange: postalBox.onType, onBlur: postalBox.onBlur })} />
-          {postalBox.list}
-        </div>
-        <TextField label="Thành phố (city)" required {...bind('receiver.city')} />
-        <TextField label="Tỉnh / bang (state)" {...bind('receiver.state')} />
         <div className={styles.suggestWrap}>
           <TextField
             label="Tên công ty (company name)"
@@ -248,6 +242,13 @@ export function ReceiverSection() {
             <TextField label="EORI No" placeholder="DE123456789012345" {...bind('receiver.eoriNo', { onBlur: () => void trigger('receiver.eoriNo') })} />
           </>
         )}
+        <TextField label="Nước đến (country)" required list="va-countries" autoComplete="country-name" {...bind('receiver.country', { onChange: onCountryInput })} />
+        <div className={styles.suggestCell}>
+          <TextField label="Mã bưu chính (postal code)" hint={postalHint} {...postalBox.inputProps} {...bind('receiver.postal', { onChange: postalBox.onType, onBlur: postalBox.onBlur })} />
+          {postalBox.list}
+        </div>
+        <TextField label="Thành phố (city)" required {...bind('receiver.city')} />
+        <TextField label="Tỉnh / bang (state)" {...bind('receiver.state')} />
         <div className={styles.suggestWrap}>
           {addressField('addr1', 'Địa chỉ 1 (address 1)', addr1, true, addr1Extra)}
           {addrBox.visible.length > 0 && (

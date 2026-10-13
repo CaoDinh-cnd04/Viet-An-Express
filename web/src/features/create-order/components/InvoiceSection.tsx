@@ -2,11 +2,10 @@ import { get, useFieldArray, useFormContext, useWatch } from 'react-hook-form';
 import { useI18n } from '@/shared/i18n';
 import { cx } from '@/shared/lib/cx';
 import { Button, Card, FormGrid, Icon, SelectField, TextField } from '@/shared/ui';
-import { CURRENCIES, DUTY_TERMS, EXPORT_TYPES } from '../constants';
+import { CURRENCIES, DUTY_TERMS, EXPORT_TYPES, RULES } from '../constants';
 import { useFieldBinder } from '../hooks/useFieldBinder';
 import { invoiceTotal, lineTotal } from '../lib/shipment';
 import { emptyInvoiceItem, type CreateOrderValues } from '../schema';
-import { InvoiceToolbar } from './InvoiceToolbar';
 import { UnitCell } from './UnitCell';
 import { decimalField, onCellArrows } from '../hooks/cellNavigation';
 import styles from './form.module.css';
@@ -23,17 +22,21 @@ const autoGrow = (e: React.FormEvent<HTMLTextAreaElement>) => {
 export function InvoiceSection() {
   const bind = useFieldBinder();
   const { t } = useI18n();
-  const { control, register, formState } = useFormContext<CreateOrderValues>();
-  const { fields, append, remove, replace } = useFieldArray({ control, name: 'invoice.items' });
+  const { control, register, formState, trigger } = useFormContext<CreateOrderValues>();
+  const { fields, append, remove } = useFieldArray({ control, name: 'invoice.items' });
   const [type, items = [], currency, shippingFee] = useWatch({ control, name: ['shipment.type', 'invoice.items', 'invoice.currency', 'invoice.shippingFee'] });
   const fmt = new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 2 });
   const err = (i: number, key: ItemKey) => get(formState.errors, `invoice.items.${i}.${key}`)?.message as string | undefined;
-  const cell = (i: number, key: ItemKey, props: Record<string, unknown> = {}, numeric = false) => (
+  // numeric: chỉ nhận số; maxDecimals: số chữ số sau dấu chấm tối đa (đơn giá: 2).
+  const cell = (i: number, key: ItemKey, props: Record<string, unknown> = {}, numeric = false, maxDecimals?: number) => (
     <input
       className={cx(styles.cell, err(i, key) && styles.cellInvalid)}
       title={err(i, key)}
       {...props}
-      {...(numeric ? decimalField(register(`invoice.items.${i}.${key}`)) : register(`invoice.items.${i}.${key}`))}
+      {...(numeric
+        // Số lượng: báo lỗi ngay khi gõ (số nguyên với ĐVT có sẵn), không đợi rời ô.
+        ? decimalField(register(`invoice.items.${i}.${key}`, key === 'qty' ? { onChange: () => void trigger(`invoice.items.${i}.qty`) } : undefined), false, maxDecimals)
+        : register(`invoice.items.${i}.${key}`))}
     />
   );
   // Tên / nhà sản xuất: Enter để xuống dòng (vd "Nhà sản xuất" ↵ "Địa chỉ"); dòng dài tự xuống dòng.
@@ -50,19 +53,12 @@ export function InvoiceSection() {
   );
 
   return (
-    <Card title="Invoice" subtitle="(khai báo hải quan)">
+    <Card accent title="Invoice" subtitle="(khai báo hải quan)">
       {type === 'DOC' ? (
         <p className={styles.hint}>{t('Đơn chứng từ (DOC) không cần khai invoice. Chỉ khai shipping fee bên dưới nếu có.')}</p>
       ) : (
         <>
-          <InvoiceToolbar
-            onItems={(list, mode) => {
-              // Thay dòng trống mặc định thay vì để lại dòng rỗng phía trên
-              const onlyBlank = items.length === 1 && !items[0]?.descEn && !items[0]?.price;
-              if (mode === 'replace' || onlyBlank) replace(list);
-              else append(list);
-            }}
-          />
+          {/* Thư viện mặt hàng / Invoice cũ / Nhập từ Excel: ở khung "Hỗ trợ khách hàng" cột trái (tab Khai invoice) */}
           <FormGrid columns={3}>
             <SelectField label="Hình thức xuất khẩu" required placeholder="Chọn hình thức xuất khẩu" options={EXPORT_TYPES} {...bind('invoice.exportType')} />
             <SelectField
@@ -108,7 +104,7 @@ export function InvoiceSection() {
                         <UnitCell index={i} error={err(i, 'unit')} />
                       </div>
                     </td>
-                    <td>{cell(i, 'price', { 'aria-label': t('Đơn giá mặt hàng {n}', { n: i + 1 }) }, true)}</td>
+                    <td>{cell(i, 'price', { 'aria-label': t('Đơn giá mặt hàng {n}', { n: i + 1 }) }, true, RULES.priceDecimals)}</td>
                     <td className={styles.computed}>{items[i] ? fmt.format(lineTotal(items[i])) : 0}</td>
                     <td>
                       <Button size="sm" iconOnly variant="ghost" aria-label={t('Xóa mặt hàng {n}', { n: i + 1 })} disabled={fields.length <= 1} onClick={() => remove(i)}>

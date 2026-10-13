@@ -37,9 +37,9 @@ public class OrderQuerySqlServerTests(SqlServerQueryFixture fixture) : IClassFix
     [InlineData("fly")]
     [InlineData("nd")]
     [InlineData("ok")]
-    [InlineData("late")]
     [InlineData("wait,ok,wait")]
-    [InlineData("wait,fly,nd,ok,late")]
+    [InlineData("fly,ok")]
+    [InlineData("wait,fly,nd,ok")]
     [InlineData("unknown")]
     public async Task List_matches_existing_counts_totals_and_DTOs_using_two_SQL_reads(string? status)
     {
@@ -64,7 +64,8 @@ public class OrderQuerySqlServerTests(SqlServerQueryFixture fixture) : IClassFix
         commands.Reads.Clear();
 
         var response = await new GetOrdersHandler(db, Access(db), Clock).Handle(q, TestContext.Current.CancellationToken);
-        Assert.Equal(2, commands.Reads.Count);
+        // Lọc từ 2 nhóm trạng thái (nhóm trùng nhau) cần thêm 1 lần đếm trên tập đã lọc
+        Assert.Equal(OrderSummaryQuery.Totals.NeedsRecount(OrderListFilter.Statuses(status)) ? 3 : 2, commands.Reads.Count);
         Assert.Equal(expectedTotal, response.Total);
         Assert.Equal((int)Math.Ceiling(expectedTotal / 3d), response.TotalPages);
         foreach (var pair in counts) Assert.Equal(pair.Value, response.Summary.StatusCounts[pair.Key]);
@@ -72,7 +73,7 @@ public class OrderQuerySqlServerTests(SqlServerQueryFixture fixture) : IClassFix
         Assert.Equal(sums.Weight, response.Summary.TotalWeight);
         Assert.Equal(JsonSerializer.Serialize(expectedItems), JsonSerializer.Serialize(response.Items));
         Assert.Empty(db.ChangeTracker.Entries());
-        Assert.DoesNotContain("[SenderEmail]", commands.Reads[1]);
+        Assert.DoesNotContain("[SenderEmail]", commands.Reads[^1]);
     }
 
     [Fact(Skip = "Set VIETAN_TEST_SQLSERVER to run disposable SQL Server integration tests", SkipUnless = nameof(SqlServerAvailable))]
@@ -95,7 +96,8 @@ public class OrderQuerySqlServerTests(SqlServerQueryFixture fixture) : IClassFix
         Assert.Equal(expectedTotal, response.Total);
         Assert.Equal(expectedAll, response.Summary.StatusCounts["all"]);
         Assert.Equal(expectedIds, response.Items.Select(o => o.Seq));
-        Assert.Equal(expectedIds.Count > 0 ? 2 : 1, commands.Reads.Count);
+        // "wait,fly" = 2 nhóm → thêm 1 lần đếm trên tập đã lọc
+        Assert.Equal(expectedIds.Count > 0 ? 3 : 2, commands.Reads.Count);
     }
 
     [Theory(Skip = "Set VIETAN_TEST_SQLSERVER to run disposable SQL Server integration tests", SkipUnless = nameof(SqlServerAvailable))]

@@ -33,3 +33,16 @@
 .body {
   padding: var(--space-3) var(--space-4) var(--space-4);
 }
+
+/* Tiêu đề nổi bật: tên khung màu xanh lá đậm, in đậm */
+.accent .title {
+  color: var(--color-section-title);
+  font-size: var(--text-lg);
+  font-weight: 700;
+}
+
+/* Nút trên tiêu đề (Làm mới, Sổ địa chỉ…) cùng màu với tên khung */
+.accent > .header .actions :is(button, a) {
+  border-color: var(--color-section-title);
+  color: var(--color-section-title);
+}

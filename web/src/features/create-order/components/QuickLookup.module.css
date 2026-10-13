@@ -1,0 +1,279 @@
+/* Khung "Hỗ trợ khách hàng" dưới khung các bước tạo đơn: nút Tra mã HS (mở popup) + nút khai invoice */
+.box {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--text-sm);
+  font-weight: 700;
+  color: var(--color-section-title);
+}
+
+.tabs {
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 999px;
+  background: var(--color-surface-muted);
+}
+
+.tab {
+  flex: 1;
+  height: 24px;
+  padding: 0 4px;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: var(--color-text-muted);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.tabOn {
+  background: var(--color-surface);
+  color: var(--color-brand-strong);
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.12);
+}
+
+.search {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-text-faint);
+}
+
+.search:focus-within {
+  border-color: var(--color-brand);
+  box-shadow: var(--focus-ring);
+}
+
+.search input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: none;
+  color: var(--color-text);
+  font: inherit;
+  font-size: 12px;
+}
+
+/* Tab Khai invoice: nút dọc có mô tả; Nhập từ Excel | File mẫu là nút tách đôi */
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.action {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-brand-strong);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.action:hover {
+  border-color: var(--color-brand);
+  background: var(--color-brand-softer);
+}
+
+.action span {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.action b {
+  color: var(--color-text);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.action small {
+  color: var(--color-text-muted);
+  font-size: 11px;
+}
+
+.split {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.split .action {
+  border: 0;
+  border-radius: 0;
+}
+
+.splitSide {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 5px 10px;
+  border: 0;
+  border-top: 1px dashed var(--color-border);
+  background: var(--color-surface-muted);
+  color: var(--color-text-muted);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.splitSide {
+  text-decoration: none;
+}
+
+.splitSide:hover {
+  background: var(--color-brand-softer);
+  color: var(--color-brand-strong);
+}
+
+.results {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 300px;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.hit {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  column-gap: 8px;
+  width: 100%;
+  padding: 5px 6px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--color-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.hit:hover,
+.hitOn {
+  background: var(--color-brand-softer);
+}
+
+.code {
+  grid-row: span 2;
+  align-self: start;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--color-brand-soft);
+  color: var(--color-brand-strong);
+  font-size: 11px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.main {
+  overflow: hidden;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sub {
+  overflow: hidden;
+  color: var(--color-text-muted);
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.note,
+.hint {
+  margin: 0;
+  padding: 2px 6px;
+  color: var(--color-text-faint);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+/* Màn hình hẹp: thanh các bước nằm ngang, ẩn ô tra cứu */
+@media (max-width: 1100px) {
+  .box {
+    display: none;
+  }
+}
+
+/* Nút Tra mã HS: nổi bật, mở popup tra mã theo nước */
+.hsButton {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px;
+  border: 1px solid var(--color-brand);
+  border-radius: var(--radius-sm);
+  background: var(--color-brand-softer);
+  color: var(--color-brand-strong);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.hsButton:hover {
+  background: var(--color-brand-soft);
+}
+
+.hsButton span {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.hsButton b {
+  color: var(--color-text);
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+.hsButton small {
+  color: var(--color-text-muted);
+  font-size: 11px;
+}
+
+.section {
+  margin-top: 2px;
+  color: var(--color-text-faint);
+  font-size: 10.5px;
+  font-weight: 700;
+}

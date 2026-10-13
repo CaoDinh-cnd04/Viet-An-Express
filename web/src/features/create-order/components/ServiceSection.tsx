@@ -22,7 +22,7 @@ export function ServiceSection() {
   }, [hubs, carrier, getValues, setValue]);
 
   return (
-    <Card title="Dịch vụ" subtitle={lang === 'vi' ? '(Services)' : undefined}>
+    <Card accent title="Dịch vụ" subtitle={lang === 'vi' ? '(Services)' : undefined}>
       {/* Dịch vụ · Hub · Số tham chiếu trên cùng 1 hàng (màn hình hẹp tự xuống dòng) */}
       <FormGrid columns={3}>
         <SelectField

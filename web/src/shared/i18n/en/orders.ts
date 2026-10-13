@@ -75,6 +75,12 @@ export const orders: Record<string, string> = {
   'In hóa đơn (Invoice)': 'Print invoice',
   'Công văn cam kết (CVCK)': 'Commitment letter (CVCK)',
   'In nhãn (A6)': 'Print label (A6)',
+  'đơn': 'orders',
+  'Tổng quan đơn hàng': 'Order overview',
+  '{n} sự cố': '{n} issues',
+  'Sự cố của đơn': 'Issues on this order',
+  'Sự cố {id}: {type} — bấm biểu tượng con mắt để xem': 'Issue {id}: {type} — click the eye icon to view',
+  'Xem chi tiết đơn {bill}': 'View order {bill}',
   'Xem chi tiết đơn': 'View order details',
   'Xem ảnh kiện hàng': 'View package photos',
   'Xem ảnh kiện hàng ({n})': 'View package photos ({n})',
@@ -251,4 +257,12 @@ export const orders: Record<string, string> = {
   'Xóa hết': 'Clear all',
   '{n} từ khóa · cùng loại: khớp bất kỳ · khác loại: phải khớp tất cả': '{n} keywords · same type: match any · different types: must match all',
   'Không': 'No',
+  // In nhiều loại chứng từ
+  'Chọn chứng từ cần in': 'Choose documents to print',
+  'Chọn nhiều loại: in lần lượt từng loại, mỗi loại 1 hộp thoại in theo đúng khổ giấy.': 'Several types print one after another, each in its own print dialog with the right paper size.',
+  'In {n} đơn': 'Print {n} orders',
+  // Trạng thái đơn
+  'Đơn chưa có thông tin POD': 'Orders without POD information',
+  // Thanh thao tác
+  'Xuất bảng kê': 'Export manifest'
 };

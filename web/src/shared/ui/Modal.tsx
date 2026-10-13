@@ -11,8 +11,8 @@ interface ModalProps {
   footer?: ReactNode;
   /** Ghi chú nhỏ bên trái thanh nút. */
   footerNote?: ReactNode;
-  /** md 560px (mặc định) · lg 860px · xl 1120px */
-  size?: 'md' | 'lg' | 'xl';
+  /** md 560px (mặc định) · lg 860px · xl 1120px · full gần hết màn hình (rộng ≤ 1320px, cao 94vh) */
+  size?: 'md' | 'lg' | 'xl' | 'full';
   children: ReactNode;
 }
 

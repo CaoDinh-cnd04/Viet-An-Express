@@ -69,8 +69,6 @@ export function trackStep(status: OrderStatus): StepState {
       return { current: 2, problem: false };
     case 'nd':
       return { current: 2, problem: true };
-    case 'late':
-      return { current: 2, problem: true };
     case 'ok':
       return { current: 3, problem: false };
   }

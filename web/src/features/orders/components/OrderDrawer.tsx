@@ -1,9 +1,10 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useI18n } from '@/shared/i18n';
 import { formatNumber } from '@/shared/lib/format';
 import { useCopyToClipboard } from '@/shared/lib/useCopyToClipboard';
-import { Button, DropdownMenu, Icon, Sheet, SheetBox, SheetFields, SheetLines, SheetName, SheetRow, SheetTable, SheetTotals } from '@/shared/ui';
+import { Button, DropdownMenu, Icon, Sheet, SheetBox, SheetFields, SheetLines, SheetName, SheetRow, SheetTable, SheetTotals, StatusPill } from '@/shared/ui';
+import { TROUBLE_STATUS, TroubleDetailDialog, troublesOfBill, useTroubles } from '@/features/troubles';
 import { useOrder, useOrderEvents } from '../api';
 import { ORDER_STATUS, PRINT_DOCUMENTS } from '../constants';
 import { invoiceTotal, lineVolume, receiverAddress, summarizePackages } from '../lib/order-detail';
@@ -33,6 +34,8 @@ export function OrderDrawer({ order, onClose, actions }: OrderDrawerProps) {
   const print = usePrintDocuments();
   const events = useOrderEvents(order?.bill ?? null);
   const detail = useOrder(order?.bill ?? null);
+  const troubleList = useTroubles();
+  const [openTroubleId, setOpenTroubleId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!order) return;
@@ -48,10 +51,12 @@ export function OrderDrawer({ order, onClose, actions }: OrderDrawerProps) {
   const s = o.shipper;
   const r = o.receiver;
   const packages = o.packages ?? [];
-  const sum = packages.length ? summarizePackages(packages) : null;
+  const sum = packages.length ? summarizePackages(packages, o.route) : null;
   const items = o.invoice?.items ?? [];
   const cur = o.invoice?.currency || '';
   const money = (n: number) => `${formatNumber(n)}${cur ? ` ${cur}` : ''}`;
+  const troubles = troublesOfBill(troubleList.data ?? [], o.bill);
+  const openTrouble = troubles.find(x => x.id === openTroubleId) ?? null;
   let no = 0;
 
   return (
@@ -112,6 +117,26 @@ export function OrderDrawer({ order, onClose, actions }: OrderDrawerProps) {
               />
             </SheetBox>
 
+            {troubles.length > 0 && (
+              <SheetBox no={++no} title="Sự cố của đơn" aside={t('{n} sự cố', { n: troubles.length })}>
+                <ul className={styles.troubles}>
+                  {troubles.map(x => (
+                    <li key={x.id}>
+                      <button type="button" className={styles.trouble} onClick={() => setOpenTroubleId(x.id)}>
+                        <span className={styles.troubleHead}>
+                          <strong className="mono">{x.id}</strong> · {t(x.type)}
+                          <StatusPill tone={TROUBLE_STATUS[x.status].tone}>{t(TROUBLE_STATUS[x.status].label)}</StatusPill>
+                        </span>
+                        <span className={styles.troubleSub}>
+                          {x.date}{x.reply ? ` · ${t('CS Việt An')}: ${x.reply}` : ` · ${t('Chưa có phản hồi.')}`}
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </SheetBox>
+            )}
+
             {detail.isLoading ? (
               <SheetBox title="Người gửi & người nhận"><p className={styles.muted}>{t('Đang tải chi tiết đơn…')}</p></SheetBox>
             ) : (
@@ -139,14 +164,14 @@ export function OrderDrawer({ order, onClose, actions }: OrderDrawerProps) {
                     p.packType || '—',
                     p.length && p.width && p.height ? `${p.length} × ${p.width} × ${p.height}` : '—',
                     `${formatNumber(p.weightKg)} kg`,
-                    `${formatNumber(lineVolume(p))} kg`
+                    `${formatNumber(lineVolume(p, o.route))} kg`
                   ])}
                 />
                 <SheetTotals
                   items={[
                     ['Cân thực', `${formatNumber(sum.gross)} kg`],
                     ['Cân quy đổi', `${formatNumber(sum.volume)} kg`],
-                    ['Cân tính cước', `${formatNumber(sum.chargeable)} kg`]
+                    ['Cân tính cước', `${formatNumber(o.chargeableWeight ?? sum.chargeable)} kg`]
                   ]}
                 />
               </SheetBox>
@@ -200,6 +225,7 @@ export function OrderDrawer({ order, onClose, actions }: OrderDrawerProps) {
           </Sheet>
         </div>
       </aside>
+      <TroubleDetailDialog ticket={openTrouble} onClose={() => setOpenTroubleId(null)} />
     </>
   );
 }

@@ -39,12 +39,12 @@ Backend mới (SQL Server) chỉ cần làm đúng các hợp đồng này là f
 | DELETE | `/orders/:bill` | Có sẵn | Hủy đơn (chỉ đơn "Chưa đi") |
 | GET | `/orders/:bill/photos` | **Chưa làm** | Ảnh kiện chụp tại kho |
 | GET | `/orders/:bill/events` | **Mới** | Hành trình đơn |
-| GET | `/orders/print?bills=A,B&doc=` | Có sẵn | Trang **HTML** in chứng từ cho 1 hoặc nhiều đơn (≤ 100), tự mở hộp thoại in. `doc`: `bill-a4` \| `invoice` \| `cvck` \| `label-a6`. Mẫu theo hệ thống cũ: `invoice` (A4 dọc, 3 bản / đơn: SHIPPER, CONSIGNEE, Air waybill No. / Date / No. of pkgs / Weight / Dimensions, bảng hàng tên Anh/ Việt + nhà sản xuất - xuất xứ, HS, số lượng, đơn giá, thành tiền, Reason for Export và lời cam kết), `cvck` (công văn cam kết nội dung hàng xuất), `label-a6` (khổ 100×150 mm: 3 liên + 1 shipping mark mỗi kiện; cân quy đổi trên nhãn làm tròn lên 0,5 kg) |
+| GET | `/orders/print?bills=A,B&doc=` | Có sẵn | Trang **HTML** in chứng từ cho 1 hoặc nhiều đơn (≤ 100), tự mở hộp thoại in. `doc`: `bill-a4` \| `invoice` \| `cvck` \| `label-a6`, hoặc nhiều loại ngăn bằng dấu phẩy (VD `bill-a4,invoice,label-a6`) → trang gộp, mỗi loại 1 khung, in lần lượt từng loại (mỗi loại 1 hộp thoại in theo khổ giấy riêng). Mẫu theo hệ thống cũ: `invoice` (A4 dọc, 3 bản / đơn: SHIPPER, CONSIGNEE, Air waybill No. / Date / No. of pkgs / Weight / Dimensions, bảng hàng tên Anh/ Việt + nhà sản xuất - xuất xứ, HS, số lượng, đơn giá, thành tiền, Reason for Export và lời cam kết), `cvck` (công văn cam kết nội dung hàng xuất), `label-a6` (khổ 100×150 mm: chỉ shipping mark, 1 nhãn / kiện để dán thùng) |
 | GET | `/orders/export` | Có sẵn | Bảng kê gửi hàng **.xlsx** (cùng tham số lọc như `GET /orders`, tối đa 10.000 dòng); tên file ở header `Content-Disposition` |
 
 ### GET `/orders` — query
 
-`q, searchField (all|cnee|bill|ref|ct), status (all | danh sách wait,fly,nd,ok,late), type (DOC|PACK), fromDate, toDate (yyyy-mm-dd), weightFrom, weightTo, page, pageSize (20|50|100), sortBy (seq|ref|bill|cnee|ct|sent|pod|created), sortDir (asc|desc)`
+`q, searchField (all|cnee|bill|ref|ct), status (all | danh sách wait,fly,nd,ok — nhóm lọc có thể trùng nhau: wait = chưa có ngày gửi, fly = có ngày gửi, nd = chưa có POD, ok = có POD), type (DOC|PACK), fromDate, toDate (yyyy-mm-dd), weightFrom, weightTo, page, pageSize (20|50|100), sortBy (seq|ref|bill|cnee|ct|sent|pod|created), sortDir (asc|desc)`
 
 - `type`: dbo.MaVanDon không có cột loại hàng — DOC là đơn có tên hàng chứa "document", "chứng từ", "hồ sơ" hoặc từ "doc"/"docs"; còn lại là PACK (cùng quy tắc với cột `type` trả về).
 - `fromDate`, `toDate`: theo ngày tạo đơn (`CreateDate`), tính cả 2 ngày đầu cuối.
@@ -71,7 +71,7 @@ Phản hồi (`OrderListResponse`):
   }],
   "total": 8, "page": 1, "pageSize": 20, "totalPages": 1,
   "summary": {
-    "statusCounts": { "all": 8, "wait": 2, "fly": 2, "nd": 1, "ok": 2, "late": 1 },
+    "statusCounts": { "all": 8, "wait": 2, "fly": 6, "nd": 4, "ok": 4 },
     "totalPieces": 16, "totalWeight": 237
   }
 }
@@ -169,6 +169,8 @@ Khi cấp bill, hai mã được lưu vào `dbo.MaVanDon.ConsigneeIossNo` / `Con
 | PUT | `/catalog/products/:id/favorite` | **Mới** | Đánh dấu / bỏ yêu thích mặt hàng, body `{ isFavorite }` → `{ message }` (bảng `dbo.MatHangKhachHang`, Loai = `SP`). Khóa sai định dạng **400** |
 | DELETE | `/catalog/products/:id` | **Mới** | Xóa mặt hàng khỏi thư viện — chỉ ẩn (`Da_Xoa = 1`), dòng hàng trong đơn cũ giữ nguyên. |
 | POST | `/catalog/products` | Không làm | Mặt hàng tự vào thư viện khi đơn được cấp bill (ghi `MaVanDon_ChiTietHang`) — bảng không có cột khách nên không lưu riêng được |
+| POST | `/invoices/import` | **Mới** | Đọc file Excel mẫu invoice (`/templates/Mau_Import_Invoice.xlsx`, multipart `file` ≤ 5 MB) → `{ data: { items: InvoiceItem[], skipped: string[] } }`; không lưu. Cột: STT, Product_en (bắt buộc, ≤ 170), Product_vn (≤ 170), Description = nhà sản xuất (≤ 300), Country (≤ 50, trống = VN), HS_Code, Quantyti (> 0, số nguyên với PCS/SET/BOX/BAG), Unit (trống = PCS), Unit_Price (≤ 2 số lẻ); dòng 2 chú thích bỏ qua; tối đa 49 dòng. Dòng lỗi vào `skipped` dạng "Dòng 5: lý do". Sai mẫu / không đọc được → 400 |
+| GET | `/catalog/hs-lookup?country=US&q=&mode=verified` | **Mới — chờ dữ liệu** | Tra mã HS theo nước nhập khẩu (popup "Tra mã HS" ở trang tạo đơn). `country`: `US` (HTSUS 10 số) \| `GB` (UK Tariff 10 số) \| `AU` (ABF 8/10 số); `mode`: `verified` (mặt hàng Việt An đã gửi thực tế, đã rà soát) \| `catalog` (tra danh mục mã của biểu thuế nước đó); `q` ≥ 2 ký tự (tên Việt/Anh hoặc số). → `{ data: HsLookupItem[] }` = `{ nameVi, nameEn, hs6, nationalCode?, nationalDescription?, note? }`. Bảng dữ liệu do người dùng cung cấp (cần duyệt nếu tạo bảng mới). Chưa có endpoint (404/501) → popup tạm hiện HS6 từ nhóm hàng / thư viện mặt hàng / invoice gần đây |
 | GET | `/invoices/recent?limit=20` | Có sẵn | Invoice đơn gần đây (≤ 50, từ `MaVanDon_ChiTietHang`) để chép lại: `{ bill, cnee, date, currency, items: SavedProduct[] }[]` |
 | GET | `/geo/countries` | Có sẵn | Quốc gia + mã điện thoại: `[{ code: "US", name: "United States", dialCode: "+1" }]` (backend lấy từ world-countries, cache 1 ngày) |
 | GET | `/geo/postal/:countryCode/:postalCode` | Có sẵn | Mã bưu chính → `{ countryCode, postalCode, city, state, stateCode, places: [{ city, state, stateCode, area }] }` — `city/state/stateCode` = nơi đầu tiên; `places` = mọi nơi khác nhau dùng chung mã (tối đa 20): nhiều thành phố thì form không tự điền, khách chọn; `area` = khu phố / bưu cục nhỏ hơn thành phố (Mexico: colonia, thành phố = municipio adminName2; Ấn Độ: locality, thành phố adminName3), null ở nước khác (backend tra GeoNames postalCodeLookupJSON maxRows=30, ~100 nước, nhận cả mã đầy đủ như `SW1A 1AA`; tài khoản GeoNames chỉ ở cấu hình backend `GeoNames:Username`); không tìm thấy / chưa hỗ trợ / nguồn tạm lỗi → 404 |
@@ -354,7 +356,7 @@ Liên hệ để trống thì không hiện nút trong preview. Cấu hình ản
 | POST | `/admin/troubles/:id/reply` | **Mới** | `{ reply?, status? }` (ít nhất 1; `status` ∈ `new \| doing \| waitc \| done`) → `{ data, message }`. Tạo thông báo **riêng khách đó** (`dbo.ThongBao.CustomerID`), nút "Xem tại đây" mở trang Sự cố |
 | DELETE | `/admin/notifications/:id` | **Mới** | Xóa thông báo và lượt đã đọc → `{ message }` (email đã gửi không thu hồi) |
 | DELETE | `/admin/feedback/:id` | **Mới** | Xóa hẳn góp ý: xóa dòng `dbo.GopY` và ảnh `dbo.GopY_HinhAnh` (khách cũng không còn thấy, không khôi phục được) → `{ message }`; không có → 404 `FEEDBACK_NOT_FOUND` |
-| POST | `/support/feedback` | **Mới** | Trang Trợ giúp, `multipart/form-data`: `category` (≤ 100), `subject` (5–200), `message` (20–4000), `contact` (6–200), `attachment?` (≤ 10 MB: ảnh, PDF, Excel, CSV, Word) → `{ message }`. Không lưu database: gửi email về hộp thư nhận (`Email:InboxAddress`), Reply-To = `contact` nếu là email, không thì email hồ sơ khách. Máy chủ chưa cấu hình email → 422 `EMAIL_NOT_CONFIGURED`. Quyền `account.feedback` |
+| POST | `/support/feedback` | **Mới** | Trang Trợ giúp, `multipart/form-data`: `category` (≤ 100), `subject` (5–200), `message` (20–4000), `contact` (6–200), `attachment?` (≤ 10 MB: ảnh, PDF, Excel, CSV, Word) → `{ message }`. Lưu vào `dbo.GopY` (hiện ở danh sách góp ý trang quản trị `/admin`; nội dung = `[Hỗ trợ · category] subject` + `message`; tệp là ảnh JPG/PNG/WEBP/GIF ≤ 5 MB lưu `dbo.GopY_HinhAnh`, tệp khác chỉ ghi tên) và gửi email về hộp thư nhận (`Email:InboxAddress`), Reply-To = `contact` nếu là email, không thì email hồ sơ khách. Máy chủ chưa cấu hình email → vẫn lưu, bỏ qua email. Quyền `account.feedback` |
 | POST | `/auth/login` | **Mới** | `{ username, password, remember }` — `username` là tên đăng nhập của khách (`dbo.TCustomer.Login_UserName`), mật khẩu so với `Login_Password`; không khớp thì thử tài khoản con của nhân viên (§7.1). Đúng: đặt cookie phiên (httpOnly; `remember: false` → cookie hết khi đóng trình duyệt) và trả `{ data: SessionUser }`. Sai: 401 + `message` |
 | GET | `/auth/session` | **Mới** | Phiên hiện tại cho web portal, **luôn 200**: đã đăng nhập → `{ data: SessionUser }`; access token hết hạn mà còn refresh cookie → làm mới (đặt lại cookie) rồi trả người dùng; chưa đăng nhập → `{ data: null }`. Frontend dùng thay `/me` để mở trang khi chưa đăng nhập không sinh lỗi 401 (Shopify review) |
 | POST | `/auth/refresh` | Có sẵn | Đổi refresh token (cookie) lấy phiên mới — frontend tự gọi 1 lần khi gặp 401 |
@@ -386,7 +388,7 @@ Khi `/me` trả 404/501 (backend chưa bật đăng nhập), frontend cho vào p
 { "bill": "VA999999", "found": false }
 ```
 
-- `status` dùng chung mã với đơn hàng: `wait | fly | nd | ok | late`. `events` mới nhất trước.
+- `status` dùng chung mã với đơn hàng: `wait | fly | ok` (nhãn 1 đơn: có POD → ok, có ngày gửi → fly, còn lại → wait). `events` mới nhất trước.
 - Tìm theo **mã bill Việt An hoặc mã hãng** (tracking DHL/FedEx/UPS/TNT). Chỉ trả thông tin hành trình — **không** trả tên/địa chỉ/điện thoại người gửi, người nhận, giá cước.
 - Hai endpoint này mở công khai nên cần **giới hạn tần suất** theo IP (VD 30 lần/phút cho tracking, 5 lần/giờ cho contact) → trả **429** + `message` tiếng Việt. Validate lại phía server (tên ≤ 100, nội dung 10–2000 ký tự, số điện thoại 9–15 ký tự số).
 - `/public/contact` lưu lại để nhân viên kinh doanh xử lý (và/hoặc gửi email thông báo nội bộ).

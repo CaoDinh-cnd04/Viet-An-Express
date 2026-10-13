@@ -50,6 +50,7 @@ internal sealed class IdentityDbContext(DbContextOptions<IdentityDbContext> opti
     public const string Schema = "identity";
 
     public DbSet<CustomerLogin> Logins => Set<CustomerLogin>();
+    public DbSet<UsageEvent> UsageEvents => Set<UsageEvent>();
 
     /// <summary>Tài khoản con của nhân viên (dbo.TaiKhoanNhanVien).</summary>
     public DbSet<StaffAccount> StaffAccounts => Set<StaffAccount>();

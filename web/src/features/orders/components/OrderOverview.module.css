@@ -1,0 +1,139 @@
+/* Dải trạng thái đầu khung lọc: tab không khung, tab đang chọn nền nhạt cùng màu trạng thái; tổng bên phải */
+.overview {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px var(--space-3);
+  padding: 5px var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.statuses {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1px;
+}
+
+.status {
+  --tone: var(--color-text-muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 26px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: var(--color-text);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 0.12s, color 0.12s;
+}
+
+.status:hover {
+  background: color-mix(in srgb, var(--tone) 10%, transparent);
+}
+
+.status:focus-visible {
+  outline: 2px solid var(--tone);
+  outline-offset: 2px;
+}
+
+.dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--tone);
+}
+
+.count {
+  min-width: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-border) 55%, var(--color-surface));
+  color: var(--color-text);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 16px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Đang chọn: nền nhạt cùng màu trạng thái, chữ cùng màu; chỉ số đếm tô đặc */
+.on,
+.on:hover {
+  background: color-mix(in srgb, var(--tone) 12%, var(--color-surface));
+  color: var(--tone);
+  font-weight: 700;
+}
+
+.on .count {
+  background: var(--tone);
+  color: var(--color-on-hero);
+}
+
+.all {
+  --tone: var(--color-print-doc);
+}
+
+.info {
+  --tone: var(--color-info);
+}
+
+.success,
+.brand {
+  --tone: var(--color-success);
+}
+
+.warning {
+  --tone: var(--color-warning);
+}
+
+.danger {
+  --tone: var(--color-danger);
+}
+
+/* Tổng kiện · Tổng cân · Kết quả — đẩy sang phải, thao tác ngay sau */
+.totals {
+  display: flex;
+  flex-wrap: wrap;
+  align-self: center;
+  gap: var(--space-1) 10px;
+  margin: 0 0 0 auto;
+}
+
+.totals div {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.totals div + div {
+  padding-left: 10px;
+  border-left: 1px solid var(--color-border);
+}
+
+.totals dt {
+  color: var(--color-text-muted);
+  font-size: 12px;
+}
+
+.totals dd {
+  margin: 0;
+  color: var(--color-table-head-text);
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Thao tác cuối hàng, ngăn với tổng bằng vạch mảnh */
+.actions {
+  display: flex;
+  align-items: center;
+  margin-left: auto;
+  padding-left: 10px;
+  border-left: 1px solid var(--color-border);
+}

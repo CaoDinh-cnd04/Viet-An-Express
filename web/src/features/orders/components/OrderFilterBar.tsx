@@ -3,8 +3,7 @@ import { useI18n } from '@/shared/i18n';
 import { useDebouncedCallback } from '@/shared/lib/useDebouncedCallback';
 import { Button, Icon, SelectField, TextField } from '@/shared/ui';
 import { parseTags, serializeTags } from '../lib/multi-filter';
-import type { OrderFilters, OrderListResponse } from '../types';
-import { StatusFilter } from './StatusFilter';
+import type { OrderFilters } from '../types';
 import { TagSearch } from './TagSearch';
 import styles from './OrderFilterBar.module.css';
 
@@ -13,12 +12,11 @@ interface OrderFilterBarProps {
   onChange: (patch: Partial<OrderFilters>) => void;
   onReset: () => void;
   /** Số đơn theo trạng thái (đếm trên các chip). */
-  statusCounts?: OrderListResponse['summary']['statusCounts'];
 }
 
 type TextKey = 'weightFrom' | 'weightTo';
 
-export function OrderFilterBar({ filters, onChange, onReset, statusCounts }: OrderFilterBarProps) {
+export function OrderFilterBar({ filters, onChange, onReset }: OrderFilterBarProps) {
   const { t } = useI18n();
   // Ô gõ tự do giữ state cục bộ để nhập mượt, đẩy lên URL sau khi ngừng gõ.
   const [draft, setDraft] = useState<Record<TextKey, string>>({ weightFrom: filters.weightFrom, weightTo: filters.weightTo });
@@ -59,7 +57,6 @@ export function OrderFilterBar({ filters, onChange, onReset, statusCounts }: Ord
         </div>
         <Button size="sm" className={styles.reset} onClick={onReset}>{t('Xóa lọc')}</Button>
       </div>
-      <StatusFilter value={filters.status} onChange={status => onChange({ status })} counts={statusCounts} />
     </section>
   );
 }

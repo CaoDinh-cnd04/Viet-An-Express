@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { arrowMove, sanitizeDecimal } from './cell-nav';
+import { arrowMove, hasMaxDecimals, sanitizeDecimal } from './cell-nav';
 
 describe('arrowMove', () => {
   it('cuối ô + → thì sang ô sau, đầu ô + ← thì về ô trước', () => {
@@ -26,5 +26,23 @@ describe('sanitizeDecimal', () => {
 
   it('số nguyên chỉ giữ chữ số', () => {
     expect(sanitizeDecimal('3.5', true)).toBe('35');
+  });
+});
+
+describe('giới hạn số lẻ (đơn giá invoice tối đa 2 số lẻ)', () => {
+  it('cắt bớt số lẻ khi gõ', () => {
+    expect(sanitizeDecimal('1.0000000000000000000003', false, 2)).toBe('1.00');
+    expect(sanitizeDecimal('12,345', false, 2)).toBe('12.34');
+    expect(sanitizeDecimal('40.', false, 2)).toBe('40.');
+    expect(sanitizeDecimal('7', false, 2)).toBe('7');
+  });
+
+  it('kiểm tra giá trị có sẵn (nháp cũ, dán vào)', () => {
+    expect(hasMaxDecimals('40', 2)).toBe(true);
+    expect(hasMaxDecimals('40.5', 2)).toBe(true);
+    expect(hasMaxDecimals('40.55', 2)).toBe(true);
+    expect(hasMaxDecimals('1.0000000000000000000003', 2)).toBe(false);
+    expect(hasMaxDecimals('', 2)).toBe(false);
+    expect(hasMaxDecimals('abc', 2)).toBe(false);
   });
 });

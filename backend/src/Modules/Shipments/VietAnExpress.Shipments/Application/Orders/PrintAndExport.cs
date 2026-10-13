@@ -9,6 +9,7 @@ using VietAnExpress.SharedKernel.Results;
 using VietAnExpress.Shipments.Application.Orders.Documents;
 using VietAnExpress.Shipments.Infrastructure;
 using VietAnExpress.Shipments.Infrastructure.Legacy;
+using VietAnExpress.Shipments.Domain;
 
 namespace VietAnExpress.Shipments.Application.Orders;
 
@@ -53,7 +54,7 @@ internal sealed class PrintOrdersHandler(
             .ToList();
 
         var now = VietnamTime.Now(clock);
-        return OrderDocumentRenderer.Render(q.Doc, models, company.Value, now);
+        return OrderDocumentRenderer.RenderMany(PrintDocs.Parse(q.Doc), models, company.Value, now);
     }
 
     /// <summary>Đơn tạo trên portal còn giữ form (nháp đã in) → lấy dòng hàng cho invoice, dòng kiện cho bill.</summary>
@@ -81,8 +82,10 @@ internal sealed class PrintOrdersHandler(
                     i.Hs, string.IsNullOrWhiteSpace(i.Origin) ? null : i.Origin,
                     string.IsNullOrWhiteSpace(i.DescVi) ? null : i.DescVi, string.IsNullOrWhiteSpace(i.Manufacturer) ? null : i.Manufacturer))
                 .ToList();
+            var rule = ShippingRules.Rule(payload.Service.Carrier, payload.Service.Hub);
             IReadOnlyList<PrintPackage> packages = payload.Packages
-                .Select(k => new PrintPackage((int)Num(k.Qty), Num(k.Length), Num(k.Width), Num(k.Height), Num(k.Weight)))
+                .Select(k => new PrintPackage((int)Num(k.Qty), Num(k.Length), Num(k.Width), Num(k.Height), Num(k.Weight),
+                    ShippingRules.Round((int)Num(k.Qty) * ShippingRules.Volume(Num(k.Length), Num(k.Width), Num(k.Height), rule))))
                 .Where(k => k.Qty > 0 && (k.WeightKg > 0 || k.Length * k.Width * k.Height > 0))
                 .ToList();
             result[d.Number] = (items, packages);
@@ -112,8 +115,7 @@ internal sealed class ExportOrdersHandler(ShipmentsDbContext db, OrderAccess acc
         [LegacyOrderStatus.Waiting] = "Chưa đi",
         [LegacyOrderStatus.InTransit] = "Đã đi",
         [LegacyOrderStatus.NotDelivered] = "Chưa phát",
-        [LegacyOrderStatus.Delivered] = "Đã phát",
-        [LegacyOrderStatus.Late] = "Vượt ngày"
+        [LegacyOrderStatus.Delivered] = "Đã phát"
     };
 
     public async Task<ExportedFile> Handle(ExportOrdersQuery q, CancellationToken ct)

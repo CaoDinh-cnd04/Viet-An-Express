@@ -10,7 +10,7 @@ export interface ImportRow {
   city: string;
   pieces: number;
   weightKg: number;
-  /** Cân tính cước = max(cân thực, D×R×C / 5000). */
+  /** Tổng cân tính cước từng kiện (D×R×C / 5000), làm tròn theo hãng/dịch vụ. */
   chargeableKg: number;
   value: number;
   currency: string;

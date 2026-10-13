@@ -7,7 +7,8 @@ import { getErrorMessage } from '@/shared/api/http';
 import { useCategories, useFavoriteCategory, type Category } from '../api';
 import { MULTI_CATEGORY, PACKAGING_TYPES, RULES } from '../constants';
 import { evaluatePackages } from '../lib/carrier-limits';
-import { summarizePackages, volumetricWeight } from '../lib/shipment';
+import { packageChargeableWeight, summarizePackages, volumetricWeight } from '../lib/shipment';
+import { weightRule } from '@/shared/lib/shipping-weight';
 import { emptyPackage, type CreateOrderValues } from '../schema';
 import { CategoryManagerDialog } from './CategoryManagerDialog';
 import { CategoryPicker } from './CategoryPicker';
@@ -31,8 +32,10 @@ export function PackagesTable({ onPackagesInput }: { onPackagesInput: () => void
   const { fields, append, remove } = useFieldArray({ control, name: 'packages' });
   const packages = useWatch({ control, name: 'packages' }) ?? [];
   const carrier = useWatch({ control, name: 'service.carrier' });
+  const hub = useWatch({ control, name: 'service.hub' });
+  const service = { carrier, hub };
   const declaredPieces = useWatch({ control, name: 'shipment.pieces' });
-  const summary = summarizePackages(packages);
+  const summary = summarizePackages(packages, service);
   const warnings = evaluatePackages(carrier, packages);
   const err = (path: string) => get(formState.errors, path)?.message as string | undefined;
   // Tổng SL các dòng kiện ≠ số kiện dự kiến (báo khi bấm Tạo đơn / Tiếp tục)
@@ -49,7 +52,7 @@ export function PackagesTable({ onPackagesInput }: { onPackagesInput: () => void
   const [managing, setManaging] = useState(false);
 
   return (
-    <Card
+    <Card accent
       title="Chi tiết kiện hàng"
       actions={
         <div className={styles.pkgHeader}>
@@ -91,7 +94,8 @@ export function PackagesTable({ onPackagesInput }: { onPackagesInput: () => void
                   {t(c.label)} {'required' in c && <span className={styles.required}>*</span>}
                 </th>
               ))}
-              <th className={styles.colNum}>{t('Quy đổi (kg)')}</th>
+              <th className={cx(styles.colNum, styles.computedHeader)}>{t('Quy đổi (kg)')}</th>
+              <th className={cx(styles.colNum, styles.computedHeader)}>{t('Tính cước (kg)')}</th>
               <th className={styles.colDel}><span className="visually-hidden">{t('Xóa')}</span></th>
             </tr>
           </thead>
@@ -153,7 +157,8 @@ export function PackagesTable({ onPackagesInput }: { onPackagesInput: () => void
                     />
                   </td>
                 ))}
-                <td className={styles.computed}>{packages[i] ? volumetricWeight(packages[i]) : 0}</td>
+                <td className={styles.computed}>{packages[i] ? volumetricWeight(packages[i], service) : 0}</td>
+                <td className={styles.computed}>{packages[i] ? packageChargeableWeight(packages[i], service) : 0}</td>
                 <td>
                   <Button
                     size="sm"
@@ -206,6 +211,8 @@ export function PackagesTable({ onPackagesInput }: { onPackagesInput: () => void
           ))}
         </div>
       )}
+      <p className={styles.weightRuleHint}>{t(weightRule(service).label)}</p>
+      <p className={styles.weightRuleHint}>{t('Quy đổi và tính cước ở mỗi dòng là tổng theo SL.')}{weightRule(service).dimension === 'up' ? ` ${t('Kích thước tính quy đổi làm tròn lên cm.')}` : weightRule(service).dimension === 'nearest' ? ` ${t('Kích thước tính quy đổi làm tròn đến cm gần nhất.')}` : ''}</p>
       <CategoryManagerDialog
         open={managing}
         onClose={() => setManaging(false)}

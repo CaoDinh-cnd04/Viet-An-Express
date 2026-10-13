@@ -1,12 +1,26 @@
 .sidebar {
+  /* Nền trắng, chữ đen (màu theo token --color-sidebar-*): đổi bộ màu dùng bên trong menu (mục đang chọn, rê chuột, đường kẻ, số đếm) */
+  --color-text: var(--color-sidebar-text);
+  --color-text-muted: var(--color-sidebar-muted);
+  --color-text-faint: var(--color-sidebar-faint);
+  --color-border: var(--color-sidebar-line);
+  --color-brand: var(--color-sidebar-text);
+  --color-brand-strong: var(--color-sidebar-text);
+  --color-brand-deep: var(--color-sidebar-text);
+  --color-brand-soft: var(--color-sidebar-active);
+  --color-brand-softer: var(--color-sidebar-hover);
+  --color-surface: var(--color-sidebar-bg);
   position: sticky;
   top: 0;
   height: 100vh;
   display: flex;
   flex-direction: column;
-  background: var(--color-surface);
+  background: var(--color-sidebar-bg);
   border-right: 1px solid var(--color-border);
   overflow: hidden;
+  font-family: var(--font-nav);
+  -webkit-font-smoothing: antialiased;
+  line-height: 1.35;
 }
 
 /* Thu gọn tạm + rê chuột: mở rộng đè lên nội dung (cột menu vẫn hẹp nên form không bị xô) */
@@ -21,32 +35,28 @@
 .brand {
   display: flex;
   align-items: center;
-  gap: 11px;
+  gap: 9px;
   height: var(--topbar-h); /* cùng chiều cao thanh trên cùng để 2 đường kẻ ngang thẳng hàng */
-  padding: 0 18px;
+  padding: 0 14px;
   border-bottom: 1px solid var(--color-border);
 }
 
 .logo {
-  width: 36px;
-  height: 36px;
+  width: 30px;
+  height: 30px;
   flex: none;
   object-fit: contain;
   border: 1px solid var(--color-border);
-  border-radius: 10px;
+  border-radius: 8px;
   background: #fff;
 }
 
 .brandName {
   font-size: 15px;
   font-weight: 700;
-  color: var(--color-brand-deep);
+  letter-spacing: -0.01em;
+  color: var(--color-sidebar-active-text);
   white-space: nowrap;
-}
-
-.brandSub {
-  font-size: var(--text-xs);
-  color: var(--color-text-faint);
 }
 
 .nav {
@@ -54,7 +64,7 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
-  padding: var(--space-3) 10px;
+  padding: var(--space-3) 8px;
   overflow-y: auto;
 }
 
@@ -67,14 +77,16 @@
 .item {
   display: flex;
   align-items: center;
-  gap: 11px;
+  gap: 9px;
   width: 100%;
-  padding: 8px 10px;
+  padding: 6px 10px;
   border: 0;
   border-radius: 0;
   background: none;
   color: var(--color-text-muted);
-  font-size: var(--text-sm);
+  font-size: 13px;
+  font-weight: 400;
+  letter-spacing: -0.005em;
   text-align: left;
 }
 
@@ -85,8 +97,9 @@
 
 .top {
   color: var(--color-text);
-  font-size: var(--text-md);
+  font-size: 13px;
   font-weight: 600;
+  letter-spacing: -0.01em;
 }
 
 .icon {
@@ -111,36 +124,29 @@
   display: flex;
   flex-direction: column;
   gap: 1px;
-  margin: 2px 0 6px 19px;
-  padding-left: 12px;
+  margin: 2px 0 6px 17px;
+  padding-left: 10px;
   border-left: 1px solid var(--color-border);
 }
 
 .child {
   position: relative;
-  padding: 7px 10px;
+  padding: 6px 10px;
 }
 
-.active {
-  background: var(--color-brand-soft);
-  color: var(--color-brand-strong);
-  font-weight: 600;
+.active,
+.active:hover {
+  background: var(--color-sidebar-active-bg);
+  color: var(--color-sidebar-active-text);
+  font-weight: 700;
 }
 
-.active .icon,
+.active .icon {
+  color: var(--color-sidebar-active-text);
+}
+
 .groupActive .icon {
   color: var(--color-brand);
-}
-
-.child.active::before {
-  content: '';
-  position: absolute;
-  left: -13px;
-  top: 8px;
-  bottom: 8px;
-  width: 2px;
-  border-radius: 2px;
-  background: var(--color-brand);
 }
 
 .badge {

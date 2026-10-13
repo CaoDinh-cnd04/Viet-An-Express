@@ -48,7 +48,7 @@ internal static class LegacyOrderFactory
         // Hàng hóa: số kiện = tổng SL các dòng kiện (form không còn ô số kiện riêng); chứng từ: khách khai
         var packageQty = p.Packages.Sum(x => (int)Num(x.Qty));
         var pieces = Math.Max(1, isDoc || packageQty == 0 ? (int)Num(p.Shipment.Pieces) : packageQty);
-        var weight = isDoc ? Num(p.Shipment.GrossWeight) : ChargeableWeight(p.Packages, Num(p.Shipment.GrossWeight));
+        var weight = isDoc ? Num(p.Shipment.GrossWeight) : ChargeableWeight(p.Packages, Num(p.Shipment.GrossWeight), p.Service.Carrier, p.Service.Hub);
         var goods = isDoc ? p.Goods.DocContent : GoodsName(p);
         var value = p.Invoice.Items.Sum(i => Num(i.Qty) * Num(i.Price));
         if (value == 0) value = Num(p.Invoice.DeclaredValue);
@@ -118,24 +118,26 @@ internal static class LegacyOrderFactory
     public static List<LegacyPackageLine> PackageLines(OrderPayload p, int orderId)
     {
         if (string.Equals(p.Shipment.Type, "DOC", StringComparison.OrdinalIgnoreCase)) return [];
+        var rule = ShippingRules.Rule(p.Service.Carrier, p.Service.Hub);
         return p.Packages
             .Select(k => (Part: k, Qty: (int)Num(k.Qty), L: Num(k.Length), W: Num(k.Width), H: Num(k.Height), Kg: Num(k.Weight)))
             .Where(k => k.Qty > 0 && (k.Kg > 0 || k.L * k.W * k.H > 0))
             .Select(k =>
             {
                 var weight = Round(k.Qty * k.Kg);
-                var volumetric = Round(k.Qty * k.L * k.W * k.H / ShippingRules.VolumetricDivisor);
+                var volumePerPiece = ShippingRules.Volume(k.L, k.W, k.H, rule);
+                var volumetric = Round(k.Qty * volumePerPiece);
                 return new LegacyPackageLine
                 {
                     OrderId = orderId,
                     Quantity = k.Qty,
                     PackType = Clip(PackTypeCode(k.Part), 50) ?? DefaultPackType,
-                    LengthCm = (int)Math.Ceiling(k.L),
-                    WidthCm = (int)Math.Ceiling(k.W),
-                    HeightCm = (int)Math.Ceiling(k.H),
+                    LengthCm = (int)Math.Ceiling(ShippingRules.Dimension(k.L, rule)),
+                    WidthCm = (int)Math.Ceiling(ShippingRules.Dimension(k.W, rule)),
+                    HeightCm = (int)Math.Ceiling(ShippingRules.Dimension(k.H, rule)),
                     WeightKg = weight,
                     VolumetricKg = volumetric,
-                    ChargeableKg = ShippingRules.ChargeableWeight(weight, volumetric)
+                    ChargeableKg = Round(k.Qty * ShippingRules.PieceWeight(k.Kg, volumePerPiece, rule))
                 };
             })
             .ToList();
@@ -190,14 +192,14 @@ internal static class LegacyOrderFactory
         return parts.Length == 2 ? $"{parts[0]}|{parts[1]}" : source.Trim();
     }
 
-    /// <summary>Cân tính cước = max(tổng cân thực, tổng cân quy đổi D×R×C/5000) — giống frontend; không có kiện thì lấy cân tổng khai báo.</summary>
-    public static decimal ChargeableWeight(IReadOnlyCollection<OrderPayload.PackagePart> packages, decimal grossWeight)
+    /// <summary>Tổng cân tính cước từng kiện, rồi làm tròn tổng theo hãng/dịch vụ; không có kiện thì lấy cân tổng khai báo.</summary>
+    public static decimal ChargeableWeight(IReadOnlyCollection<OrderPayload.PackagePart> packages, decimal grossWeight, string? carrier = null, string? hub = null)
     {
         if (packages.Count == 0) return grossWeight;
-        var actual = packages.Sum(p => Num(p.Weight) * Math.Max(1, Num(p.Qty)));
-        var volumetric = packages.Sum(p => Num(p.Length) * Num(p.Width) * Num(p.Height) * Math.Max(1, Num(p.Qty)) / ShippingRules.VolumetricDivisor);
-        var chargeable = Math.Max(actual, volumetric);
-        return chargeable > 0 ? chargeable : grossWeight;
+        var rule = ShippingRules.Rule(carrier, hub);
+        var chargeable = packages.Sum(p => (int)Num(p.Qty) * ShippingRules.PieceWeight(Num(p.Weight),
+            ShippingRules.Volume(Num(p.Length), Num(p.Width), Num(p.Height), rule), rule));
+        return chargeable > 0 ? ShippingRules.ShipmentWeight(chargeable, rule) : grossWeight;
     }
 
     private static decimal Num(string? value) =>

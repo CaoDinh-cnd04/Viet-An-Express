@@ -93,6 +93,5 @@ export const TRACK_STATUS: Record<OrderStatus, { label: string; tone: Tone; icon
   wait: { label: 'Đã tạo vận đơn, chờ gửi', tone: 'info', icon: 'file' },
   fly: { label: 'Đang vận chuyển', tone: 'brand', icon: 'plane' },
   nd: { label: 'Giao chưa thành công', tone: 'warning', icon: 'alert' },
-  late: { label: 'Chậm so với dự kiến', tone: 'danger', icon: 'clock' },
   ok: { label: 'Đã giao hàng', tone: 'success', icon: 'check' }
 };

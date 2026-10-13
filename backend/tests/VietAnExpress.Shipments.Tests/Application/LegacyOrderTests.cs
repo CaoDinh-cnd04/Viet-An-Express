@@ -190,13 +190,24 @@ public class LegacyOrderViewTests
     };
 
     [Theory]
-    [InlineData("08/01/2026 17:53, DELIVERED Jason Teo", null, null, "ok")]
-    [InlineData("08/01/2026 17:53 Consignee not available", null, null, "nd")]
-    [InlineData(null, "2026-09-20", "2026-09-25", "late")]
-    [InlineData(null, "2026-09-20", "2026-10-05", "fly")]
+    [InlineData("08/01/2026 17:53, DELIVERED Jason Teo", "2026-01-03", null, "ok")]
+    [InlineData("08/01/2026 17:53 Consignee not available", null, null, "ok")] // có thông tin POD = đã phát
+    [InlineData(null, "2026-09-20", "2026-09-25", "fly")]                     // quá ngày dự kiến vẫn là đã đi (bỏ "vượt ngày")
     [InlineData(null, null, null, "wait")]
-    public void Trang_thai_suy_ra_tu_POD_ngay_gui_va_du_kien(string? pod, string? sent, string? eta, string expected) =>
+    public void Nhan_trang_thai_suy_ra_tu_POD_va_ngay_gui(string? pod, string? sent, string? eta, string expected) =>
         Assert.Equal(expected, LegacyOrderStatus.Of(Order(pod, Parse(sent), Parse(eta)), Today));
+
+    [Theory]
+    [InlineData(null, null, "wait,nd")]                       // chưa gửi, chưa POD
+    [InlineData(null, "2026-09-20", "fly,nd")]                // đã gửi, chưa POD
+    [InlineData("08/01/2026 DELIVERED", "2026-09-20", "fly,ok")] // đã gửi, có POD
+    public void Bo_loc_trang_thai_co_the_trung_nhau(string? pod, string? sent, string groups)
+    {
+        var order = Order(pod, Parse(sent));
+        var matched = LegacyOrderStatus.All.Where(s => LegacyOrderStatus.Is(s, Today).Compile()(order));
+        Assert.Equal(groups, string.Join(",", matched));
+        Assert.Contains(LegacyOrderStatus.Of(order, Today), matched); // nhãn dòng luôn thuộc 1 nhóm lọc khớp
+    }
 
     [Fact]
     public void Doi_sang_dang_Order_cua_frontend()

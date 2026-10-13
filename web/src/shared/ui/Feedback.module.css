@@ -28,8 +28,8 @@
 }
 
 .success {
-  background: var(--color-brand-soft);
-  color: var(--color-brand-strong);
+  background: var(--color-success-soft);
+  color: var(--color-success-strong);
 }
 
 /* ---------- StatCard ---------- */

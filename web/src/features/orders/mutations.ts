@@ -13,7 +13,8 @@ export type PrintDoc = (typeof PRINT_DOCUMENTS)[number]['key'];
 const errorMessage = (e: unknown) => (e instanceof ApiError ? e.message : 'Có lỗi xảy ra, vui lòng thử lại');
 
 /**
- * In chứng từ cho 1 hoặc nhiều đơn: mở tab mới NGAY khi bấm (trình duyệt không chặn pop-up),
+ * In chứng từ cho 1 hoặc nhiều đơn, 1 hoặc nhiều loại (nhiều loại → backend trả trang gộp, in lần lượt từng loại):
+ * mở tab mới NGAY khi bấm (trình duyệt không chặn pop-up),
  * tải trang in từ backend rồi đổ vào tab — trang tự mở hộp thoại in.
  * `bills` có thể là hàm async (vd cấp mã bill rồi mới in); trả mảng rỗng = hủy, tự đóng tab (lỗi đã báo ở nơi gọi).
  */
@@ -21,7 +22,7 @@ export function usePrintDocuments() {
   const toast = useToast();
   const { t } = useI18n();
   return useCallback(
-    async (bills: readonly string[] | (() => Promise<readonly string[]>), doc: PrintDoc) => {
+    async (bills: readonly string[] | (() => Promise<readonly string[]>), doc: PrintDoc | readonly PrintDoc[]) => {
       if (Array.isArray(bills) && bills.length === 0) return;
       const win = window.open('', '_blank');
       if (!win) {
@@ -37,7 +38,7 @@ export function usePrintDocuments() {
           win.close();
           return;
         }
-        const html = await fetchPrintHtml(list, doc);
+        const html = await fetchPrintHtml(list, typeof doc === 'string' ? doc : doc.join(','));
         win.document.open();
         win.document.write(html);
         win.document.close();

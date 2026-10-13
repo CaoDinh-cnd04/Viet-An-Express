@@ -1,4 +1,10 @@
 .page {
+  /* Trang ngoài giữ màu chính xanh lá Việt An (portal dùng xanh dương) */
+  --color-brand: var(--color-success);
+  --color-brand-strong: var(--color-success-strong);
+  --color-brand-deep: var(--color-success-deep);
+  --color-brand-soft: var(--color-success-soft);
+  --color-brand-softer: var(--color-success-softer);
   min-height: 100%;
   background: var(--color-surface);
   scroll-behavior: smooth;

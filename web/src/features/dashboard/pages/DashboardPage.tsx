@@ -46,7 +46,7 @@ export default function DashboardPage() {
         <StatGrid>
           <StatCard label="Tổng đơn" value={formatNumber(counts?.all ?? 0)} hint={t('{kg} kg · {n} kiện', { kg: formatNumber(orders.data?.summary.totalWeight ?? 0), n: orders.data?.summary.totalPieces ?? 0 })} tone="brand" icon="box" />
           <StatCard label="Chờ in bill" value={readyDrafts} hint={t('{n} đơn nháp & chưa in', { n: drafts.data?.length ?? 0 })} icon="printer" />
-          <StatCard label="Chưa phát / vượt ngày" value={(counts?.nd ?? 0) + (counts?.late ?? 0)} hint={t('{n} đơn vượt ngày dự kiến', { n: counts?.late ?? 0 })} tone={counts?.late ? 'danger' : undefined} icon="clock" />
+          <StatCard label="Chưa phát" value={counts?.nd ?? 0} hint={t('Đơn chưa có thông tin POD')} icon="clock" />
           <StatCard label="Sự cố chưa xong" value={openTroubles} tone={openTroubles ? 'warning' : undefined} icon="alert" />
         </StatGrid>
 

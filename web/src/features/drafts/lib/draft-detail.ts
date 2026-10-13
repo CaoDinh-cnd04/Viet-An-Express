@@ -55,7 +55,7 @@ export function draftDetail(payload: unknown): DraftDetail {
   const packages = isDoc ? [] : (v.packages ?? []).filter(p => text(p.qty) || text(p.weight) || text(p.length));
   const items = isDoc ? [] : (inv.items ?? []).filter(it => text(it.descEn));
   const exportType = EXPORT_TYPES.find(t => t.value === inv.exportType)?.label ?? text(inv.exportType);
-  const sum = packages.length ? summarizePackages(packages) : null;
+  const sum = packages.length ? summarizePackages(packages, sv) : null;
   const content = isDoc ? text(g.docContent) || 'Documents' : text(g.description) || [...new Set(packages.map(packageCategory).filter(Boolean))].join(', ');
 
   return {

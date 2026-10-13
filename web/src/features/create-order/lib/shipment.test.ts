@@ -16,12 +16,12 @@ describe('volumetricWeight', () => {
 });
 
 describe('summarizePackages', () => {
-  it('cân tính cước = max(cân thực, quy đổi)', () => {
+  it('cân tính cước = tổng max(cân thực, quy đổi) từng kiện', () => {
     const s = summarizePackages([
       pkg({ qty: '2', weight: '3', length: '50', width: '40', height: '30' }),
       pkg({ qty: '1', weight: '5' })
     ]);
-    expect(s).toEqual({ pieces: 3, grossWeight: 11, volumetricWeight: 24, chargeableWeight: 24 });
+    expect(s).toEqual({ pieces: 3, grossWeight: 11, volumetricWeight: 24, chargeableWeight: 29 });
   });
 });
 

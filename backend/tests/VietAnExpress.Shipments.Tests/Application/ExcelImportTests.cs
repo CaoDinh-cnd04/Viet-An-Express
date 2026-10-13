@@ -46,6 +46,33 @@ public class ExcelImportTests
     }
 
     [Fact]
+    public void Preview_Excel_tinh_tung_kien_va_khop_can_ghi_vao_don()
+    {
+        var r = Parse(c =>
+        {
+            c["l_1"] = "20"; c["w_1"] = "30"; c["h_1"] = "40"; c["gw_1"] = "6";
+            c["qty_pack_2"] = "1"; c["pack_type_2"] = "CARTON";
+            c["l_2"] = "30"; c["w_2"] = "50"; c["h_2"] = "10"; c["gw_2"] = "2";
+        });
+        Assert.True(r.IsValid, string.Join("; ", r.Errors));
+        Assert.Equal(8m, r.GrossKg);
+        Assert.Equal(9m, r.ChargeableKg);
+        Assert.Equal(r.ChargeableKg, LegacyOrderFactory.FromPayload(r.Payload, Ctx.Customer, 1, new DateTime(2026, 10, 13)).WeightKg);
+    }
+
+    [Theory]
+    [InlineData("UPS", "UPS - VN Saver", 4.5)]
+    [InlineData("UPS", "UPS - VN Expedited", 6)]
+    [InlineData("Fedex", "Fedex - VN", 3.5)]
+    public void Preview_Excel_GW_la_can_ca_dong_lam_tron_dung_theo_hub(string carrier, string hub, double expected)
+    {
+        var r = Parse(c => { c["qty_pack_1"] = "3"; c["gw_1"] = "3.3"; c["l_1"] = "1"; c["w_1"] = "1"; c["h_1"] = "1"; }, Ctx with { Service = carrier, Hub = hub });
+        Assert.True(r.IsValid, string.Join("; ", r.Errors));
+        Assert.Equal((decimal)expected, r.ChargeableKg);
+        Assert.Equal(r.ChargeableKg, LegacyOrderFactory.FromPayload(r.Payload, Ctx.Customer, 1, new DateTime(2026, 10, 13)).WeightKg);
+    }
+
+    [Fact]
     public void Doc_file_mau_bo_dong_chu_thich_va_dong_trong_so_giu_nguyen_dang_bat_bien()
     {
         using var book = new XLWorkbook();
@@ -183,6 +210,28 @@ public class ExcelImportTests
         Assert.Equal("DOC", r.Payload.Shipment.Type);
         Assert.Equal("DRESS (100% COTTON)", r.Payload.Goods.DocContent);
         Assert.Equal("20", r.Payload.Invoice.DeclaredValue);
+    }
+
+    [Theory]
+    [InlineData("PCS", "1.5", false)]
+    [InlineData("box", "2.5", false)]
+    [InlineData("PCS", "3", true)]
+    [InlineData("KG", "1.5", true)]
+    public void So_luong_nguyen_voi_don_vi_co_san_so_thuc_voi_don_vi_khac(string unit, string qty, bool ok)
+    {
+        var r = Parse(c => { c["unit_1"] = unit; c["qty_1"] = qty; });
+        Assert.Equal(ok, !r.Errors.Any(e => e.Contains("Qty_1") && e.Contains("số nguyên")));
+    }
+
+    [Theory]
+    [InlineData("12.345", false)]
+    [InlineData("1.0000000000000000000003", false)]
+    [InlineData("12.34", true)]
+    [InlineData("12", true)]
+    public void Don_gia_invoice_toi_da_2_so_le(string price, bool ok)
+    {
+        var r = Parse(c => c["unit_price_1"] = price);
+        Assert.Equal(ok, !r.Errors.Any(e => e.Contains("tối đa 2 số lẻ")));
     }
 
     [Fact]

@@ -23,7 +23,7 @@ export function AddonsSection() {
   const { control } = useFormContext<CreateOrderValues>();
   const [showFees, setShowFees] = useState(false);
   return (
-    <Card
+    <Card accent
       title="Tùy chọn dịch vụ"
       subtitle="(có tính phí)"
       actions={

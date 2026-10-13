@@ -5,6 +5,7 @@ import LandingPage from '@/features/landing/pages/LandingPage';
 import TrackingPage from '@/features/landing/pages/TrackingPage';
 import { AppShell } from './layout/AppShell';
 import { NotFoundPage } from './pages/NotFoundPage';
+import { UsageTrackingLayout } from './UsageTrackingLayout';
 
 /** Dữ liệu gắn với route — Topbar đọc `title` để hiện breadcrumb. */
 export interface RouteHandle {
@@ -104,4 +105,4 @@ const routes: RouteObject[] = [
   }
 ];
 
-export const router = createBrowserRouter(routes);
+export const router = createBrowserRouter([{ element: <UsageTrackingLayout />, children: routes }]);

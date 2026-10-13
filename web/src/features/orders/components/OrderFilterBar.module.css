@@ -1,22 +1,22 @@
-/* Thanh lọc gọn: mọi ô trên 1 hàng (ngày, loại hàng, cân, tìm theo, xóa lọc); ô nhỏ hơn mặc định */
+/* Thanh lọc gọn: mọi ô trên 1 hàng (ngày, loại hàng, cân, tìm theo, xóa lọc); chữ 12px, ô cao 26px */
 .bar {
-  --control-h: 30px;
+  --control-h: 26px;
+  --control-h-sm: 26px;
   --text-sm: 12px;
-  --text-md: 12.5px;
-  --text-xs: 11.5px;
-  padding: var(--space-3) var(--space-4);
-  margin-bottom: var(--space-4);
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  --text-md: 12px;
+  --text-xs: 12px;
+  --field-label-size: 12px;
+  --field-input-size: 12px;
+  /* Nằm trong khung chung với tab trạng thái (OrdersPage .panel) nên không có viền riêng */
+  padding: 5px var(--space-3) 7px;
   font-size: var(--text-sm);
 }
 
 .row {
   display: grid;
-  grid-template-columns: 132px 132px 96px 86px 86px minmax(280px, 1fr) auto;
+  grid-template-columns: 124px 124px 96px 72px 72px minmax(240px, 1fr) auto;
   align-items: start;
-  gap: var(--space-2) var(--space-3);
+  gap: var(--space-2) var(--space-2);
 }
 
 .search {
@@ -34,7 +34,7 @@
 
 /* Nút "Xóa lọc" ngang hàng ô nhập (bỏ qua chiều cao nhãn) */
 .reset {
-  margin-top: 22px;
+  margin-top: 21px;
 }
 
 /* Màn hình vừa: ô lọc 1 hàng, tìm theo xuống hàng dưới */

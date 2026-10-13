@@ -5,8 +5,7 @@ export const ORDER_STATUS: Record<OrderStatus, { label: string; tone: Tone }> = 
   wait: { label: 'Chưa đi', tone: 'info' },
   fly: { label: 'Đã đi', tone: 'success' },
   nd: { label: 'Chưa phát', tone: 'warning' },
-  ok: { label: 'Đã phát', tone: 'brand' },
-  late: { label: 'Vượt ngày', tone: 'danger' }
+  ok: { label: 'Đã phát', tone: 'brand' }
 };
 
 export const SEARCH_FIELDS: ReadonlyArray<{ value: OrderSearchField; label: string }> = [

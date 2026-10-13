@@ -6,6 +6,8 @@ export const common: Record<string, string> = {
   'Thu gọn menu': 'Collapse navigation',
   'Mở rộng menu': 'Expand navigation',
   'Ngôn ngữ': 'Language',
+  // Tên ngôn ngữ hiện bằng chính ngôn ngữ đó trên menu chọn ngôn ngữ — không dịch.
+  'Tiếng Việt': 'Tiếng Việt',
   'Chuyển giao diện sáng': 'Switch to light theme',
   'Chuyển giao diện tối': 'Switch to dark theme',
   'Thông báo, {n} chưa đọc': 'Notifications, {n} unread',
@@ -69,5 +71,20 @@ export const common: Record<string, string> = {
   'Email không hợp lệ': 'Invalid email',
   'Số không hợp lệ': 'Invalid number',
   'Số điện thoại không hợp lệ': 'Invalid phone number',
-  'Số điện thoại chỉ gồm chữ số và + ( ) - . /, tối thiểu 6 số': 'Phone number may only contain digits and + ( ) - . /, at least 6 digits'
+  'Số điện thoại chỉ gồm chữ số và + ( ) - . /, tối thiểu 6 số': 'Phone number may only contain digits and + ( ) - . /, at least 6 digits',
+  // Popup thông báo
+  '{n} chưa đọc': '{n} unread',
+  'Xem tất cả thông báo': 'View all notifications',
+  // Trung tâm thông báo
+  'Hôm nay': 'Today',
+  'Hôm qua': 'Yesterday',
+  'Thông báo từ Việt An: lịch cut-off, phụ phí, quy định hãng bay, bảo trì hệ thống, cập nhật sự cố.': 'Notices from Viet An: cut-off schedules, surcharges, airline rules, system maintenance, issue updates.',
+  'Danh sách thông báo': 'Notification list',
+  'Tìm thông báo…': 'Search notifications…',
+  'Tìm thông báo': 'Search notifications',
+  'Lọc thông báo': 'Filter notifications',
+  'Không có thông báo nào khớp.': 'No matching notifications.',
+  'Nội dung thông báo': 'Notification content',
+  'Chọn 1 thông báo để xem nội dung.': 'Select a notification to read it.',
+  'Mở sự cố {id}': 'Open issue {id}'
 };

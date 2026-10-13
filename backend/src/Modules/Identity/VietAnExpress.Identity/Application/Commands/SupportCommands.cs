@@ -2,6 +2,8 @@ using System.Net.Mail;
 using MediatR;
 using VietAnExpress.Customers.Contracts;
 using VietAnExpress.Identity.Application;
+using VietAnExpress.Identity.Domain;
+using VietAnExpress.Identity.Infrastructure;
 using VietAnExpress.SharedKernel.Application;
 using VietAnExpress.SharedKernel.Results;
 
@@ -10,7 +12,10 @@ namespace VietAnExpress.Identity.Application.Commands;
 /// <summary>Tệp khách đính kèm yêu cầu hỗ trợ (đã đọc vào bộ nhớ ở controller).</summary>
 internal sealed record SupportAttachment(string FileName, string ContentType, byte[] Data);
 
-/// <summary>Yêu cầu hỗ trợ ở trang Trợ giúp — không lưu database, gửi email về hộp thư nhận của Việt An (Email:InboxAddress).</summary>
+/// <summary>
+/// Yêu cầu hỗ trợ ở trang Trợ giúp & Góp ý: lưu vào dbo.GopY (hiện ở danh sách góp ý trang quản trị /admin, ảnh đính kèm lưu
+/// dbo.GopY_HinhAnh) và gửi email về hộp thư nhận của Việt An (Email:InboxAddress) như trước.
+/// </summary>
 internal sealed record SendSupportRequestCommand(string? Category, string? Subject, string? Message, string? Contact, SupportAttachment? Attachment)
     : IRequest<Result<bool>>;
 
@@ -80,6 +85,21 @@ internal static class SupportRules
         ? $"Bấm Trả lời để phản hồi khách qua {replyTo}."
         : $"Khách không để lại email — liên hệ lại qua {(string.IsNullOrWhiteSpace(contact) ? "thông tin trong hồ sơ" : contact.Trim())}.";
 
+    /// <summary>Tệp đính kèm là ảnh hợp lệ cho dbo.GopY_HinhAnh (JPG / PNG / WEBP / GIF ≤ 5 MB) — tệp khác chỉ gửi qua email.</summary>
+    public static bool IsStorableImage(SupportAttachment a) =>
+        Feedback.ImageTypes.Contains(a.ContentType) && a.Data.Length is > 0 and <= Feedback.ImageMaxBytes && FeedbackRules.LooksLikeImage(a.Data);
+
+    /// <summary>
+    /// Nội dung lưu dbo.GopY: "[Hỗ trợ · chủ đề] tiêu đề" + nội dung; tệp không lưu được (PDF, Excel, ảnh quá lớn…) ghi tên để admin tìm trong email.
+    /// Cắt theo độ dài tối đa của góp ý.
+    /// </summary>
+    public static string FeedbackMessage(SendSupportRequestCommand c)
+    {
+        var text = $"[Hỗ trợ · {c.Category!.Trim()}] {c.Subject!.Trim()}\n\n{c.Message!.Trim()}";
+        if (c.Attachment is { } a && !IsStorableImage(a)) text += $"\n\nĐính kèm (xem trong email): {a.FileName}";
+        return text.Length <= Feedback.MessageMaxLength ? text : text[..Feedback.MessageMaxLength];
+    }
+
     public static EmailMessage Email(SendSupportRequestCommand c, CustomerSummary? customer, string? userName, bool isStaff, EmailCompany company)
     {
         var replyTo = ReplyTo(c.Contact, customer?.Email);
@@ -96,6 +116,7 @@ internal static class SupportRules
                     .. c.Attachment is { } a ? [new EmailField("Đính kèm", a.FileName)] : Array.Empty<EmailField>()
                 ])
             ],
+            Button: company.Portal("/admin") is { } admin ? new EmailLink("Xem trong trang quản trị", admin) : null,
             FooterNote: ReplyNote(replyTo, c.Contact));
         return new EmailMessage(
             $"[Hỗ trợ portal] {c.Category!.Trim()}: {c.Subject!.Trim()} — {customer?.Code ?? "?"}",
@@ -107,18 +128,25 @@ internal static class SupportRules
 }
 
 internal sealed class SupportHandlers(
-    ICurrentUser user, ICustomersApi customers, IEmailSender email, IBackgroundJobQueue jobs, EmailCompany company) :
+    IdentityDbContext db, ICurrentUser user, ICustomersApi customers, IEmailSender email, IBackgroundJobQueue jobs, EmailCompany company, TimeProvider clock) :
     IRequestHandler<SendSupportRequestCommand, Result<bool>>
 {
     public async Task<Result<bool>> Handle(SendSupportRequestCommand c, CancellationToken ct)
     {
         if (user.CustomerId is not { } customerId || customerId <= 0) return FeedbackErrors.NotLoggedIn;
         if (SupportRules.Validate(c) is { } error) return error;
-        // Không lưu database: chưa cấu hình email thì báo khách gọi hotline thay vì im lặng làm mất yêu cầu.
-        if (!email.IsConfigured) return SupportErrors.EmailNotConfigured;
 
+        // Lưu vào góp ý trước: email lỗi / chưa cấu hình thì yêu cầu vẫn nằm ở trang quản trị, không bị mất.
         var customer = await customers.GetByIdAsync(customerId, ct);
-        jobs.EnqueueEmail("email yêu cầu hỗ trợ", SupportRules.Email(c, customer, user.UserName, user.StaffId is not null, company));
+        var images = c.Attachment is { } a && SupportRules.IsStorableImage(a)
+            ? [new FeedbackImage(FeedbackRules.SafeFileName(a.FileName), a.ContentType.ToLowerInvariant(), a.Data)]
+            : Array.Empty<FeedbackImage>();
+        db.Feedbacks.Add(Feedback.Create(customerId, customer?.Code ?? "", customer?.CompanyName ?? "", user.StaffId, user.UserName ?? "",
+            SupportRules.FeedbackMessage(c), c.Contact?.Trim(), null, images, VietnamTime.Now(clock)));
+        await db.SaveChangesAsync(ct);
+
+        if (email.IsConfigured)
+            jobs.EnqueueEmail("email yêu cầu hỗ trợ", SupportRules.Email(c, customer, user.UserName, user.StaffId is not null, company));
         return true;
     }
 }

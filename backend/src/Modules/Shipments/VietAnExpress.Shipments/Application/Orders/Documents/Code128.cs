@@ -62,19 +62,6 @@ internal static class Code128
     /// <summary>Vùng trắng hai bên mã vạch (module).</summary>
     private const int Quiet = 10;
 
-    /// <summary>
-    /// Dòng chữ dưới mã vạch, dàn đúng bằng phần vạch (bỏ vùng trắng hai bên): SVG cùng hệ đơn vị với <see cref="Svg"/>,
-    /// chữ co giãn theo chiều ngang (textLength) nên mã dài / ngắn đều thẳng mép với mã vạch. Chiều cao đặt bằng CSS (.awb-text).
-    /// </summary>
-    public static string FitText(string barcodeText, string label)
-    {
-        var width = Encode(barcodeText).Sum(v => Patterns[v].Sum(c => c - '0'));
-        var total = width + 2 * Quiet;
-        var text = System.Net.WebUtility.HtmlEncode(label);
-        return $"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 {total} 20\" preserveAspectRatio=\"none\" class=\"awb-text\" role=\"img\" aria-label=\"{text}\">" +
-               $"<text x=\"{Quiet}\" y=\"16\" textLength=\"{width}\" lengthAdjust=\"spacingAndGlyphs\" font-family=\"Arial, Helvetica, sans-serif\" font-weight=\"700\" font-size=\"19\">{text}</text></svg>";
-    }
-
     /// <summary>SVG co giãn theo khung chứa (width 100%); có vùng trắng 10 module hai bên để máy quét đọc.</summary>
     public static string Svg(string text, int height = 60)
     {

@@ -1,56 +1,77 @@
+/* Nhóm thao tác gọn trên hàng trạng thái: Hiển thị · In nhiều bill · Xuất bảng kê (ô cao 26px, chữ 12px) */
 .bar {
-  display: flex;
-  align-items: center;
-  gap: var(--space-4);
-  flex-wrap: wrap;
-  padding: 10px var(--space-4);
-  border-bottom: 1px solid var(--color-border);
-  background: var(--color-surface-muted);
-}
-
-.kpis {
-  display: flex;
-  gap: var(--space-6);
-  flex-wrap: wrap;
-  margin: 0;
-}
-
-.kpis div {
-  display: flex;
-  gap: 6px;
-  align-items: baseline;
-}
-
-.kpis dt {
-  color: var(--color-text-muted);
-}
-
-.kpis dd {
-  margin: 0;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
+  --control-h-sm: 26px;
+  --text-sm: 12px;
+  --text-xs: 12px;
 }
 
 .actions {
-  margin-left: auto;
   display: flex;
   align-items: center;
-  gap: var(--space-2);
-  flex-wrap: wrap;
+  gap: 6px;
+  white-space: nowrap;
 }
 
 .pageSize {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-2);
-  font-size: var(--text-xs);
+  gap: 4px;
+  font-size: 12px;
   color: var(--color-text-muted);
 }
 
 .pageSize select {
-  height: var(--control-h-sm);
-  padding: 0 var(--space-2);
+  height: 26px;
+  padding: 0 4px;
   border: 1px solid var(--color-border-strong);
   border-radius: var(--radius-sm);
   background: var(--color-surface);
+  font-size: 12px;
+}
+
+.actions button {
+  height: 26px;
+  padding: 0 9px;
+  font-size: 12px;
+}
+
+/* Hộp chọn loại chứng từ khi in nhiều đơn */
+.printMenu {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 260px;
+  padding: var(--space-2);
+}
+
+.printMenu button {
+  height: auto;
+}
+
+.printTitle {
+  margin-bottom: 2px;
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+  font-weight: 600;
+}
+
+.printOption {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 6px;
+  border-radius: var(--radius-sm);
+  font-size: 12.5px;
+  cursor: pointer;
+}
+
+.printOption:hover {
+  background: var(--color-brand-softer);
+}
+
+.printHint {
+  margin: 4px 0;
+  color: var(--color-text-faint);
+  font-size: 11px;
+  line-height: 1.4;
 }

@@ -7,10 +7,11 @@ using VietAnExpress.Shipments.Infrastructure.Legacy;
 namespace VietAnExpress.Shipments.Application.Orders;
 
 /// <summary>
-/// Trạng thái đơn suy ra từ dữ liệu dbo.MaVanDon (cột Status của hệ thống cũ không phân biệt trạng thái):
-/// POD có "deliver" → ok (đã phát) · POD khác rỗng → nd (chưa phát được) · quá ngày dự kiến POD_Est → late ·
-/// đã có Sent_Date → fly (đã đi) · còn lại → wait (chưa đi).
-/// <see cref="Is"/> (dịch ra SQL để lọc) và <see cref="Of"/> (tính trên bộ nhớ) PHẢI cùng logic.
+/// Bộ lọc trạng thái đơn theo dữ liệu dbo.MaVanDon (cột Status của hệ thống cũ không phân biệt trạng thái):
+/// wait (chưa đi) = chưa có Ngày gửi · fly (đã đi) = có Ngày gửi (kể cả đơn đã phát) ·
+/// nd (chưa phát) = chưa có POD · ok (đã phát) = có thông tin POD.
+/// Các nhóm lọc có thể trùng nhau (đơn đã phát vẫn thuộc "đã đi"); chọn đủ 4 nhóm = mọi đơn.
+/// Nhãn trên 1 dòng đơn (<see cref="Of"/>): có POD → ok · có Ngày gửi → fly · còn lại → wait — luôn thuộc nhóm lọc tương ứng.
 /// </summary>
 internal static class LegacyOrderStatus
 {
@@ -18,25 +19,22 @@ internal static class LegacyOrderStatus
     public const string InTransit = "fly";
     public const string NotDelivered = "nd";
     public const string Delivered = "ok";
-    public const string Late = "late";
 
-    public static readonly string[] All = [Waiting, InTransit, NotDelivered, Delivered, Late];
+    public static readonly string[] All = [Waiting, InTransit, NotDelivered, Delivered];
 
+    /// <param name="today">Giữ để không đổi chữ ký gọi (bộ lọc hiện không phụ thuộc ngày).</param>
     public static Expression<Func<LegacyOrder, bool>> Is(string status, DateTime today) => status switch
     {
-        Delivered => o => o.Pod != null && o.Pod.Contains("deliver"),
-        NotDelivered => o => o.Pod != null && o.Pod != "" && !o.Pod.Contains("deliver"),
-        Late => o => (o.Pod == null || o.Pod == "") && o.PodEstimate != null && o.PodEstimate < today,
-        InTransit => o => (o.Pod == null || o.Pod == "") && !(o.PodEstimate != null && o.PodEstimate < today) && o.SentDate != null,
-        Waiting => o => (o.Pod == null || o.Pod == "") && !(o.PodEstimate != null && o.PodEstimate < today) && o.SentDate == null,
+        Waiting => o => o.SentDate == null,
+        InTransit => o => o.SentDate != null,
+        NotDelivered => o => o.Pod == null || o.Pod == "",
+        Delivered => o => o.Pod != null && o.Pod != "",
         _ => throw new ArgumentOutOfRangeException(nameof(status), status, null)
     };
 
     public static string Of(LegacyOrder o, DateTime today)
     {
-        if (!string.IsNullOrWhiteSpace(o.Pod))
-            return o.Pod.Contains("deliver", StringComparison.OrdinalIgnoreCase) ? Delivered : NotDelivered;
-        if (o.PodEstimate is { } eta && eta < today) return Late;
+        if (!string.IsNullOrWhiteSpace(o.Pod)) return Delivered;
         return o.SentDate is null ? Waiting : InTransit;
     }
 }
@@ -78,7 +76,8 @@ internal static partial class LegacyOrderView
             Pod: ParsePod(o.Pod),
             Photos: 0,
             PodEstimate: Date(o.PodEstimate),
-            RemoteArea: string.IsNullOrWhiteSpace(o.RemoteAreaFedEx) ? null : o.RemoteAreaFedEx.Trim());
+            RemoteArea: string.IsNullOrWhiteSpace(o.RemoteAreaFedEx) ? null : o.RemoteAreaFedEx.Trim(),
+            ChargeableWeight: o.WeightKg);
     }
 
     /// <summary>Danh sách "Đơn hàng của tôi": kèm người nhận đầy đủ để bảng xổ chi tiết (người liên hệ, SĐT, địa chỉ) — cùng dòng đã đọc, không truy vấn thêm.</summary>
@@ -108,7 +107,8 @@ internal static partial class LegacyOrderView
     /// <summary>Cột TrongLuong là tổng cân của dòng → cân 1 kiện = TrongLuong / SoLuong.</summary>
     public static OrderPackageDto ToPackageDto(LegacyPackageLine p) =>
         new(p.Quantity, S(p.PackType), p.LengthCm, p.WidthCm, p.HeightCm,
-            p.Quantity > 0 ? decimal.Round(p.WeightKg / p.Quantity, 3, MidpointRounding.AwayFromZero) : p.WeightKg);
+            p.Quantity > 0 ? decimal.Round(p.WeightKg / p.Quantity, 3, MidpointRounding.AwayFromZero) : p.WeightKg,
+            p.VolumetricKg, p.ChargeableKg);
 
     public static OrderItemDto ToItemDto(LegacyInvoiceLine i)
     {

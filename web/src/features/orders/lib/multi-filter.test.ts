@@ -12,8 +12,8 @@ describe('trạng thái chọn nhiều', () => {
     expect(toggleStatus('wait,fly', 'fly')).toBe('wait');
     expect(toggleStatus('wait', 'wait')).toBe('all');
   });
-  it('chọn đủ 5 trạng thái = tất cả', () => {
-    expect(toggleStatus('wait,fly,nd,ok', 'late')).toBe('all');
+  it('chọn đủ 4 trạng thái = tất cả', () => {
+    expect(toggleStatus('wait,fly,nd', 'ok')).toBe('all');
   });
 });
 

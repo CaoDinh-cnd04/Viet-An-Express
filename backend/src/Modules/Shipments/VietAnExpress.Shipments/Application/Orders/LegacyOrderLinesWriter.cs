@@ -56,7 +56,7 @@ internal static class LegacyOrderLinesReader
     /// <summary>Cột TrongLuong là tổng cân của dòng → cân 1 kiện = TrongLuong / SoLuong.</summary>
     public static PrintPackage ToPrint(LegacyPackageLine p) =>
         new(p.Quantity, p.LengthCm, p.WidthCm, p.HeightCm,
-            p.Quantity > 0 ? decimal.Round(p.WeightKg / p.Quantity, 3, MidpointRounding.AwayFromZero) : p.WeightKg);
+            p.Quantity > 0 ? decimal.Round(p.WeightKg / p.Quantity, 3, MidpointRounding.AwayFromZero) : p.WeightKg, p.VolumetricKg);
 
     public static PrintItem ToPrint(LegacyInvoiceLine i)
     {

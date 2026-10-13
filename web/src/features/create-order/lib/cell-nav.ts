@@ -13,9 +13,20 @@ export function arrowMove(key: string, start: number | null, end: number | null,
 }
 
 /** Ô số dạng chữ (để biết vị trí con trỏ): chỉ giữ chữ số và 1 dấu thập phân ("," đổi thành "."). Số nguyên → chỉ chữ số. */
-export function sanitizeDecimal(value: string, integer = false): string {
+export function sanitizeDecimal(value: string, integer = false, maxDecimals?: number): string {
   const digits = value.replace(',', '.').replace(integer ? /\D/g : /[^\d.]/g, '');
   if (integer) return digits;
   const dot = digits.indexOf('.');
-  return dot < 0 ? digits : digits.slice(0, dot + 1) + digits.slice(dot + 1).replace(/\./g, '');
+  if (dot < 0) return digits;
+  const fraction = digits.slice(dot + 1).replace(/\./g, '');
+  // Cắt bớt số lẻ vượt giới hạn (vd đơn giá invoice chỉ 2 số lẻ theo chuẩn quốc tế).
+  return digits.slice(0, dot + 1) + (maxDecimals === undefined ? fraction : fraction.slice(0, maxDecimals));
+}
+
+/** Số có tối đa `max` chữ số sau dấu chấm (chuỗi rỗng / không phải số → false). Hàm thuần — có test. */
+export function hasMaxDecimals(value: string, max: number): boolean {
+  const v = value.trim();
+  if (!/^\d+(\.\d*)?$/.test(v)) return false;
+  const dot = v.indexOf('.');
+  return dot < 0 || v.length - dot - 1 <= max;
 }

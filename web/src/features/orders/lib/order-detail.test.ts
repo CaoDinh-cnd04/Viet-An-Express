@@ -4,9 +4,14 @@ import { filledRows, invoiceTotal, lineVolume, receiverAddress, summarizePackage
 const pkg = (qty: number, l: number, w: number, h: number, kg: number) => ({ qty, packType: 'CARTON', length: l, width: w, height: h, weightKg: kg });
 
 describe('kiện hàng', () => {
+  it('giữ số quy đổi/cân tính cước đã lưu khi kích thước trong DB đã làm tròn', () => {
+    const p = { ...pkg(2, 21, 21, 21, 1), volumetricWeight: 3.45, chargeableWeight: 4 };
+    expect(lineVolume(p, 'UPS')).toBe(3.45);
+    expect(summarizePackages([p], 'UPS').chargeable).toBe(4);
+  });
   it('cân quy đổi cả dòng', () => expect(lineVolume(pkg(2, 50, 40, 30, 5))).toBe(24));
   it('tổng: cân tính cước = max(thực, quy đổi)', () => {
-    expect(summarizePackages([pkg(2, 50, 40, 30, 5), pkg(1, 10, 10, 10, 3)])).toEqual({ pieces: 3, gross: 13, volume: 24.2, chargeable: 24.2 });
+    expect(summarizePackages([pkg(2, 50, 40, 30, 5), pkg(1, 10, 10, 10, 3)])).toEqual({ pieces: 3, gross: 13, volume: 24.2, chargeable: 27 });
     expect(summarizePackages([])).toEqual({ pieces: 0, gross: 0, volume: 0, chargeable: 0 });
   });
 });

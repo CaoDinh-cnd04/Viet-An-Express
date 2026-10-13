@@ -1,11 +1,12 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useI18n } from '@/shared/i18n';
-import { Button, Card, EmptyState, LinkButton, PageHeader, Pagination } from '@/shared/ui';
+import { Button, Card, EmptyState, Pagination } from '@/shared/ui';
 import { useOrders } from '../api';
 import { ReportTroubleDialog } from '@/features/troubles';
 import { OrderDrawer } from '../components/OrderDrawer';
 import { OrderPhotosDialog } from '../components/OrderPhotosDialog';
 import { OrderFilterBar } from '../components/OrderFilterBar';
+import { OrderOverview } from '../components/OrderOverview';
 import { OrderSummaryBar } from '../components/OrderSummaryBar';
 import { OrdersTable } from '../components/OrdersTable';
 import { useOrderFilters } from '../hooks/useOrderFilters';
@@ -50,27 +51,32 @@ export default function OrdersPage() {
 
   return (
     <>
-      <PageHeader
-        title="Đơn hàng của tôi"
-        description="Tra cứu, theo dõi và in bill các đơn đã tạo."
-        actions={<LinkButton to="/orders/new" variant="primary" size="sm">{t('Tạo đơn mới')}</LinkButton>}
-      />
 
-      <OrderFilterBar filters={filters} onChange={update} onReset={reset} statusCounts={summary?.statusCounts} />
-
-      <Card flush>
-        <OrderSummaryBar
+      {/* 1 cụm gọn: hàng 1 trạng thái + tổng + thao tác, hàng 2 bộ lọc */}
+      <div className={styles.panel}>
+        <OrderOverview
+          status={filters.status}
+          onStatusChange={status => update({ status })}
+          counts={summary?.statusCounts}
           totalPieces={summary?.totalPieces ?? 0}
           totalWeight={summary?.totalWeight ?? 0}
           totalRows={data?.total ?? 0}
-          selectedCount={selected.size}
-          pageSize={filters.pageSize}
-          onPageSizeChange={pageSize => update({ pageSize })}
-          onBulkPrint={() => void print([...selected], 'bill-a4')}
-          onExport={() => exportOrders.mutate(filters)}
-          exporting={exportOrders.isPending}
+          actions={
+            <OrderSummaryBar
+              selectedCount={selected.size}
+              pageSize={filters.pageSize}
+              onPageSizeChange={pageSize => update({ pageSize })}
+              onBulkPrint={docs => void print([...selected], docs)}
+              onExport={() => exportOrders.mutate(filters)}
+              exporting={exportOrders.isPending}
+            />
+          }
         />
 
+        <OrderFilterBar filters={filters} onChange={update} onReset={reset} />
+      </div>
+
+      <Card flush>
         {isError ? (
           <EmptyState
             title="Không tải được danh sách đơn"
