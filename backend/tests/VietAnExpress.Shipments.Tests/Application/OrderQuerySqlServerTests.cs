@@ -48,7 +48,7 @@ public class OrderQuerySqlServerTests(SqlServerQueryFixture fixture) : IClassFix
         var q = Query(status);
         var scope = db.LegacyOrders.AsNoTracking().Where(o => o.CustomerId == 42);
 
-        // Baseline reproduces the previous nine database reads.
+        // Baseline: 1 lần đếm tất cả + 1 lần mỗi trạng thái + tổng kiện/cân + tổng dòng + trang dữ liệu.
         var counts = new Dictionary<string, int> { ["all"] = await scope.CountAsync(TestContext.Current.CancellationToken) };
         foreach (var code in LegacyOrderStatus.All)
             counts[code] = await scope.CountAsync(LegacyOrderStatus.Is(code, Today), TestContext.Current.CancellationToken);
@@ -60,7 +60,7 @@ public class OrderQuerySqlServerTests(SqlServerQueryFixture fixture) : IClassFix
         var expectedTotal = await filtered.CountAsync(TestContext.Current.CancellationToken);
         var expectedItems = (await OrderListFilter.Sort(filtered, q.SortBy, q.SortDir).Take(3).ToListAsync(TestContext.Current.CancellationToken))
             .Select(o => LegacyOrderView.ToListDto(o, Today)).ToList();
-        Assert.Equal(9, commands.Reads.Count);
+        Assert.Equal(4 + LegacyOrderStatus.All.Length, commands.Reads.Count);
         commands.Reads.Clear();
 
         var response = await new GetOrdersHandler(db, Access(db), Clock).Handle(q, TestContext.Current.CancellationToken);
