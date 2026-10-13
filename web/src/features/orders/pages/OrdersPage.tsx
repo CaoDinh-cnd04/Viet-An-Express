@@ -7,7 +7,7 @@ import { OrderDrawer } from '../components/OrderDrawer';
 import { OrderPhotosDialog } from '../components/OrderPhotosDialog';
 import { OrderFilterBar } from '../components/OrderFilterBar';
 import { OrderOverview } from '../components/OrderOverview';
-import { OrderSummaryBar } from '../components/OrderSummaryBar';
+import { OrderSummaryBar, PageSizeSelect } from '../components/OrderSummaryBar';
 import { OrdersTable } from '../components/OrdersTable';
 import { useOrderFilters } from '../hooks/useOrderFilters';
 import { useExportOrders, usePrintDocuments } from '../mutations';
@@ -52,7 +52,7 @@ export default function OrdersPage() {
   return (
     <>
 
-      {/* 1 cụm gọn: hàng 1 trạng thái + tổng + thao tác, hàng 2 bộ lọc */}
+      {/* 1 cụm gọn: hàng 1 trạng thái + tổng, hàng 2 bộ lọc + Xóa lọc + In nhiều bill + Xuất bảng kê */}
       <div className={styles.panel}>
         <OrderOverview
           status={filters.status}
@@ -61,19 +61,21 @@ export default function OrdersPage() {
           totalPieces={summary?.totalPieces ?? 0}
           totalWeight={summary?.totalWeight ?? 0}
           totalRows={data?.total ?? 0}
+        />
+
+        <OrderFilterBar
+          filters={filters}
+          onChange={update}
+          onReset={reset}
           actions={
             <OrderSummaryBar
               selectedCount={selected.size}
-              pageSize={filters.pageSize}
-              onPageSizeChange={pageSize => update({ pageSize })}
               onBulkPrint={docs => void print([...selected], docs)}
               onExport={() => exportOrders.mutate(filters)}
               exporting={exportOrders.isPending}
             />
           }
         />
-
-        <OrderFilterBar filters={filters} onChange={update} onReset={reset} />
       </div>
 
       <Card flush>
@@ -99,7 +101,10 @@ export default function OrdersPage() {
         )}
 
         <footer className={styles.footer}>
-          <span>{t('{n} đơn hàng', { n: data?.total ?? 0 })}</span>
+          <span className={styles.footerLeft}>
+            {t('{n} đơn hàng', { n: data?.total ?? 0 })}
+            <PageSizeSelect value={filters.pageSize} onChange={pageSize => update({ pageSize })} />
+          </span>
           {data && (
             <Pagination page={data.page} totalPages={data.totalPages} total={data.total} pageSize={data.pageSize} onChange={page => update({ page })} />
           )}

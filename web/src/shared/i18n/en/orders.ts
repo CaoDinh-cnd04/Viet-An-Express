@@ -264,5 +264,7 @@ export const orders: Record<string, string> = {
   // Trạng thái đơn
   'Đơn chưa có thông tin POD': 'Orders without POD information',
   // Thanh thao tác
-  'Xuất bảng kê': 'Export manifest'
+  'Xuất bảng kê': 'Export manifest',
+  // Ô cân bộ lọc
+  'Cân đến (kg)': 'Weight to (kg)'
 };

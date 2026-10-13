@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from 'react';
+import { useEffect, useId, useState, type ReactNode } from 'react';
 import { useI18n } from '@/shared/i18n';
 import { useDebouncedCallback } from '@/shared/lib/useDebouncedCallback';
 import { Button, Icon, SelectField, TextField } from '@/shared/ui';
@@ -11,12 +11,13 @@ interface OrderFilterBarProps {
   filters: OrderFilters;
   onChange: (patch: Partial<OrderFilters>) => void;
   onReset: () => void;
-  /** Số đơn theo trạng thái (đếm trên các chip). */
+  /** Nút thao tác đặt sau "Xóa lọc" (In nhiều bill, Xuất bảng kê). */
+  actions?: ReactNode;
 }
 
 type TextKey = 'weightFrom' | 'weightTo';
 
-export function OrderFilterBar({ filters, onChange, onReset }: OrderFilterBarProps) {
+export function OrderFilterBar({ filters, onChange, onReset, actions }: OrderFilterBarProps) {
   const { t } = useI18n();
   // Ô gõ tự do giữ state cục bộ để nhập mượt, đẩy lên URL sau khi ngừng gõ.
   const [draft, setDraft] = useState<Record<TextKey, string>>({ weightFrom: filters.weightFrom, weightTo: filters.weightTo });
@@ -55,7 +56,10 @@ export function OrderFilterBar({ filters, onChange, onReset }: OrderFilterBarPro
             onFieldChange={searchField => onChange({ searchField, page: filters.page })}
           />
         </div>
-        <Button size="sm" className={styles.reset} onClick={onReset}>{t('Xóa lọc')}</Button>
+        <div className={styles.tail}>
+          <Button size="sm" onClick={onReset}>{t('Xóa lọc')}</Button>
+          {actions}
+        </div>
       </div>
     </section>
   );
@@ -88,7 +92,7 @@ function DateFilter({ label, value, min, max, onCommit }: { label: string; value
   );
 }
 
-/** Ô cân có nút tăng / giảm (bước 0.5 kg) đặt cạnh chữ "kg", gõ tay được số lẻ. */
+/** Ô cân (kg) có nút tăng / giảm bước 0.5 kg, gõ tay được số lẻ. */
 function WeightFilter({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
   const { t } = useI18n();
   const id = useId();
@@ -98,10 +102,9 @@ function WeightFilter({ label, value, onChange }: { label: string; value: string
   };
   return (
     <div className={styles.weight}>
-      <label className={styles.weightLabel} htmlFor={id}>{t(label)}</label>
+      <label className={styles.weightLabel} htmlFor={id} title={t(label)}>{t(label)}</label>
       <div className={styles.weightBox}>
         <input id={id} type="number" min={0} step={0.1} inputMode="decimal" value={value} onChange={e => onChange(e.target.value)} />
-        <span className={styles.weightUnit}>kg</span>
         <span className={styles.stepper}>
           <button type="button" aria-label={t('Tăng {label}', { label: t(label) })} onClick={() => step(0.5)}>
             <Icon name="chevronDown" size={11} className={styles.up} />

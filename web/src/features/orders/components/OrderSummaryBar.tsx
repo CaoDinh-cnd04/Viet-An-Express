@@ -7,8 +7,6 @@ import styles from './OrderSummaryBar.module.css';
 
 interface OrderSummaryBarProps {
   selectedCount: number;
-  pageSize: number;
-  onPageSizeChange: (size: number) => void;
   /** In các đơn đã chọn với 1 hoặc nhiều loại chứng từ (Bill A4 / Invoice / CVCK / nhãn A6) trong 1 lần. */
   onBulkPrint: (docs: readonly PrintDoc[]) => void;
   onExport: () => void;
@@ -16,18 +14,25 @@ interface OrderSummaryBarProps {
   exporting?: boolean;
 }
 
-/** Thao tác trên bảng đơn: số dòng / trang, in nhiều đơn (chọn loại chứng từ), xuất bảng kê (tổng kiện / cân nằm ở tổng quan đầu trang). */
+/** Số dòng / trang — đặt ở chân bảng đơn. */
+export function PageSizeSelect({ value, onChange }: { value: number; onChange: (size: number) => void }) {
+  const { t } = useI18n();
+  return (
+    <label className={styles.pageSize}>
+      {t('Hiển thị')}
+      <select value={value} onChange={e => onChange(Number(e.target.value))}>
+        {PAGE_SIZES.map(n => <option key={n} value={n}>{n}</option>)}
+      </select>
+    </label>
+  );
+}
+
+/** Thao tác trên các đơn: in nhiều đơn (chọn loại chứng từ), xuất bảng kê — đặt cuối hàng bộ lọc. */
 export function OrderSummaryBar(p: OrderSummaryBarProps) {
   const { t } = useI18n();
   return (
     <div className={styles.bar}>
       <div className={styles.actions}>
-        <label className={styles.pageSize}>
-          {t('Hiển thị')}
-          <select value={p.pageSize} onChange={e => p.onPageSizeChange(Number(e.target.value))}>
-            {PAGE_SIZES.map(n => <option key={n} value={n}>{n}</option>)}
-          </select>
-        </label>
         <BulkPrintMenu selectedCount={p.selectedCount} onPrint={p.onBulkPrint} />
         <Button size="sm" onClick={p.onExport} disabled={p.exporting}>
           {t(p.exporting ? 'Đang xuất…' : 'Xuất bảng kê')}

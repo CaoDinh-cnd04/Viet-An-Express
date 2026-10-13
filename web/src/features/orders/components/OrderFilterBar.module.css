@@ -14,7 +14,7 @@
 
 .row {
   display: grid;
-  grid-template-columns: 124px 124px 96px 72px 72px minmax(240px, 1fr) auto;
+  grid-template-columns: 124px 124px 96px 68px 68px minmax(240px, 1fr) auto;
   align-items: start;
   gap: var(--space-2) var(--space-2);
 }
@@ -32,9 +32,13 @@
   color: var(--color-text);
 }
 
-/* Nút "Xóa lọc" ngang hàng ô nhập (bỏ qua chiều cao nhãn) */
-.reset {
+/* "Xóa lọc" + In nhiều bill + Xuất bảng kê ngang hàng ô nhập (bỏ qua chiều cao nhãn) */
+.tail {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   margin-top: 21px;
+  white-space: nowrap;
 }
 
 /* Màn hình vừa: ô lọc 1 hàng, tìm theo xuống hàng dưới */
@@ -47,7 +51,7 @@
     grid-column: 1 / 5;
   }
 
-  .reset {
+  .tail {
     grid-column: 5;
   }
 }
@@ -61,8 +65,9 @@
     grid-column: 1 / -1;
   }
 
-  .reset {
+  .tail {
     grid-column: 1 / -1;
+    flex-wrap: wrap;
     margin-top: 0;
   }
 }
@@ -79,7 +84,7 @@
   -webkit-appearance: none;
 }
 
-/* ---------- Ô cân: số · kg · nút tăng/giảm xếp dọc ở mép phải ---------- */
+/* ---------- Ô cân (kg): số + nút tăng/giảm xếp dọc ở mép phải ---------- */
 .weight {
   display: flex;
   flex-direction: column;
@@ -91,6 +96,9 @@
   font-size: var(--text-sm);
   font-weight: 500;
   color: var(--color-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .weightBox {
@@ -120,14 +128,6 @@
 
 .weightBox input:focus {
   outline: none;
-}
-
-.weightUnit {
-  display: grid;
-  place-items: center;
-  padding: 0 6px 0 2px;
-  color: var(--color-text-muted);
-  font-size: var(--text-xs);
 }
 
 /* Nút tăng / giảm liền với ô (cùng nền trắng, không khung riêng) */
