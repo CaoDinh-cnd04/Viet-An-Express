@@ -1,0 +1,115 @@
+.carousel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.viewport {
+  display: flex;
+  gap: var(--space-5);
+  margin: 0;
+  /* Chừa chỗ cho bóng đổ và hiệu ứng nổi khi rê chuột */
+  padding: var(--space-2) 2px var(--space-4);
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  list-style: none;
+  cursor: grab;
+  user-select: none;
+}
+
+.viewport::-webkit-scrollbar {
+  display: none;
+}
+
+/* Đang kéo: tắt snap để thẻ đi theo tay, bật lại khi nhả */
+.dragging {
+  scroll-snap-type: none;
+  cursor: grabbing;
+}
+
+.dragging a {
+  pointer-events: none;
+}
+
+.slide {
+  flex: none;
+  display: flex;
+  width: calc((100% - 3 * var(--space-5)) / 4);
+  scroll-snap-align: start;
+}
+
+.slide > * {
+  flex: 1;
+}
+
+.slide img {
+  -webkit-user-drag: none;
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+}
+
+.arrow {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 50%;
+  background: var(--color-surface);
+  color: var(--color-text);
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+
+.arrow:hover {
+  border-color: var(--color-brand);
+  background: var(--color-brand);
+  color: #fff;
+}
+
+.flip {
+  transform: scaleX(-1);
+}
+
+.dots {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: var(--color-border-strong);
+  transition: width 0.2s, background 0.2s;
+}
+
+.dot:hover {
+  background: var(--color-brand);
+}
+
+.dotActive {
+  width: 24px;
+  background: var(--color-brand);
+}
+
+@media (max-width: 960px) {
+  .slide {
+    width: calc((100% - var(--space-5)) / 2);
+  }
+}
+
+@media (max-width: 560px) {
+  /* Điện thoại: 1 thẻ + hé thẻ sau để gợi ý vuốt */
+  .slide {
+    width: 78%;
+  }
+}
