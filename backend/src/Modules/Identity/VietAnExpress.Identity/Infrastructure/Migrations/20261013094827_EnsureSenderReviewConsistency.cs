@@ -5,7 +5,7 @@
 namespace VietAnExpress.Identity.Infrastructure.Migrations
 {
     /// <inheritdoc />
-    public partial class EnsureSenderReviewConsistency : Migration
+    internal partial class EnsureSenderReviewConsistency : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
