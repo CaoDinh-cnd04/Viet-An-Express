@@ -64,7 +64,10 @@ export default function ShopifyConnectPage() {
             <p className={styles.muted}>{t('Đang kiểm tra đăng nhập…')}</p>
           ) : signedIn ? (
             claim.isError && !(claim.error instanceof ApiError && claim.error.code === 'ECOM_INSTALL_NOT_FOUND') ? (
-              <EmptyState title="Chưa kết nối được cửa hàng Shopify" description={getErrorMessage(claim.error)}
+              <EmptyState title="Chưa kết nối được cửa hàng Shopify"
+                description={claim.error instanceof ApiError && claim.error.status === 403
+                  ? t('Tài khoản này chưa được cấp quyền kết nối cửa hàng. Đăng nhập bằng tài khoản chính của công ty hoặc nhờ quản trị viên cấp quyền "Kết nối / ngắt kết nối cửa hàng", rồi mở lại ứng dụng từ Shopify admin.')
+                  : getErrorMessage(claim.error)}
                 action={<Link to={CONNECT_TAB}>{t('Mở trang Kết nối')}</Link>} />
             ) : (
               <EmptyState title="Đang kết nối cửa hàng Shopify…" description="Đang gắn cửa hàng vừa cài vào tài khoản của bạn." />

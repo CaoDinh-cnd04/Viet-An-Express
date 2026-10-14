@@ -250,6 +250,7 @@ export const ecommerce: Record<string, string> = {
   'Việt An sẽ ngừng nhận đơn từ {shop} và gỡ ứng dụng khỏi shop. Đơn đã nhận vẫn giữ nguyên.': 'Viet An will stop receiving orders from {shop} and uninstall the app from the store. Orders already received are kept.',
   'Chưa kết nối được cửa hàng Shopify': 'Could not connect your Shopify store',
   'Mở trang Kết nối': 'Open the Connect tab',
+  'Tài khoản này chưa được cấp quyền kết nối cửa hàng. Đăng nhập bằng tài khoản chính của công ty hoặc nhờ quản trị viên cấp quyền "Kết nối / ngắt kết nối cửa hàng", rồi mở lại ứng dụng từ Shopify admin.': 'This account is not allowed to connect stores. Sign in with your company\'s main account, or ask your administrator to grant the "Connect / disconnect stores" permission, then open the app again from Shopify admin.',
   '{n} SP': '{n} items',
   'Kèm mã nước, vd +81…': 'Include country code, e.g. +81…',
   'Trống: Việt An cân': 'Blank: Viet An weighs',
