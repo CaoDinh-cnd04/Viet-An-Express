@@ -1,3 +1,4 @@
+/* Các phần của trang giới thiệu — bố cục "ảnh lớn": nền navy (--color-hero-*) xen kẽ trắng / xám nhạt, nhấn xanh lá Việt An */
 .section {
   padding: 88px 0;
   scroll-margin-top: 64px;
@@ -5,13 +6,18 @@
 }
 
 .muted {
-  background: var(--color-bg);
+  background: var(--color-surface-muted);
+}
+
+.dark {
+  background: var(--color-hero-from);
+  color: var(--color-on-hero);
 }
 
 .container {
   display: flex;
   flex-direction: column;
-  gap: 40px;
+  gap: 36px;
   max-width: 1200px;
   margin: 0 auto;
   padding: 0 var(--space-5);
@@ -27,6 +33,28 @@
   text-align: center;
 }
 
+.sectionHead > div {
+  display: flex;
+  flex-direction: column;
+  align-items: inherit;
+  gap: var(--space-3);
+}
+
+.headLeft {
+  flex-direction: row;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-5);
+  max-width: none;
+  margin: 0;
+  text-align: left;
+}
+
+.headLeft > div {
+  align-items: flex-start;
+  max-width: 720px;
+}
+
 .eyebrow {
   padding: 4px var(--space-3);
   border-radius: 999px;
@@ -36,10 +64,16 @@
   font-weight: 600;
 }
 
+.dark .eyebrow {
+  background: rgba(255, 255, 255, 0.1);
+  color: #9be7ae;
+}
+
 .title {
-  font-size: var(--text-2xl);
-  font-weight: 700;
-  line-height: 1.25;
+  font-size: 32px;
+  font-weight: 800;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
   text-wrap: balance;
 }
 
@@ -48,46 +82,8 @@
   font-size: var(--text-lg);
 }
 
-.subTitle {
-  font-size: var(--text-xl);
-  font-weight: 700;
-}
-
-.center {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--space-3);
-  text-align: center;
-}
-
-.grid3 {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: var(--space-5);
-}
-
-.card {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  padding: var(--space-6);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  background: var(--color-surface);
-  transition: transform 0.18s, box-shadow 0.18s, border-color 0.18s;
-}
-
-.card:hover {
-  transform: translateY(-3px);
-  border-color: var(--color-brand);
-  box-shadow: var(--shadow-lg);
-}
-
-.cardRow {
-  flex-direction: row;
-  align-items: flex-start;
-  gap: var(--space-4);
+.dark .lead {
+  color: var(--color-on-hero-muted);
 }
 
 .cardTitle {
@@ -100,302 +96,487 @@
   font-size: var(--text-md);
 }
 
-.iconBox {
-  display: inline-grid;
+.carriers {
   flex: none;
-  place-items: center;
-  width: 44px;
-  height: 44px;
-  border-radius: var(--radius-md);
-  background: var(--color-brand-soft);
-  color: var(--color-brand-strong);
-}
-
-/* Tuyến chuyên — thẻ nằm trong Carousel */
-.lane {
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  background: var(--color-surface);
-  transition: transform 0.18s, box-shadow 0.18s, border-color 0.18s;
-}
-
-.lane:hover {
-  transform: translateY(-3px);
-  border-color: var(--color-brand);
-  box-shadow: var(--shadow-lg);
-}
-
-.laneArt {
-  position: relative;
-  border-bottom: 1px solid var(--color-border);
-}
-
-/* Ảnh thật của công trình biểu tượng nước đến (cùng tỉ lệ 7:4 với khung cũ) */
-.lanePhoto {
-  display: block;
-  width: 100%;
-  height: auto;
-  aspect-ratio: 7 / 4;
-  object-fit: cover;
-}
-
-/* Huy hiệu cờ góc trên trái */
-.laneFlag {
-  position: absolute;
-  top: var(--space-3);
-  left: var(--space-3);
-  width: 44px;
-  height: 33px;
-  border: 2px solid var(--color-surface);
-  border-radius: 6px;
-  object-fit: cover;
-  box-shadow: var(--shadow-lg);
-}
-
-.laneBody {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: var(--space-3) var(--space-4) var(--space-4);
-}
-
-.laneName {
-  font-size: var(--text-lg);
-  font-weight: 700;
-}
-
-.laneDesc {
   color: var(--color-text-muted);
   font-size: var(--text-sm);
 }
 
-.laneMore {
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-2);
-  padding: var(--space-5);
-  border-style: dashed;
-  border-color: var(--color-brand);
-  background: var(--color-brand-softer);
+.carriers strong {
   color: var(--color-text);
-  text-align: center;
+  letter-spacing: 0.04em;
 }
 
-.laneMoreIcon {
+/* ---------- Dịch vụ: 6 ô trong khung kẻ ô ---------- */
+.serviceGrid {
   display: grid;
-  place-items: center;
-  width: 64px;
-  height: 64px;
-  margin-bottom: var(--space-2);
-  border-radius: 50%;
-  background: var(--color-brand);
-  color: #fff;
+  grid-template-columns: repeat(3, 1fr);
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: 18px;
 }
 
-.laneMore .textLink {
-  margin-top: var(--space-2);
-  color: var(--color-brand-strong);
-}
-
-.textLink {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: var(--text-md);
-  font-weight: 600;
-}
-
-/* Về chúng tôi */
-.about {
-  display: grid;
-  grid-template-columns: 5fr 7fr;
-  align-items: center;
-  gap: 48px;
-}
-
-.aboutPhoto {
-  width: 100%;
-  aspect-ratio: 4 / 5;
-  object-fit: cover;
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-lg);
-}
-
-.aboutBody {
+.service {
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
-  color: var(--color-text-muted);
-  font-size: var(--text-lg);
-  line-height: 1.7;
+  gap: var(--space-2);
+  padding: 30px;
+  border-right: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
+  transition: background-color 0.18s;
 }
 
-.values {
+.service:nth-child(3n) {
+  border-right: 0;
+}
+
+.service:nth-last-child(-n + 3) {
+  border-bottom: 0;
+}
+
+.service:hover {
+  background: var(--color-brand-softer);
+}
+
+.serviceIcon {
+  margin-bottom: var(--space-2);
+  color: var(--color-brand);
+}
+
+/* ---------- Quy trình 4 bước (nền navy) ---------- */
+.process {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: var(--space-5);
-  margin: var(--space-3) 0 0;
+  grid-template-columns: repeat(4, 1fr);
+  margin: 0;
   padding: 0;
   list-style: none;
-  line-height: 1.5;
 }
 
-.values li {
+.process li {
   display: flex;
-  gap: var(--space-3);
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: 8px 28px 8px 0;
 }
 
-.values strong {
-  color: var(--color-text);
+.process li + li {
+  padding-left: 28px;
+  border-left: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.process strong {
   font-size: var(--text-lg);
 }
 
-.gallery {
+.process span:last-child {
+  color: var(--color-on-hero-muted);
+  font-size: var(--text-md);
+}
+
+.processNo {
+  color: #6fd08a;
+  font-size: 46px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+/* ---------- Tuyến chuyên: lưới ảnh lớn ---------- */
+.laneGrid {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: var(--space-3);
-  margin-top: calc(-1 * var(--space-5));
+  grid-template-columns: repeat(4, 1fr);
+  grid-auto-rows: 200px;
+  gap: 14px;
 }
 
-.galleryItem {
+.laneTile {
+  position: relative;
   overflow: hidden;
-  padding: 0;
-  border: 0;
-  border-radius: var(--radius-md);
-  aspect-ratio: 1;
-  background: var(--color-surface-muted);
+  border-radius: 16px;
+  background: var(--color-hero-from);
+  color: var(--color-on-hero);
 }
 
-/* Ảnh đầu to gấp đôi: 7 ảnh lấp kín 2 hàng × 5 cột */
-.galleryItem:first-child {
-  grid-column: span 2;
-  grid-row: span 2;
-}
-
-.galleryItem img {
+.laneTile > img:first-child {
   width: 100%;
   height: 100%;
   object-fit: cover;
   transition: transform 0.3s;
 }
 
-.galleryItem:hover img {
-  transform: scale(1.06);
+.laneTile:hover > img:first-child {
+  transform: scale(1.05);
 }
 
-.lightbox {
-  display: block;
-  width: 100%;
-  max-height: 64vh;
-  object-fit: contain;
-}
-
-/* Portal: 4 bước */
-.steps {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: var(--space-4);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  counter-reset: step;
-}
-
-.step {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--space-1);
-  text-align: center;
-}
-
-/* Đường nối giữa các bước */
-.step:not(:last-child)::after {
+.laneTile::after {
   content: '';
   position: absolute;
-  top: 20px;
-  left: calc(50% + 28px);
-  right: calc(-50% + 28px);
-  height: 2px;
-  background: var(--color-border-strong);
+  inset: 0;
+  background: linear-gradient(transparent 45%, rgba(10, 22, 38, 0.78));
+  pointer-events: none;
 }
 
-.stepNo {
-  display: grid;
-  place-items: center;
-  width: 40px;
-  height: 40px;
-  margin-bottom: var(--space-2);
-  border-radius: 50%;
-  background: var(--color-brand);
-  color: #fff;
+.laneLabel {
+  position: absolute;
+  left: 14px;
+  bottom: 12px;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--text-lg);
   font-weight: 700;
 }
 
-.step strong {
+.laneFlag {
+  width: 30px;
+  height: 21px;
+  border-radius: 3px;
+  object-fit: cover;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.4);
+}
+
+.laneMore {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: var(--color-brand);
+  text-align: center;
+}
+
+.laneMore::after {
+  display: none;
+}
+
+.laneMore span {
+  font-size: var(--text-sm);
+  opacity: 0.9;
+}
+
+/* ---------- Vì sao chọn Việt An ---------- */
+.valueGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.valueGrid li {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 24px;
+  border-radius: 16px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+}
+
+.valueGrid strong {
   font-size: var(--text-lg);
+}
+
+.mosaic {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  grid-template-rows: 190px 190px;
+  gap: 10px;
+}
+
+.mosaic button {
+  overflow: hidden;
+  padding: 0;
+  border: 0;
+  border-radius: 14px;
+  background: none;
+  cursor: zoom-in;
+}
+
+.mosaic button:first-child {
+  grid-row: span 2;
+}
+
+.mosaic img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s;
+}
+
+.mosaic button:hover img {
+  transform: scale(1.04);
+}
+
+.lightbox {
+  width: 100%;
+  max-height: 70vh;
+  object-fit: contain;
+}
+
+/* ---------- Portal doanh nghiệp ---------- */
+.portal {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: center;
+  gap: 48px;
+}
+
+.portal > div {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
+.featureGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  width: 100%;
+  margin: var(--space-3) 0;
+  padding: 0;
+  list-style: none;
+}
+
+.featureGrid li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  font-size: var(--text-md);
+  font-weight: 600;
+}
+
+.featureGrid svg {
+  flex: none;
+  color: var(--color-brand);
+}
+
+.portalActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4);
 }
 
 .bigButton {
-  height: 48px;
-  padding: 0 28px;
-  font-size: var(--text-lg);
+  height: 46px;
+  padding: 0 24px;
+  font-size: var(--text-md);
 }
 
+.portalPhoto {
+  width: 100%;
+  height: 420px;
+  border-radius: 20px;
+  object-fit: cover;
+}
+
+/* ---------- Dải kêu gọi báo giá ---------- */
+.ctaWrap {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 var(--space-5) 88px;
+}
+
+.cta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-5);
+  padding: 44px;
+  border-radius: 24px;
+  background: linear-gradient(135deg, var(--color-success-strong), var(--color-success));
+  color: var(--color-on-hero);
+}
+
+.ctaTitle {
+  font-size: 28px;
+  font-weight: 800;
+}
+
+.cta p {
+  margin: 6px 0 0;
+  opacity: 0.9;
+}
+
+.ctaActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.ctaPrimary,
+.ctaGhost {
+  display: inline-flex;
+  align-items: center;
+  height: 46px;
+  padding: 0 22px;
+  border-radius: 10px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.ctaPrimary {
+  background: #fff;
+  color: var(--color-success-strong);
+}
+
+.ctaGhost {
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  color: #fff;
+}
+
+/* ---------- Hỏi đáp ---------- */
+.faq {
+  max-width: 860px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.faq details {
+  padding: 18px 4px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.faq summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  font-size: var(--text-lg);
+  font-weight: 600;
+  list-style: none;
+  cursor: pointer;
+}
+
+.faq summary::-webkit-details-marker {
+  display: none;
+}
+
+.faq summary svg {
+  flex: none;
+  color: var(--color-brand);
+  transition: transform 0.2s;
+}
+
+.faq details[open] summary svg {
+  transform: rotate(180deg);
+}
+
+.faq p {
+  margin: 10px 0 0;
+  color: var(--color-text-muted);
+  line-height: 1.65;
+}
+
+/* ---------- Màn hình hẹp ---------- */
 @media (max-width: 960px) {
-  .grid3 {
+  .headLeft {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .serviceGrid,
+  .valueGrid {
     grid-template-columns: repeat(2, 1fr);
   }
 
-  .about {
+  .service:nth-child(3n) {
+    border-right: 1px solid var(--color-border);
+  }
+
+  .service:nth-child(2n) {
+    border-right: 0;
+  }
+
+  .service:nth-last-child(-n + 3) {
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .service:nth-last-child(-n + 2) {
+    border-bottom: 0;
+  }
+
+  .process {
+    grid-template-columns: repeat(2, 1fr);
+    row-gap: 28px;
+  }
+
+  .process li:nth-child(3) {
+    padding-left: 0;
+    border-left: 0;
+  }
+
+  .laneGrid {
+    grid-template-columns: repeat(2, 1fr);
+    grid-auto-rows: 170px;
+  }
+
+  .portal {
     grid-template-columns: 1fr;
   }
 
-  .aboutPhoto {
-    aspect-ratio: 16 / 10;
+  .portalPhoto {
+    height: 280px;
   }
 }
 
-@media (max-width: 640px) {
+@media (max-width: 560px) {
   .section {
-    padding: 56px 0;
+    padding: 64px 0;
   }
 
   .container {
-    gap: 28px;
     padding: 0 var(--space-4);
   }
 
   .title {
-    font-size: 24px;
+    font-size: 26px;
   }
 
-  .lead,
-  .aboutBody {
-    font-size: var(--text-md);
-  }
-
-  .grid3,
-  .values {
+  .serviceGrid,
+  .valueGrid,
+  .featureGrid,
+  .process {
     grid-template-columns: 1fr;
   }
 
-  .steps {
-    grid-template-columns: repeat(2, 1fr);
-    row-gap: var(--space-6);
+  .service {
+    border-right: 0 !important;
+    border-bottom: 1px solid var(--color-border) !important;
   }
 
-  .step::after {
-    display: none;
+  .service:last-child {
+    border-bottom: 0 !important;
   }
 
-  .gallery {
-    grid-template-columns: repeat(3, 1fr);
-    grid-auto-flow: dense;
-    margin-top: calc(-1 * var(--space-3));
+  .process li,
+  .process li + li {
+    padding: 0;
+    border-left: 0;
+  }
+
+  .mosaic {
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 150px 120px 120px;
+  }
+
+  .mosaic button:first-child {
+    grid-column: span 2;
+    grid-row: auto;
+  }
+
+  .ctaWrap {
+    padding: 0 var(--space-4) 64px;
+  }
+
+  .cta {
+    padding: 28px;
   }
 }

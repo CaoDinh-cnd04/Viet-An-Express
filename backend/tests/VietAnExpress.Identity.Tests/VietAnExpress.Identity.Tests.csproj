@@ -12,5 +12,6 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\Modules\Identity\VietAnExpress.Identity\VietAnExpress.Identity.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Customers\VietAnExpress.Customers\VietAnExpress.Customers.csproj" />
   </ItemGroup>
 </Project>

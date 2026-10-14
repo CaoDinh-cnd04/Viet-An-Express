@@ -12,10 +12,12 @@ import { AdminNotifications } from '../components/AdminNotifications';
 import { AdminTroubles } from '../components/AdminTroubles';
 import { SurveyStats } from '../components/SurveyStats';
 import { AdminUsage } from '../components/AdminUsage';
+import { AdminSenderInfo } from '../components/AdminSenderInfo';
+import { useAdminSenderInfo } from '../sender-info-api';
 import styles from './AdminPage.module.css';
 
 type Filter = 'all' | 'new';
-type Section = 'feedback' | 'troubles' | 'notifications' | 'analytics';
+type Section = 'feedback' | 'troubles' | 'notifications' | 'analytics' | 'sender-info';
 
 /**
  * Trang quản trị Việt An (/admin) — chỉ tài khoản quản trị cố định trong code đăng nhập được.
@@ -29,8 +31,9 @@ export default function AdminPage() {
   const [section, setSection] = useState<Section>('feedback');
   const feedback = useAdminFeedback(signedIn);
   const troubles = useAdminTroubles(signedIn);
+  const senderInfo = useAdminSenderInfo(signedIn);
   // Token hết hạn (401) → về màn đăng nhập.
-  const expired = signedIn && feedback.isError && !getAdminToken();
+  const expired = signedIn && (feedback.isError || senderInfo.isError) && !getAdminToken();
 
   if (!signedIn || expired) return <AdminLogin onSignedIn={() => setSignedIn(true)} expired={expired} />;
 
@@ -55,7 +58,8 @@ export default function AdminPage() {
             { key: 'feedback', label: 'Góp ý', count: feedback.data?.filter(f => !f.seen).length || undefined },
             { key: 'troubles', label: 'Sự cố', count: troubles.data?.filter(x => x.ticket.status === 'new').length || undefined },
             { key: 'notifications', label: 'Thông báo' },
-            { key: 'analytics', label: 'Thống kê sử dụng' }
+            { key: 'analytics', label: 'Thống kê sử dụng' },
+            { key: 'sender-info', label: 'Duyệt người gửi', count: senderInfo.data?.length || undefined }
           ]}
           value={section}
           onChange={setSection}
@@ -69,6 +73,8 @@ export default function AdminPage() {
           <AdminTroubles />
         ) : section === 'analytics' ? (
           <AdminUsage />
+        ) : section === 'sender-info' ? (
+          <AdminSenderInfo />
         ) : (
           <AdminNotifications />
         )}

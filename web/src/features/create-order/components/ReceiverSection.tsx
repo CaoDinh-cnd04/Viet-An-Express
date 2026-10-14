@@ -58,6 +58,7 @@ export function ReceiverSection() {
   }, [countryCode, setValue, clearErrors]);
   const dialCode = country?.dialCode ?? '';
   useEffect(() => {
+    if (!dialCode) return; // Keep the copied prefix while the country catalogue loads or has no match.
     if ((getValues('receiver.phoneCode') ?? '') !== dialCode) setValue('receiver.phoneCode', dialCode, { shouldDirty: true });
   }, [dialCode, getValues, setValue]);
 

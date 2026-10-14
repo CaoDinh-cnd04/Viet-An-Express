@@ -114,6 +114,7 @@ export function PackagesTable({ onPackagesInput }: { onPackagesInput: () => void
                   <select aria-label={t('Bao bì dòng {n}', { n: i + 1 })} className={cx(styles.cell, err(`packages.${i}.packaging`) && styles.cellInvalid)} {...reg(`packages.${i}.packaging`)}>
                     <option value="">{t('Chọn')}</option>
                     {PACKAGING_TYPES.map(p => <option key={p} value={p}>{t(p)}</option>)}
+                    {packages[i]?.packaging && !PACKAGING_TYPES.some(p => p === packages[i]!.packaging) && <option value={packages[i]!.packaging}>{t(packages[i]!.packaging)}</option>}
                   </select>
                 </td>
                 <td>

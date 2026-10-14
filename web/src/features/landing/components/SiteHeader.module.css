@@ -205,3 +205,11 @@
     font-weight: 600 !important;
   }
 }
+
+/* Điện thoại nhỏ: bỏ chữ tên công ty (giữ logo) và nút sáng/tối để các nút không tràn khỏi màn hình */
+@media (max-width: 480px) {
+  .brand span,
+  .themeButton {
+    display: none;
+  }
+}

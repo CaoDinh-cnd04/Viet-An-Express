@@ -82,6 +82,7 @@ export const NAV: ReadonlyArray<NavEntry> = [
     short: 'Tài khoản',
     icon: 'user',
     children: [
+      { to: '/account/sender-info', label: 'Thông tin người gửi', permission: PERMISSIONS.senderInfo },
       { to: '/account/mytracking', label: 'MyTracking cá nhân', permission: PERMISSIONS.myTracking },
       { to: '/account/staff', label: 'Tài khoản nhân viên', permission: PERMISSIONS.manageStaff }
     ]

@@ -48,8 +48,9 @@
   --color-sidebar-hover: #f3f5f8;
   --color-sidebar-active: #ebf2fa;
   /* Nền hero trang ngoài (luôn đậm, chữ trắng) */
-  --color-hero-from: #0f3d1a;
-  --color-hero-to: #2e8b3e;
+  /* Trang ngoài (giới thiệu, tra cứu): nền navy, nút xanh lá Việt An */
+  --color-hero-from: #10233f;
+  --color-hero-to: #1d3a63;
   --color-on-hero: #ffffff;
   --color-on-hero-muted: rgba(255, 255, 255, 0.78);
   /* Nút / chữ đặt trên ảnh (vd nút bỏ ảnh) */
@@ -151,8 +152,8 @@
     --color-print-doc-hover: #4a7fbb;
     --color-print-label: #2c7a7b;
     --color-print-label-hover: #379192;
-  --color-hero-from: #07170d;
-  --color-hero-to: #14502a;
+  --color-hero-from: #0a1626;
+  --color-hero-to: #142a47;
     --color-bg: #0f1218;
     --color-surface: #161a22;
     --color-surface-muted: #1b2029;
@@ -204,8 +205,8 @@
   --color-print-doc-hover: #4a7fbb;
   --color-print-label: #2c7a7b;
   --color-print-label-hover: #379192;
-  --color-hero-from: #07170d;
-  --color-hero-to: #14502a;
+  --color-hero-from: #0a1626;
+  --color-hero-to: #142a47;
   --color-bg: #0f1218;
   --color-surface: #161a22;
   --color-surface-muted: #1b2029;

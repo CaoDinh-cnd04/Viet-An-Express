@@ -143,6 +143,27 @@ internal sealed class AdminController : ApiControllerBase
     public async Task<IActionResult> ReplyTrouble(string id, TroubleReplyRequest body, CancellationToken ct) =>
         FromResult(await Sender.Send(new AdminReplyTroubleCommand(id, body.Reply, body.Status), ct), "Đã cập nhật sự cố — khách đã nhận thông báo");
 
+    /// <summary>Yêu cầu sửa thông tin người gửi (chờ duyệt lên đầu, 300 gần nhất) kèm hồ sơ hiện tại trong dbo.TCustomer.</summary>
+    [HttpGet("sender-info")]
+    [HasPermission(IdentityPermissions.AdminSenderInfo)]
+    [ProducesResponseType<ApiResponse<IReadOnlyList<AdminSenderInfoRequestDto>>>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> SenderInfoRequests([FromQuery] string? status, CancellationToken ct) =>
+        FromResult(await Sender.Send(new GetAdminSenderInfoRequestsQuery(string.IsNullOrWhiteSpace(status) ? null : status.Trim()), ct));
+
+    /// <summary>Duyệt → ghi vào dbo.TCustomer; khách nhận thông báo và email.</summary>
+    [HttpPost("sender-info/{id:long}/approve")]
+    [HasPermission(IdentityPermissions.AdminSenderInfo)]
+    [ProducesResponseType<ApiResponse<AdminSenderInfoRequestDto>>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> ApproveSenderInfo(long id, CancellationToken ct) =>
+        FromResult(await Sender.Send(new ApproveSenderInfoRequestCommand(id), ct), "Đã duyệt — hồ sơ khách đã được cập nhật");
+
+    /// <summary><c>{ reason }</c> — bắt buộc lý do; khách nhận thông báo và email.</summary>
+    [HttpPost("sender-info/{id:long}/reject")]
+    [HasPermission(IdentityPermissions.AdminSenderInfo)]
+    [ProducesResponseType<ApiResponse<AdminSenderInfoRequestDto>>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> RejectSenderInfo(long id, RejectSenderInfoRequest body, CancellationToken ct) =>
+        FromResult(await Sender.Send(new RejectSenderInfoRequestCommand(id, body.Reason), ct), "Đã từ chối — khách đã nhận thông báo");
+
     /// <summary>Xóa hẳn góp ý và ảnh đính kèm (khách cũng không còn thấy).</summary>
     [HttpDelete("feedback/{id:long}")]
     [HasPermission(IdentityPermissions.AdminFeedback)]
@@ -155,5 +176,7 @@ internal sealed class AdminController : ApiControllerBase
 }
 
 internal sealed record AdminLoginRequest(string? UserName, string? Password);
+
+internal sealed record RejectSenderInfoRequest(string? Reason);
 
 internal sealed record CreateNotificationRequest(string? Title, string? Body, bool Important, bool SendEmail, string? Link = null);

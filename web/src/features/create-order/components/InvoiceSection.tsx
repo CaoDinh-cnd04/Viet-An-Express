@@ -25,6 +25,9 @@ export function InvoiceSection() {
   const { control, register, formState, trigger } = useFormContext<CreateOrderValues>();
   const { fields, append, remove } = useFieldArray({ control, name: 'invoice.items' });
   const [type, items = [], currency, shippingFee] = useWatch({ control, name: ['shipment.type', 'invoice.items', 'invoice.currency', 'invoice.shippingFee'] });
+  const exportType = useWatch({ control, name: 'invoice.exportType' });
+  const exportTypes = [...EXPORT_TYPES, ...(exportType && !EXPORT_TYPES.some(o => o.value === exportType) ? [{ value: exportType, label: exportType }] : [])];
+  const currencies = CURRENCIES.some(c => c === currency) || !currency ? CURRENCIES : [...CURRENCIES, currency];
   const fmt = new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 2 });
   const err = (i: number, key: ItemKey) => get(formState.errors, `invoice.items.${i}.${key}`)?.message as string | undefined;
   // numeric: chỉ nhận số; maxDecimals: số chữ số sau dấu chấm tối đa (đơn giá: 2).
@@ -60,7 +63,7 @@ export function InvoiceSection() {
         <>
           {/* Thư viện mặt hàng / Invoice cũ / Nhập từ Excel: ở khung "Hỗ trợ khách hàng" cột trái (tab Khai invoice) */}
           <FormGrid columns={3}>
-            <SelectField label="Hình thức xuất khẩu" required placeholder="Chọn hình thức xuất khẩu" options={EXPORT_TYPES} {...bind('invoice.exportType')} />
+            <SelectField label="Hình thức xuất khẩu" required placeholder="Chọn hình thức xuất khẩu" options={exportTypes} {...bind('invoice.exportType')} />
             <SelectField
               label="Hình thức chịu thuế"
               required
@@ -68,7 +71,7 @@ export function InvoiceSection() {
               options={DUTY_TERMS}
               {...bind('invoice.dutyTerms')}
             />
-            <SelectField label="Đơn vị tiền tệ" required placeholder="Đơn vị tiền tệ" options={CURRENCIES} {...bind('invoice.currency')} />
+            <SelectField label="Đơn vị tiền tệ" required placeholder="Đơn vị tiền tệ" options={currencies} {...bind('invoice.currency')} />
           </FormGrid>
 
           <div className={cx(styles.tableScroll, styles.spaced)}>

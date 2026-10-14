@@ -19,6 +19,12 @@ namespace VietAnExpress.Shipments.Api;
 [Tags("Đơn hàng")]
 internal sealed class OrdersController : ApiControllerBase
 {
+    /// <summary>Toàn bộ form để copy đơn; chỉ đọc, giữ phạm vi khách/tài khoản con của đơn gốc.</summary>
+    [HttpGet("{bill}/copy")]
+    [HasPermission(ShipmentsPermissions.View)]
+    [HasPermission(ShipmentsPermissions.Create)]
+    public async Task<IActionResult> Copy(string bill, CancellationToken ct) => FromResult(await Sender.Send(new CopyOrderQuery(bill), ct));
+
     [HttpGet]
     [HasPermission(ShipmentsPermissions.View)]
     [ProducesResponseType<OrderListResponse>(StatusCodes.Status200OK)]

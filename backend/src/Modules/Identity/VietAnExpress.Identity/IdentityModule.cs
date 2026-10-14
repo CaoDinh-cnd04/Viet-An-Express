@@ -109,9 +109,11 @@ internal sealed class IdentityPermissionProvider : IPermissionProvider
         new(IdentityPermissions.Feedback, "Gửi góp ý", SystemRoles.Customer),
         new(IdentityPermissions.Notifications, "Xem thông báo của Việt An", SystemRoles.Customer),
         new(IdentityPermissions.Troubles, "Báo và theo dõi sự cố vận đơn", SystemRoles.Customer),
+        new(IdentityPermissions.SenderInfo, "Yêu cầu sửa thông tin người gửi", SystemRoles.Customer),
         new(IdentityPermissions.AdminFeedback, "Xem góp ý của khách (quản trị Việt An)", SystemRoles.VietAnAdmin),
         new(IdentityPermissions.AdminNotifications, "Soạn và gửi thông báo cho khách (quản trị Việt An)", SystemRoles.VietAnAdmin),
         new(IdentityPermissions.AdminTroubles, "Xử lý sự cố của khách (quản trị Việt An)", SystemRoles.VietAnAdmin),
-        new(IdentityPermissions.AdminAnalytics, "Thống kê sử dụng (quản trị Việt An)", SystemRoles.VietAnAdmin)
+        new(IdentityPermissions.AdminAnalytics, "Thống kê sử dụng (quản trị Việt An)", SystemRoles.VietAnAdmin),
+        new(IdentityPermissions.AdminSenderInfo, "Duyệt sửa thông tin người gửi (quản trị Việt An)", SystemRoles.VietAnAdmin)
     ];
 }

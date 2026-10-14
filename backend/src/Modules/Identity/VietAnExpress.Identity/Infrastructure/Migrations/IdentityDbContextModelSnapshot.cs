@@ -316,6 +316,140 @@ namespace VietAnExpress.Identity.Infrastructure.Migrations
                     b.ToTable("PhienThuHoi", "dbo");
                 });
 
+            modelBuilder.Entity("VietAnExpress.Identity.Domain.SenderInfoRequest", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("ID");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime")
+                        .HasColumnName("Ngay_Tao");
+
+                    b.Property<string>("CustomerCode")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)")
+                        .HasColumnName("Ma_Khach");
+
+                    b.Property<long>("CustomerId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("CustomerID");
+
+                    b.Property<string>("NewAddress")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)")
+                        .HasColumnName("Dia_Chi_Moi");
+
+                    b.Property<string>("NewCompanyName")
+                        .IsRequired()
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)")
+                        .HasColumnName("Ten_Cong_Ty_Moi");
+
+                    b.Property<string>("NewContactName")
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)")
+                        .HasColumnName("Nguoi_Lien_He_Moi");
+
+                    b.Property<string>("NewEmail")
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)")
+                        .HasColumnName("Email_Moi");
+
+                    b.Property<string>("NewPhone")
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)")
+                        .HasColumnName("Dien_Thoai_Moi");
+
+                    b.Property<string>("NewTaxCode")
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)")
+                        .HasColumnName("Ma_So_Thue_Moi");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)")
+                        .HasColumnName("Ghi_Chu");
+
+                    b.Property<string>("OldAddress")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)")
+                        .HasColumnName("Dia_Chi_Cu");
+
+                    b.Property<string>("OldCompanyName")
+                        .IsRequired()
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)")
+                        .HasColumnName("Ten_Cong_Ty_Cu");
+
+                    b.Property<string>("OldContactName")
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)")
+                        .HasColumnName("Nguoi_Lien_He_Cu");
+
+                    b.Property<string>("OldEmail")
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)")
+                        .HasColumnName("Email_Cu");
+
+                    b.Property<string>("OldPhone")
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)")
+                        .HasColumnName("Dien_Thoai_Cu");
+
+                    b.Property<string>("OldTaxCode")
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)")
+                        .HasColumnName("Ma_So_Thue_Cu");
+
+                    b.Property<string>("RejectReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)")
+                        .HasColumnName("Ly_Do_Tu_Choi");
+
+                    b.Property<DateTime?>("ReviewedAt")
+                        .HasColumnType("datetime")
+                        .HasColumnName("Ngay_Duyet");
+
+                    b.Property<string>("ReviewedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("Nguoi_Duyet");
+
+                    b.Property<string>("SenderUserName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("Nguoi_Gui");
+
+                    b.Property<string>("Status")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(10)")
+                        .HasColumnName("Trang_Thai");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CustomerId")
+                        .IsUnique()
+                        .HasDatabaseName("UX_YeuCauSuaNguoiGui_Pending_CustomerID")
+                        .HasFilter("[Trang_Thai] = 'pending'");
+
+                    b.HasIndex("CustomerId", "CreatedAt")
+                        .HasDatabaseName("IX_YeuCauSuaNguoiGui_CustomerID_Ngay_Tao");
+
+                    b.HasIndex("Status", "CreatedAt")
+                        .HasDatabaseName("IX_YeuCauSuaNguoiGui_Trang_Thai_Ngay_Tao");
+
+                    b.ToTable("YeuCauSuaNguoiGui", "dbo");
+                });
+
             modelBuilder.Entity("VietAnExpress.Identity.Domain.StaffAccount", b =>
                 {
                     b.Property<long>("Id")

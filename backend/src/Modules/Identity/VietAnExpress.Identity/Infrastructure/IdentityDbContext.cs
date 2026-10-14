@@ -42,7 +42,7 @@ internal sealed class CustomerLoginConfiguration : IEntityTypeConfiguration<Cust
 
 /// <summary>
 /// dbo.TCustomer (bảng cũ, không migration) + bảng mới người dùng đã đồng ý: dbo.TaiKhoanNhanVien (tạm), dbo.MyTrackingCauHinh, dbo.GopY + dbo.GopY_HinhAnh,
-/// dbo.ThongBao + dbo.ThongBao_DaDoc, dbo.SuCo + dbo.SuCo_TraoDoi, dbo.PhienThuHoi.
+/// dbo.ThongBao + dbo.ThongBao_DaDoc, dbo.SuCo + dbo.SuCo_TraoDoi, dbo.PhienThuHoi, dbo.YeuCauSuaNguoiGui.
 /// Schema "identity" chỉ chứa lịch sử migration.
 /// </summary>
 internal sealed class IdentityDbContext(DbContextOptions<IdentityDbContext> options) : DbContext(options)
@@ -72,6 +72,9 @@ internal sealed class IdentityDbContext(DbContextOptions<IdentityDbContext> opti
 
     /// <summary>Phiên đăng nhập đã đăng xuất (dbo.PhienThuHoi).</summary>
     public DbSet<RevokedSession> RevokedSessions => Set<RevokedSession>();
+
+    /// <summary>Yêu cầu sửa thông tin người gửi chờ quản trị Việt An duyệt (dbo.YeuCauSuaNguoiGui).</summary>
+    public DbSet<SenderInfoRequest> SenderInfoRequests => Set<SenderInfoRequest>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

@@ -50,7 +50,7 @@ export function RowTools({ order, actions }: { order: Order; actions: OrderActio
   const tools = [
     { icon: 'eye', label: t('Xem chi tiết đơn {bill}', { bill: order.bill }), onClick: () => actions.onOpen(order) },
     { icon: 'image', label: order.photos ? t('Xem ảnh kiện hàng ({n})', { n: order.photos }) : t('Xem ảnh kiện hàng'), onClick: () => actions.onPhotos(order) },
-    { icon: 'copy', label: t('Copy đơn'), onClick: () => navigate(`/orders/new?from=${order.bill}`) },
+    { icon: 'copy', label: t('Copy đơn'), onClick: () => navigate(`/orders/new?from=${encodeURIComponent(order.bill)}`) },
     { icon: 'alert', label: t('Báo sự cố'), onClick: () => actions.onTrouble(order) }
   ] as const;
   return (

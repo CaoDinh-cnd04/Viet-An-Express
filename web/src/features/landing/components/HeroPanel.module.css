@@ -32,3 +32,77 @@
     padding: var(--space-4);
   }
 }
+
+/* Ô tra cứu dạng thanh ngang trên hero */
+.bar {
+  position: relative;
+  display: flex;
+  gap: 8px;
+  width: min(720px, 100%);
+  margin-top: var(--space-5);
+  padding: 8px;
+  border-radius: 14px;
+  background: var(--color-surface);
+  box-shadow: 0 18px 50px -18px rgba(0, 0, 0, 0.55);
+}
+
+.barField {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 0 12px;
+  color: var(--color-text-faint);
+}
+
+.barField input {
+  flex: 1;
+  min-width: 0;
+  height: 44px;
+  border: 0;
+  outline: 0;
+  background: none;
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--text-md);
+}
+
+.barButton {
+  height: 44px;
+  padding: 0 26px;
+  font-size: var(--text-md);
+}
+
+.barError,
+.barWarning {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  margin: 0;
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  text-align: left;
+}
+
+.barError {
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+}
+
+.barWarning {
+  background: var(--color-warning-soft);
+  color: var(--color-warning);
+}
+
+@media (max-width: 560px) {
+  .bar {
+    flex-direction: column;
+  }
+
+  .barButton {
+    width: 100%;
+  }
+}

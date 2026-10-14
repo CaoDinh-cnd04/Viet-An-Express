@@ -4,7 +4,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { getErrorMessage } from '@/shared/api/http';
 import { useI18n } from '@/shared/i18n';
 import { orderUsage } from '@/shared/lib/usage';
-import { Button, Card, LinkButton, PageHeader, SegmentedControl, useToast } from '@/shared/ui';
+import { Button, Card, LinkButton, Notice, PageHeader, SegmentedControl, useToast } from '@/shared/ui';
 import { DraftsTable, useSaveDraft, useUpdateDraft } from '@/features/drafts';
 import { useSession } from '@/features/auth';
 import { useQuote, type ServiceQuote } from '@/features/pricing';
@@ -115,7 +115,7 @@ export default function CreateOrderPage({ mode }: { mode: CreateMode }) {
   };
   const [initial] = useState(() => (search ? undefined : readAutosave(storageKey)));
   const form = useCreateOrderForm(initial);
-  const { draftId, finishAutosave, retainDraft } = useOrderPrefill(form, storageKey);
+  const { draftId, finishAutosave, retainDraft, copyLoading, copyError, retryCopy } = useOrderPrefill(form, storageKey);
   const persisting = useRef(false);
   const { onShipmentInput, onPackagesInput, onTypeChange, docConverted } = useShipmentSync(form);
   const saveDraft = useSaveDraft();
@@ -231,6 +231,12 @@ export default function CreateOrderPage({ mode }: { mode: CreateMode }) {
   const submit = form.handleSubmit(onValid, onInvalid);
   const saveAsDraft = () => persist(form.getValues(), 'draft');
   const busy = saving || quote.isPending;
+
+  if (copyLoading || copyError) return <>
+    <PageHeader title="Copy đơn" description="Điền sẵn toàn bộ thông tin đơn gốc để tạo đơn mới." />
+    {copyError ? <Notice tone="danger">{getErrorMessage(copyError, 'Không tải được đơn gốc để copy')} <Button onClick={retryCopy}>{t('Thử lại')}</Button></Notice>
+      : <p role="status">{t('Đang tải toàn bộ thông tin đơn gốc…')}</p>}
+  </>;
 
   return (
     <FormProvider {...form}>

@@ -1,5 +1,7 @@
 /** Tiếng Anh — tạo đơn (từng bước, 1 trang), invoice, kiện, cảnh báo kích thước. */
 export const createOrder: Record<string, string> = {
+  'Điền sẵn toàn bộ thông tin đơn gốc để tạo đơn mới.': 'Prefill all details from the original order to create a new order.',
+  'Đang tải toàn bộ thông tin đơn gốc…': 'Loading all details from the original order…',
   'IOSS No phải có dạng IM và 10 chữ số': 'IOSS No must be IM followed by 10 digits',
   'EORI No phải gồm 2 chữ cái mã nước và 1–15 chữ cái hoặc chữ số': 'EORI No must have a two-letter country prefix followed by 1–15 letters or digits',
   // Trang & các bước

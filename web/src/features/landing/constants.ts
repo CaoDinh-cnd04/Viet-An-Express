@@ -82,10 +82,43 @@ export const GALLERY: ReadonlyArray<{ src: string; alt: string }> = [
 /** Mục trên thanh điều hướng — trỏ tới id của từng phần. */
 export const NAV: ReadonlyArray<{ id: string; label: string }> = [
   { id: 'dich-vu', label: 'Dịch vụ' },
+  { id: 'quy-trinh', label: 'Quy trình' },
   { id: 'tuyen', label: 'Tuyến gửi' },
   { id: 've-chung-toi', label: 'Về chúng tôi' },
-  { id: 'portal', label: 'Portal' },
+  { id: 'hoi-dap', label: 'Hỏi đáp' },
   { id: 'lien-he', label: 'Liên hệ' }
+];
+
+/** Quy trình gửi hàng 4 bước (trang giới thiệu). */
+export const PROCESS: ReadonlyArray<{ icon: IconName; title: string; desc: string }> = [
+  { icon: 'phone', title: 'Liên hệ / tạo đơn', desc: 'Gọi hotline, nhắn Zalo hoặc tự tạo đơn trên portal.' },
+  { icon: 'box', title: 'Lấy hàng & đóng gói', desc: 'Nhận hàng tận nơi, đóng gói đúng chuẩn và chụp ảnh kiện tại kho.' },
+  { icon: 'shield', title: 'Khai báo hải quan', desc: 'Việt An lo chứng từ, invoice và thủ tục thông quan.' },
+  { icon: 'plane', title: 'Phát hàng & theo dõi', desc: 'Theo dõi hành trình tới khi người nhận ký nhận.' }
+];
+
+/** Câu hỏi thường gặp trên trang giới thiệu — cùng nội dung với trang Trợ giúp của portal. */
+export const FAQ: ReadonlyArray<{ q: string; a: string }> = [
+  {
+    q: 'Cước được tính theo cân thực hay cân quy đổi?',
+    a: 'Cước tính theo số lớn hơn giữa cân thực và cân quy đổi. Cân quy đổi = Dài × Rộng × Cao (cm) ÷ 5000.'
+  },
+  {
+    q: 'Chứng từ (DOC) nặng hơn 2kg thì sao?',
+    a: 'Chứng từ trên 2kg được xem là hàng hóa. Hệ thống tự chuyển sang PACK, bạn cần khai Invoice đầy đủ.'
+  },
+  {
+    q: 'Vì sao đơn bị báo phụ phí quá khổ / quá tải?',
+    a: 'Mỗi hãng có giới hạn cạnh dài, tổng 3 cạnh và cân nặng mỗi kiện. Kiện vượt giới hạn sẽ bị tính phụ thu hoặc không nhận vận chuyển. Xem bảng phụ thu ở trang Giá & gợi ý dịch vụ.'
+  },
+  {
+    q: 'Tôi có thể tạo nhiều đơn cùng lúc không?',
+    a: 'Có. Dùng "Tạo đơn từ Excel" (tối đa 100 đơn/lần) hoặc kết nối API ở trang E-commerce.'
+  },
+  {
+    q: 'Khi nào đơn được cấp mã bill Việt An?',
+    a: 'Đơn tạo xong nằm ở "Đơn nháp & chưa in". Chỉ khi bấm "In & cấp bill", hệ thống mới cấp mã bill, khóa đơn (không sửa được) và chuyển sang "Đơn hàng của tôi".'
+  }
 ];
 
 /** Trạng thái vận đơn trên trang tra cứu công khai — lời lẽ cho khách, khác nhãn nội bộ ORDER_STATUS. */

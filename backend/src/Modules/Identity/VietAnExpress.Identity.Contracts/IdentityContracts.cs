@@ -20,8 +20,12 @@ public static class IdentityPermissions
     /// <summary>Xem, trả lời, đổi trạng thái sự cố của mọi khách — chỉ quản trị Việt An.</summary>
     public const string AdminTroubles = "admin.troubles";
     public const string AdminAnalytics = "admin.analytics";
+    /// <summary>Gửi yêu cầu sửa thông tin người gửi — chỉ tài khoản chính.</summary>
+    public const string SenderInfo = "account.sender-info";
+    /// <summary>Duyệt / từ chối yêu cầu sửa thông tin người gửi — chỉ quản trị Việt An.</summary>
+    public const string AdminSenderInfo = "admin.sender-info";
 
-    public static readonly IReadOnlySet<string> AdminOnly = new HashSet<string>(StringComparer.Ordinal) { ManageStaff, MyTracking, ChangePassword };
+    public static readonly IReadOnlySet<string> AdminOnly = new HashSet<string>(StringComparer.Ordinal) { ManageStaff, MyTracking, ChangePassword, SenderInfo };
 
     /// <summary>Tài khoản con luôn có (không cần tài khoản chính chọn, không hiện trong danh sách quyền để chọn).</summary>
     public static readonly IReadOnlySet<string> StaffAlways = new HashSet<string>(StringComparer.Ordinal) { Feedback, Notifications, Troubles };

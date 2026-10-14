@@ -347,7 +347,7 @@ internal sealed class AdminFeedbackHandlers(IdentityDbContext db, ITokenService 
     {
         if (!VietAnAdminAccount.Verify(c.UserName, c.Password)) return Task.FromResult<Result<AdminSessionDto>>(IdentityErrors.InvalidCredentials);
         // CustomerID 0: không phải khách nào — chỉ có quyền xem góp ý và soạn thông báo, mọi API của khách đều bị chặn.
-        var token = tokens.CreateAccessToken(0, null, VietAnAdminAccount.UserName, [SystemRoles.VietAnAdmin], [IdentityPermissions.AdminFeedback, IdentityPermissions.AdminNotifications, IdentityPermissions.AdminTroubles, IdentityPermissions.AdminAnalytics]);
+        var token = tokens.CreateAccessToken(0, null, VietAnAdminAccount.UserName, [SystemRoles.VietAnAdmin], [IdentityPermissions.AdminFeedback, IdentityPermissions.AdminNotifications, IdentityPermissions.AdminTroubles, IdentityPermissions.AdminAnalytics, IdentityPermissions.AdminSenderInfo]);
         return Task.FromResult<Result<AdminSessionDto>>(new AdminSessionDto(token.Token, token.ExpiresAt, VietAnAdminAccount.UserName));
     }
 

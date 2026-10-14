@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useFormContext, useFormState, useWatch } from 'react-hook-form';
-import { useSession } from '@/features/auth';
+import { PERMISSIONS, useCan, useSession } from '@/features/auth';
+import { useSearchParams } from 'react-router-dom';
 import { BRANCHES } from '@/shared/config/domain';
 import { useI18n } from '@/shared/i18n';
 import { sanitizePhone } from '@/shared/lib/phone';
 import { useDebouncedCallback } from '@/shared/lib/useDebouncedCallback';
 import { cx } from '@/shared/lib/cx';
-import { Button, Card, FormGrid, Icon, SelectField, TextField } from '@/shared/ui';
+import { Button, Card, FormGrid, Icon, LinkButton, SelectField, TextField } from '@/shared/ui';
 import { useRecentSenders } from '../api';
 import { RULES } from '../constants';
 import { useCombobox } from '../hooks/useCombobox';
@@ -42,8 +43,10 @@ export function ShipperSection() {
   // Điền sẵn từ hồ sơ khách. Tài khoản chính: tên công ty và địa chỉ lấy hàng chỉ đọc (theo hồ sơ);
   // tài khoản con (nhân viên) sửa được — gửi hộ người khác / lấy hàng ở địa chỉ khác.
   const session = useSession();
+  const can = useCan();
   const profile = session.data?.status === 'authenticated' ? session.data.user : null;
-  const lockCompany = profile?.accountType !== 'staff';
+  const [params] = useSearchParams();
+  const lockCompany = profile?.accountType !== 'staff' && !params.has('from');
 
   // Tài khoản con: gõ tên công ty / người gửi → gợi ý người gửi đã dùng ở đơn trước; chọn → điền lại cả người gửi.
   const [senderQuery, setSenderQuery] = useState<string | null>(null);
@@ -67,6 +70,7 @@ export function ShipperSection() {
       subtitle={lang === 'vi' ? '(Shipper)' : undefined}
       actions={
         <>
+          {can(PERMISSIONS.senderInfo) && profile?.accountType !== 'staff' && <LinkButton to="/account/sender-info" size="sm" variant="ghost">{t('Sửa hồ sơ người gửi')}</LinkButton>}
           <SelectField className={styles.shipperBranch} label="Chi nhánh gửi hàng" required options={BRANCHES} placeholder="Chọn chi nhánh" {...bind('shipper.branch')} />
           <Button size="sm" variant="ghost" aria-expanded={expanded} aria-controls="shipper-fields" onClick={() => setOpen(!expanded)}>
             {t(expanded ? 'Thu gọn' : 'Mở rộng')} <Icon name="chevronDown" size={14} className={cx(styles.chevron, expanded && styles.chevronOpen)} />

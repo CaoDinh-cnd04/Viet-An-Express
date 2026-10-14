@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { autosaveKey, draftAutosaveKey } from './useOrderPrefill';
+import { autosaveKey, copyAutosaveKey, draftAutosaveKey } from './useOrderPrefill';
 
 describe('autosaveKey', () => {
+  it('copy mỗi bill có khóa riêng và tách khỏi đơn mới/đơn nháp', () => {
+    const base = autosaveKey({ customerCode: 'SGB', userName: 'admin' });
+    expect(copyAutosaveKey(base, 'VA100')).not.toBe(copyAutosaveKey(base, 'VA200'));
+    expect(copyAutosaveKey(base, 'VA100')).not.toBe(draftAutosaveKey(base, 'VA100'));
+    expect(copyAutosaveKey(base, 'VA100')).not.toBe(base);
+  });
   it('khóa riêng theo tài khoản — admin và nhân viên cùng công ty không dùng chung bản tự lưu', () => {
     const admin = autosaveKey({ customerCode: 'SGB', userName: 'admin' });
     const staff = autosaveKey({ customerCode: 'SGB', userName: 'kho.hn' });

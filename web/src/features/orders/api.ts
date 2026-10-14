@@ -2,6 +2,7 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { http } from '@/shared/api/http';
 import { parseTags, serializeTags } from './lib/multi-filter';
 import type { OrderDetail, OrderEvent, OrderFilters, OrderListResponse, OrderPhoto } from './types';
+import type { CreateOrderValues } from '@/features/create-order/schema';
 
 export const orderKeys = {
   all: ['orders'] as const,
@@ -40,6 +41,16 @@ export function useOrder(ref: string | null) {
     queryKey: orderKeys.detail(ref ?? ''),
     queryFn: () => http.get<{ data: OrderDetail }>(`/orders/${encodeURIComponent(ref ?? '')}`).then(r => r.data),
     enabled: !!ref
+  });
+}
+
+/** Full saved form for a new copy, including packages, invoice, addons and original precision. */
+export function useOrderCopy(bill: string | null) {
+  return useQuery({
+    queryKey: [...orderKeys.detail(bill ?? ''), 'copy'],
+    queryFn: () => http.get<{ data: Partial<CreateOrderValues> }>(`/orders/${encodeURIComponent(bill ?? '')}/copy`).then(r => r.data),
+    enabled: !!bill,
+    retry: false
   });
 }
 

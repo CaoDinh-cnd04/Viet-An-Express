@@ -70,7 +70,7 @@ function AddonPicker({ value, onChange, onShowFees }: { value: string[]; onChang
 
   const none = value.length === 0;
   const toggle = (name: string) => onChange(value.includes(name) ? value.filter(x => x !== name) : [...value, name]);
-  const selected = ADDONS.filter(a => value.includes(a.name));
+  const selected = value.map(name => ADDONS.find(a => a.name === name) ?? { name, nameEn: name, description: '', descriptionEn: '' });
 
   return (
     <div ref={root} className={styles.addonPicker}>

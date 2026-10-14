@@ -25,6 +25,7 @@ const PrivacyPage = lazy(() => import('@/features/landing/pages/PrivacyPage'));
 const ShopifyConnectPage = lazy(() => import('@/features/ecommerce/pages/ShopifyConnectPage'));
 const AdminPage = lazy(() => import('@/features/admin/pages/AdminPage'));
 const pages = {
+  senderInfo: lazy(() => import('@/features/sender-info/pages/SenderInfoPage')),
   myTracking: lazy(() => import('@/features/mytracking/pages/MyTrackingPage')),
   staff: lazy(() => import('@/features/staff/pages/StaffPage')),
   orderImport: lazy(() => import('@/features/order-import/pages/OrderImportPage')),
@@ -99,6 +100,7 @@ const routes: RouteObject[] = [
       page('account/mytracking', 'MyTracking cá nhân', pages.myTracking, PERMISSIONS.myTracking),
       page('account/staff', 'Tài khoản nhân viên', pages.staff, PERMISSIONS.manageStaff),
       page('account/password', 'Đổi mật khẩu', pages.password),
+      page('account/sender-info', 'Thông tin người gửi', pages.senderInfo, PERMISSIONS.senderInfo),
       page('account/feedback', 'Góp ý', pages.feedback, PERMISSIONS.feedback),
       { path: '*', element: <NotFoundPage />, handle: { title: 'Không tìm thấy trang' } satisfies RouteHandle }
     ]

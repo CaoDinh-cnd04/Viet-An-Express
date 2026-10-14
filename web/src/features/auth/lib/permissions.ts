@@ -18,6 +18,7 @@ export const PERMISSIONS = {
   myTracking: 'account.mytracking',
   /** Tự đổi mật khẩu — tài khoản con không có (admin đặt lại). */
   changePassword: 'account.password',
+  senderInfo: 'account.sender-info',
   feedback: 'account.feedback'
 } as const;
 
