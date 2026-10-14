@@ -13,7 +13,7 @@ public class MarketplaceOrderTests
     [Fact]
     public void Don_da_xoa_khong_bi_dong_bo_ghi_lai()
     {
-        var o = MarketplaceOrder.Import(1, null, "shopify", Imported(), Now);
+        var o = MarketplaceOrder.Import(1, null, "tiktok", Imported(), Now);
         Assert.True(o.Delete(Now));
         Assert.False(o.UpdateFrom(Imported("#1-moi"), Now));
         Assert.Equal("#1", o.OrderName);
@@ -23,18 +23,18 @@ public class MarketplaceOrderTests
     [Fact]
     public void Don_dong_bo_tu_shop_khong_xoa_duoc()
     {
-        var o = MarketplaceOrder.Import(1, 3, "shopify", Imported(), Now); // StoreConnectionId = 3 (shop đã kết nối)
+        var o = MarketplaceOrder.Import(1, 3, "tiktok", Imported(), Now); // StoreConnectionId = 3 (shop đã kết nối)
         Assert.True(o.IsSynced);
         Assert.False(o.CanDelete);
         Assert.False(o.Delete(Now));
         Assert.Null(o.DeletedAt);
-        Assert.True(MarketplaceOrder.Import(1, null, "shopify", Imported(), Now).CanDelete); // nhập file thì xóa được
+        Assert.True(MarketplaceOrder.Import(1, null, "tiktok", Imported(), Now).CanDelete); // nhập file thì xóa được
     }
 
     [Fact]
     public void Nhap_lai_file_khoi_phuc_don_da_xoa()
     {
-        var o = MarketplaceOrder.Import(1, null, "shopify", Imported(), Now);
+        var o = MarketplaceOrder.Import(1, null, "tiktok", Imported(), Now);
         o.Edit(MarketplaceRecipient.Empty with { Name = "Taro" }, 1, null, 1, null, null, null, null, null, Now);
         o.Delete(Now);
         Assert.True(o.Restore(Imported("#1-file"), Now));
@@ -47,7 +47,7 @@ public class MarketplaceOrderTests
     [Fact]
     public void Xac_nhan_roi_tra_ve_va_dong_bo_khong_ghi_de_don_da_xac_nhan()
     {
-        var o = MarketplaceOrder.Import(1, null, "shopify", Imported(), Now);
+        var o = MarketplaceOrder.Import(1, null, "tiktok", Imported(), Now);
         Assert.True(o.Confirm(Now));
         Assert.False(o.Confirm(Now));
         Assert.False(o.UpdateFrom(Imported("#1-moi"), Now));
@@ -59,7 +59,7 @@ public class MarketplaceOrderTests
     [Fact]
     public void Don_da_gui_khong_xoa_duoc()
     {
-        var o = MarketplaceOrder.Import(1, null, "shopify", Imported(), Now);
+        var o = MarketplaceOrder.Import(1, null, "tiktok", Imported(), Now);
         o.Confirm(Now);
         Assert.False(o.Delete(Now));
         Assert.Null(o.DeletedAt);
@@ -75,7 +75,7 @@ public class MarketplaceOrderTests
     [Fact]
     public void Don_da_sua_khong_bi_dong_bo_ghi_de()
     {
-        var o = MarketplaceOrder.Import(1, null, "shopify", Imported(), Now);
+        var o = MarketplaceOrder.Import(1, null, "tiktok", Imported(), Now);
         Assert.True(o.Edit(MarketplaceRecipient.Empty with { Name = "Taro" }, 1, null, 1, null, null, null, null, null, Now));
         Assert.False(o.UpdateFrom(Imported("#1-moi"), Now));
         Assert.Equal("Taro", o.Recipient.Name);

@@ -32,8 +32,7 @@ export function DeleteOrdersModal({ orders, onClose, onDeleted }: { orders: Read
       <p>
         {single
           ? t('Xóa đơn {ref} khỏi danh sách?', { ref: single.ref })
-          : t('Xóa {n} đơn khỏi danh sách?', { n: deletable.length })}{' '}
-        {t('Đơn Shopify đã xóa không tự về lại khi đồng bộ; muốn lấy lại thì nhập lại file export có đơn đó.')}
+          : t('Xóa {n} đơn khỏi danh sách?', { n: deletable.length })}
       </p>
       {billed > 0 && <p>{t('{n} đơn đã gửi sẽ được giữ lại (không xóa được).', { n: billed })}</p>}
     </Modal>

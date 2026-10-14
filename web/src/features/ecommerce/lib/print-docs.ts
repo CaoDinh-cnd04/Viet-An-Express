@@ -18,7 +18,7 @@ export interface PrintContext {
   printedAt: string;
   t: (text: string, vars?: Record<string, string | number>) => string;
   formatNumber: (n: number) => string;
-  /** "shopify" → "Shopify" */
+  /** "tiktok" → "TikTok Shop" */
   sourceLabel: (src: string) => string;
 }
 

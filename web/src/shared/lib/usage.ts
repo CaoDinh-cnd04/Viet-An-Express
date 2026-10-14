@@ -1,7 +1,7 @@
 import { apiUrl } from '@/shared/api/http';
 
 export type OrderMode = 'wizard' | 'quick';
-const paths = new Set(['/', '/login', '/privacy', '/shopify', '/orders/new', '/orders/new/quick', '/orders/import', '/orders', '/drafts', '/pricing', '/ecommerce', '/ecommerce/orders', '/troubles', '/notifications', '/help', '/account/api-tracking', '/account/mytracking', '/account/staff', '/account/password', '/account/feedback']);
+const paths = new Set(['/', '/login', '/orders/new', '/orders/new/quick', '/orders/import', '/orders', '/drafts', '/pricing', '/ecommerce', '/ecommerce/orders', '/troubles', '/notifications', '/help', '/account/api-tracking', '/account/mytracking', '/account/staff', '/account/password', '/account/feedback']);
 
 export function usagePath(path: string): string | null {
   if (path === '/account/sender-info') return path;

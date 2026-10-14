@@ -78,7 +78,7 @@ export const ecommerce: Record<string, string> = {
   'Kết nối': 'Connect',
   'Ngắt kết nối': 'Disconnect',
 
-  // Kết nối sàn (OAuth Shopify / TikTok Shop)
+  // Kết nối sàn (OAuth TikTok Shop)
   'Chưa kết nối được sàn — chức năng đang được hoàn thiện ở máy chủ': 'Could not connect the store — this feature is still being completed on the server',
   'Đã kết nối {platform}': 'Connected {platform}',
   'Không tải được danh sách cửa hàng, vui lòng thử lại sau.': 'Could not load stores, please try again later.',
@@ -91,8 +91,6 @@ export const ecommerce: Record<string, string> = {
   'Shop đã gỡ ứng dụng': 'App uninstalled by shop',
 
   // Trang đã gộp: Đơn hàng · Thêm đơn · Kết nối
-  'Kết nối Shopify, TikTok Shop để đơn tự về, hoặc thêm đơn bằng file Excel.':
-    'Connect Shopify or TikTok Shop so new orders come in automatically, or add orders from an Excel file.',
   'Đơn hàng': 'Orders',
   'Thêm đơn': 'Add orders',
   'Đã có bill': 'Bill issued',
@@ -105,7 +103,6 @@ export const ecommerce: Record<string, string> = {
   '· đơn mới tự về tab Đơn hàng': '· new orders appear in the Orders tab',
   'Máy chủ chưa có chức năng kết nối sàn. Phần này sẽ hoạt động khi backend hoàn tất.': 'The server does not support store connections yet. This will work once the backend is done.',
   'Tên cửa hàng': 'Store name',
-  'Nhập dạng ten-shop hoặc ten-shop.myshopify.com': 'Enter shop-name or shop-name.myshopify.com',
   'Thị trường': 'Market',
   'Toàn cầu': 'Global',
   'đồng bộ {date}': 'synced {date}',
@@ -127,7 +124,6 @@ export const ecommerce: Record<string, string> = {
   'Khổ {f}': 'Size {f}',
   'In nhãn': 'Print labels',
   'Chưa có đơn nào': 'No orders yet',
-  'Kết nối Shopify, TikTok Shop để đơn tự về, hoặc thêm đơn từ file Excel.': 'Connect Shopify or TikTok Shop to receive orders automatically, or add orders from an Excel file.',
   'Xóa bộ lọc': 'Clear filters',
 
   // Thêm đơn — nhập tay
@@ -143,7 +139,6 @@ export const ecommerce: Record<string, string> = {
   'Chưa có tên': 'No name yet',
   'Chưa có đơn cần giao': 'No orders to ship',
   'Đơn chưa giao trên shop đã kết nối sẽ về đây khi đồng bộ. Đơn bán ngoài sàn thì thêm tay hoặc từ file.': 'Unfulfilled orders from connected stores appear here when you sync. Add off-marketplace orders manually or from a file.',
-  'Kết nối Shopify để đơn tự về, hoặc thêm đơn tay / từ file Excel.': 'Connect Shopify to receive orders automatically, or add orders manually / from an Excel file.',
   'Đang đồng bộ…': 'Syncing…',
   'Đơn {source}': '{source} order',
   'Đã sao chép mã đơn': 'Order number copied',
@@ -155,17 +150,14 @@ export const ecommerce: Record<string, string> = {
   'Tổng tiền hàng': 'Goods total',
   'Sàn chưa gửi danh sách sản phẩm.': 'The marketplace has not sent the product list.',
   'Ghi chú của shop': 'Shop note',
-  'Chưa có địa chỉ người nhận: app Shopify cần được cấp quyền dữ liệu khách hàng (Protected customer data), rồi bấm Đồng bộ lại.': 'No recipient address: the Shopify app needs Protected customer data access, then sync again.',
 
   // Thêm đơn
   'Thêm 1 đơn': 'Add an order',
   'Bán trên': 'Sold on',
   'Lưu đơn': 'Save order',
   'Đơn trên {shops} tự về tab Đơn hàng khi đồng bộ — ở đây chỉ thêm đơn bán ngoài shop đã kết nối.': 'Orders from {shops} arrive in the Orders tab when you sync — only add orders sold outside connected stores here.',
-  'Bán trên Shopify? Kết nối shop để đơn tự về, không cần nhập tay.': 'Selling on Shopify? Connect your store so orders arrive automatically.',
-  'Nhập đơn từ file đang được hoàn thiện ở máy chủ. Tạm thời hãy dùng "Nhập tay từng đơn" hoặc kết nối Shopify.': 'File import is still being completed on the server. For now, use "Enter orders manually" or connect Shopify.',
 
-  // Nhập file Shopify, sửa đơn, việc cần bổ sung
+  // Nhập file CSV, sửa đơn, việc cần bổ sung
   'Cần bổ sung': 'Needs info',
   '(+{n} việc)': '(+{n} more)',
   'Sửa đơn': 'Edit order',
@@ -180,14 +172,13 @@ export const ecommerce: Record<string, string> = {
   'Kèm mã nước, vd +81…; số nội địa sẽ tự thêm mã nước': 'Include country code, e.g. +81…; local numbers get it added automatically',
   'Nhãn DHL / FedEx / UPS chỉ in chữ Latin: địa chỉ tiếng Nhật, Hàn, Trung… cần viết lại (vd romaji). Sau khi lưu, đồng bộ lại từ sàn sẽ không ghi đè đơn này.':
     'DHL / FedEx / UPS labels only print Latin script: Japanese, Korean, Chinese… addresses must be rewritten (e.g. romaji). After saving, syncing again will not overwrite this order.',
-  'Nhập đơn từ file Shopify': 'Import orders from a Shopify file',
-  'Vào Shopify admin → Orders → Export.': 'In Shopify admin, go to Orders → Export.',
-  'Chọn đơn cần gửi (vd "Current page" hoặc "All orders"), định dạng "CSV for Excel…", bấm Export orders.':
-    'Choose the orders to ship (e.g. "Current page" or "All orders"), format "CSV for Excel…", then click Export orders.',
-  'Kéo thả file .csv nhận được vào ô dưới.': 'Drag the downloaded .csv file into the box below.',
-  'Đơn nhiều sản phẩm được gộp lại; đơn đã giao / đã hủy bị bỏ qua; đơn đã có trong danh sách thì cập nhật, không tạo trùng. File Shopify không có cân nặng và mã HS — bổ sung ở tab Đơn hàng.':
-    'Multi-product orders are merged; fulfilled / cancelled orders are skipped; existing orders are updated, not duplicated. Shopify files have no weight or HS code — add them in the Orders tab.',
-  'File .csv tải từ Shopify, tối đa 5 MB': '.csv file exported from Shopify, up to 5 MB',
+  'Nhập đơn từ file CSV': 'Import orders from a CSV file',
+  'Tải file mẫu CSV của Việt An:': 'Download the Viet An CSV template:',
+  'tải file mẫu': 'download template',
+  'Điền đơn theo đúng các cột của file mẫu, lưu dạng CSV UTF-8.': 'Fill in orders using the template columns and save as CSV UTF-8.',
+  'Kéo thả file .csv vào ô dưới.': 'Drag the .csv file into the box below.',
+  'File .csv theo mẫu Việt An, tối đa 5 MB': '.csv file in the Viet An template, up to 5 MB',
+  'Nhập đơn từ file đang được hoàn thiện ở máy chủ. Tạm thời hãy dùng "Nhập tay từng đơn".': 'File import is still being completed on the server. For now, use "Enter orders manually".',
   'Xem tab Đơn hàng': 'Go to Orders tab',
   // Việc cần bổ sung (backend gửi)
   'Thiếu tên người nhận': 'Missing recipient name',
@@ -200,7 +191,6 @@ export const ecommerce: Record<string, string> = {
   'Xóa đơn E-commerce': 'Delete e-commerce orders',
   'Xóa đơn {ref} khỏi danh sách?': 'Delete order {ref} from the list?',
   'Xóa {n} đơn khỏi danh sách?': 'Delete {n} orders from the list?',
-  'Đơn Shopify đã xóa không tự về lại khi đồng bộ; muốn lấy lại thì nhập lại file export có đơn đó.': 'Deleted Shopify orders do not come back on sync; to restore one, import an export file that contains it again.',
   '{n} đơn đã gửi sẽ được giữ lại (không xóa được).': '{n} sent orders will be kept (cannot be deleted).',
   'Đang xóa…': 'Deleting…',
 
@@ -239,26 +229,12 @@ export const ecommerce: Record<string, string> = {
 
   // Trang Đơn hàng E-com (menu Dịch vụ & Bán hàng)
   'Đơn hàng E-com': 'E-com orders',
-  'Đơn từ Shopify, file Excel hoặc nhập tay đã xác nhận gửi — in nhãn, phiếu đóng gói, bảng kê giao cho Việt An.': 'Orders from Shopify, Excel files or manual entry confirmed for shipping — print labels, packing lists and handover manifests for Viet An.',
-  // Mở app từ Shopify (/shopify)
-  'Kết nối Shopify': 'Connect Shopify',
-  'Đang kết nối cửa hàng Shopify…': 'Connecting your Shopify store…',
-  'Đang gắn cửa hàng vừa cài vào tài khoản của bạn.': 'Linking the store you just installed to your account.',
-  'Cài ứng dụng Viet An Express từ Shopify App Store hoặc mở ứng dụng trong Shopify admin. Shopify chuyển về đây, bạn đăng nhập là shop tự kết nối vào tài khoản này.': 'Install the Viet An Express app from the Shopify App Store or open it from your Shopify admin. Shopify sends you back here; after you log in, the store connects to this account automatically.',
-  'Cài lại ứng dụng từ Shopify để kết nối lại': 'Reinstall the app from Shopify to reconnect',
-  'Bấm Kết nối, chọn shop và bấm Install trên Shopify. Shopify chuyển về đây, shop tự kết nối vào tài khoản này.': 'Click Connect, choose your store and click Install on Shopify. Shopify sends you back here and the store connects to this account automatically.',
+  'Đơn từ file CSV hoặc nhập tay đã xác nhận gửi — in nhãn, phiếu đóng gói, bảng kê giao cho Việt An.': 'Orders from CSV files or manual entry confirmed for shipping — print labels, packing lists and handover manifests for Viet An.',
+  'Thêm đơn E-commerce bằng tay hoặc từ file CSV, xác nhận gửi cho Việt An.': 'Add E-commerce orders manually or from a CSV file, then confirm shipping with Viet An.',
+  'Thêm đơn tay hoặc từ file CSV.': 'Add orders manually or from a CSV file.',
   'Việt An sẽ ngừng nhận đơn từ {shop} và gỡ ứng dụng khỏi shop. Đơn đã nhận vẫn giữ nguyên.': 'Viet An will stop receiving orders from {shop} and uninstall the app from the store. Orders already received are kept.',
-  'Chưa kết nối được cửa hàng Shopify': 'Could not connect your Shopify store',
-  'Mở trang Kết nối': 'Open the Connect tab',
-  'Tài khoản này chưa được cấp quyền kết nối cửa hàng. Đăng nhập bằng tài khoản chính của công ty hoặc nhờ quản trị viên cấp quyền "Kết nối / ngắt kết nối cửa hàng", rồi mở lại ứng dụng từ Shopify admin.': 'This account is not allowed to connect stores. Sign in with your company\'s main account, or ask your administrator to grant the "Connect / disconnect stores" permission, then open the app again from Shopify admin.',
   '{n} SP': '{n} items',
   'Kèm mã nước, vd +81…': 'Include country code, e.g. +81…',
   'Trống: Việt An cân': 'Blank: Viet An weighs',
-  'Kết nối cửa hàng Shopify với Việt An Express': 'Connect your Shopify store to Viet An Express',
-  'Đăng nhập tài khoản Việt An Express để hoàn tất kết nối. Sau đó đơn hàng Shopify tự về mục E-commerce để tạo vận đơn quốc tế.': 'Sign in to your Viet An Express account to finish connecting. Your Shopify orders will then sync to E-commerce, where you create international shipments.',
-  'Đăng nhập tài khoản Việt An Express': 'Sign in to your Viet An Express account',
-  'Cửa hàng vừa cài tự gắn vào tài khoản': 'The store you just installed is linked to your account automatically',
-  'Đơn hàng Shopify mới tự đồng bộ về E-commerce → Đơn hàng': 'New Shopify orders sync to E-commerce → Orders',
-  'Chưa có tài khoản Việt An Express?': 'No Viet An Express account yet?',
   'Gửi yêu cầu, Việt An tạo tài khoản và gửi thông tin đăng nhập cho bạn trong ngày làm việc.': 'Send us a request and Viet An will create your account and send your login details within one business day.',
 };

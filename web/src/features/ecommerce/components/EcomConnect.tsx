@@ -4,7 +4,7 @@ import { isNotImplemented } from '@/shared/api/http';
 import { useI18n } from '@/shared/i18n';
 import { cx } from '@/shared/lib/cx';
 import { useCopyToClipboard } from '@/shared/lib/useCopyToClipboard';
-import { Button, Card, Icon, LinkButton, Modal, Notice, SelectField, StatusPill, TextField, useToast } from '@/shared/ui';
+import { Button, Card, Icon, Modal, Notice, SelectField, StatusPill, TextField, useToast } from '@/shared/ui';
 import {
   useDisconnectStore,
   useEcomSettings,
@@ -16,11 +16,11 @@ import {
   useTestWebhook
 } from '../api';
 import { API_EXAMPLE, STORE_PLATFORMS, STORE_STATUS, TIKTOK_REGIONS, WEBHOOK_EVENTS } from '../constants';
-import { formatSyncTime, readOAuthResult, reconnectAction, shopifyAppStoreUrl } from '../lib/store-connection';
-import type { EcomSettings, StoreConnection, TiktokRegion } from '../types';
+import { formatSyncTime, needsReauthorize, readOAuthResult } from '../lib/store-connection';
+import type { EcomSettings, StoreConnection, StorePlatform, TiktokRegion } from '../types';
 import styles from './ecommerce.module.css';
 
-/** Tab "Kết nối": sàn Shopify / TikTok Shop (OAuth) và API cho lập trình viên. */
+/** Tab "Kết nối": sàn TikTok Shop (OAuth) và API cho lập trình viên. */
 export function EcomConnect() {
   return (
     <div className="page-stack">
@@ -42,7 +42,7 @@ function StoresCard() {
   useEffect(() => {
     const result = readOAuthResult(params);
     if (!result) return;
-    if (result.ok) toast.show(t('Đã kết nối {platform}', { platform: result.platform === 'tiktok' ? 'TikTok Shop' : 'Shopify' }), 'success');
+    if (result.ok) toast.show(t('Đã kết nối {platform}', { platform: STORE_PLATFORMS[result.platform as StorePlatform]?.label ?? result.platform }), 'success');
     else toast.show(result.error, 'error');
     setParams({ tab: 'connect' }, { replace: true });
   }, [params, setParams, t, toast]);
@@ -60,36 +60,10 @@ function StoresCard() {
           </Notice>
         )}
         {stores.data?.map(s => <StoreRow key={s.id} store={s} onDisconnect={() => setDisconnecting(s)} />)}
-        <ShopifyConnect />
         <TiktokConnect disabled={unavailable} />
       </div>
       <DisconnectModal store={disconnecting} onClose={() => setDisconnecting(null)} />
     </Card>
-  );
-}
-
-const SHOPIFY_APP_STORE_URL = shopifyAppStoreUrl(import.meta.env.VITE_SHOPIFY_APP_STORE_URL);
-
-/**
- * Shopify chỉ kết nối bằng cách cài app từ Shopify (App Store 2.3.1: không cho nhập tay tên shop).
- * Có link App Store thì nút đưa khách sang trang app; Shopify cài xong chuyển về /ecommerce/shopify, shop tự gắn vào tài khoản.
- */
-function ShopifyConnect() {
-  const { t } = useI18n();
-  return (
-    <div className={styles.connectRow}>
-      <strong className={styles.connectName}>Shopify</strong>
-      <p className={styles.sub}>
-        {SHOPIFY_APP_STORE_URL
-          ? t('Bấm Kết nối, chọn shop và bấm Install trên Shopify. Shopify chuyển về đây, shop tự kết nối vào tài khoản này.')
-          : t('Cài ứng dụng Viet An Express từ Shopify App Store hoặc mở ứng dụng trong Shopify admin. Shopify chuyển về đây, bạn đăng nhập là shop tự kết nối vào tài khoản này.')}
-      </p>
-      {SHOPIFY_APP_STORE_URL && (
-        <LinkButton variant="primary" to={SHOPIFY_APP_STORE_URL}>
-          <Icon name="link" size={15} /> {t('Kết nối')}
-        </LinkButton>
-      )}
-    </div>
   );
 }
 
@@ -120,7 +94,6 @@ function StoreRow({ store, onDisconnect }: { store: StoreConnection; onDisconnec
   const sync = useSyncStore();
   const start = useStartStoreConnection();
   const status = STORE_STATUS[store.status];
-  const action = reconnectAction(store);
 
   return (
     <div className={styles.storeRow}>
@@ -135,9 +108,7 @@ function StoreRow({ store, onDisconnect }: { store: StoreConnection; onDisconnec
         </div>
         <div className={styles.formActions}>
           <StatusPill tone={status.tone}>{status.label}</StatusPill>
-          {action === 'reinstall' ? (
-            <span className={styles.sub}>{t('Cài lại ứng dụng từ Shopify để kết nối lại')}</span>
-          ) : action === 'reauthorize' ? (
+          {needsReauthorize(store) ? (
             <Button size="sm" variant="primary" disabled={start.isPending} onClick={() => start.mutate({ platform: store.platform, shopDomain: store.shopDomain })}>
               {t('Ủy quyền lại')}
             </Button>

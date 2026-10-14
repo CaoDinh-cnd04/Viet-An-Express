@@ -224,7 +224,7 @@ export function EcomOrderList({ scope }: { scope: OrderScope }) {
           ) : (
             <EmptyState
               title="Chưa có đơn nào"
-              description="Kết nối Shopify để đơn tự về, hoặc thêm đơn tay / từ file Excel."
+              description="Thêm đơn tay hoặc từ file CSV."
               action={
                 <div className={styles.emptyActions}>
                   <LinkButton to="/ecommerce?tab=add" size="sm">{t('Thêm đơn')}</LinkButton>

@@ -11,7 +11,7 @@ internal sealed class SalesChannel
     public const int AuthTypeMaxLength = 20;
     public const int WebsiteMaxLength = 255;
 
-    /// <summary>Cách ủy quyền: OAuth 2.0 (Shopify, TikTok, Amazon, eBay, Etsy, Shopee, Lazada).</summary>
+    /// <summary>Cách ủy quyền: OAuth 2.0 (TikTok, Amazon, eBay, Etsy, Shopee, Lazada).</summary>
     public const string OAuth2 = "oauth2";
     /// <summary>Cách ủy quyền: khóa API do chủ shop tạo (WooCommerce REST API).</summary>
     public const string ApiKey = "api_key";

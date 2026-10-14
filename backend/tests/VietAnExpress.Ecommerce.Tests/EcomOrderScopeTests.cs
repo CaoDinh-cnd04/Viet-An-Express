@@ -33,11 +33,11 @@ public class EcomOrderScopeTests
     {
         var db = new EcommerceDbContext(new DbContextOptionsBuilder<EcommerceDbContext>().UseInMemoryDatabase(Guid.NewGuid().ToString()).Options);
         db.MarketplaceOrders.AddRange(
-            MarketplaceOrder.Import(CustomerId, 1, "shopify", Imported("dong-bo"), Now),                       // đồng bộ từ sàn
-            MarketplaceOrder.Import(CustomerId, null, "shopify", Imported("csv-a"), Now, StaffA),             // nhân viên A nhập CSV
+            MarketplaceOrder.Import(CustomerId, 1, "tiktok", Imported("dong-bo"), Now),                       // đồng bộ từ sàn
+            MarketplaceOrder.Import(CustomerId, null, "tiktok", Imported("csv-a"), Now, StaffA),             // nhân viên A nhập CSV
             MarketplaceOrder.CreateManual(CustomerId, "manual", Imported("tay-b"), new ManualShipping(null, null, null, null), Now, StaffB),
             MarketplaceOrder.CreateManual(CustomerId, "manual", Imported("admin"), new ManualShipping(null, null, null, null), Now),
-            MarketplaceOrder.Import(999, null, "shopify", Imported("khach-khac"), Now, StaffA));             // khách khác
+            MarketplaceOrder.Import(999, null, "tiktok", Imported("khach-khac"), Now, StaffA));             // khách khác
         db.SaveChanges();
         return db;
     }
@@ -70,7 +70,7 @@ public class EcomOrderScopeTests
     [Fact]
     public void Don_tao_moi_ghi_nhan_vien_tao_don_dong_bo_thi_khong()
     {
-        Assert.Equal(StaffA, MarketplaceOrder.Import(CustomerId, null, "shopify", Imported("x"), Now, StaffA).CreatedByStaffId);
-        Assert.Null(MarketplaceOrder.Import(CustomerId, 1, "shopify", Imported("y"), Now).CreatedByStaffId);
+        Assert.Equal(StaffA, MarketplaceOrder.Import(CustomerId, null, "tiktok", Imported("x"), Now, StaffA).CreatedByStaffId);
+        Assert.Null(MarketplaceOrder.Import(CustomerId, 1, "tiktok", Imported("y"), Now).CreatedByStaffId);
     }
 }

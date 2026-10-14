@@ -152,7 +152,7 @@ Hệ thống cũ (kho, vận hành) vẫn chạy song song trên cùng database.
 | Đơn hàng, tra cứu công khai | `dbo.MaVanDon` |
 | Chi tiết kiện / dòng hàng invoice | `dbo.MaVanDon_PCS_DIM`, `dbo.MaVanDon_ChiTietHang` |
 | Đơn nháp & chưa in (tạm giữ) | `shipments.OrderDrafts` |
-| Kênh bán e-com (Shopify, TikTok Shop, Amazon…) — bảng mới | `dbo.KenhTMDT` (danh mục, seed trong migration) |
+| Kênh bán e-com (TikTok Shop, Amazon…) — bảng mới | `dbo.KenhTMDT` (danh mục, seed trong migration) |
 | Shop của khách đã kết nối — bảng mới | `dbo.KetNoiTMDT` |
 | Đơn e-com (kéo từ sàn; sau này cả nhập tay / Excel) — bảng mới | `dbo.DonTMDT` |
 

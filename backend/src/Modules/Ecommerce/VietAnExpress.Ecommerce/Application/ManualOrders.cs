@@ -4,7 +4,6 @@ using Microsoft.EntityFrameworkCore;
 using VietAnExpress.Ecommerce.Contracts;
 using VietAnExpress.Ecommerce.Domain;
 using VietAnExpress.Ecommerce.Infrastructure;
-using VietAnExpress.Ecommerce.Infrastructure.Shopify;
 using VietAnExpress.SharedKernel.Application;
 using VietAnExpress.SharedKernel.Results;
 
@@ -28,7 +27,7 @@ internal static class ManualOrderRules
     /// <summary>Nguồn khách chọn được khi nhập tay: tự nhập hoặc đơn của 1 kênh bán chưa kết nối.</summary>
     public static readonly string[] Sources =
     [
-        MarketplaceOrder.ManualSource, SalesChannelCodes.Shopify, SalesChannelCodes.TikTok, SalesChannelCodes.Shopee,
+        MarketplaceOrder.ManualSource, SalesChannelCodes.TikTok, SalesChannelCodes.Shopee,
         SalesChannelCodes.Lazada, SalesChannelCodes.Amazon, SalesChannelCodes.Ebay, SalesChannelCodes.Etsy, SalesChannelCodes.WooCommerce
     ];
 
@@ -68,10 +67,10 @@ internal static class ManualOrderRules
             PlatformOrderId: "", OrderName: reference, Recipient: recipient,
             ItemCount: lines.Sum(l => l.Qty), WeightKg: i.Kg > 0 ? Math.Round(i.Kg, 3, MidpointRounding.AwayFromZero) : null,
             Currency: null, TotalAmount: lines.Sum(l => l.SellingPrice * l.Qty),
-            ProductsJson: JsonSerializer.Serialize(lines, ShopifyOrderMapper.Json), Note: null, PlacedAt: now);
+            ProductsJson: JsonSerializer.Serialize(lines, OrderData.Json), Note: null, PlacedAt: now);
         var shipping = new ManualShipping(
             Cut(i.Service, MarketplaceOrder.ServiceMaxLength), Cut(i.Hub, MarketplaceOrder.HubMaxLength), Cut(i.Branch, MarketplaceOrder.BranchMaxLength),
-            customs is { Count: > 0 } ? JsonSerializer.Serialize(customs, ShopifyOrderMapper.Json) : null);
+            customs is { Count: > 0 } ? JsonSerializer.Serialize(customs, OrderData.Json) : null);
         return (source, order, shipping);
     }
 

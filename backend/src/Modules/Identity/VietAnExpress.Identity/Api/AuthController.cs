@@ -52,7 +52,7 @@ internal sealed class AuthController(IOptions<JwtOptions> jwt) : ApiControllerBa
     }
 
     /// <summary>
-    /// Phiên hiện tại cho web portal — luôn 200 (không sinh lỗi 401 khi chưa đăng nhập, vd trang mở từ Shopify).
+    /// Phiên hiện tại cho web portal — luôn 200 (không sinh lỗi 401 khi chưa đăng nhập).
     /// Còn refresh cookie → cấp lại token theo quyền hiện tại rồi trả người dùng (thêm / đổi quyền trong code hoặc admin đổi quyền
     /// tài khoản con thì mở lại trang là có hiệu lực, không phải đăng nhập lại); chỉ có access token → người dùng; còn lại → data null.
     /// </summary>

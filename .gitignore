@@ -30,7 +30,3 @@ TestResults/
 Thumbs.db
 .claude/settings.local.json
 
-# Script kiểm tra webhook Shopify chỉ dùng trên máy
-backend/scripts/test-shopify-webhooks.ps1
-# Trạng thái cục bộ của Shopify CLI
-.shopify/

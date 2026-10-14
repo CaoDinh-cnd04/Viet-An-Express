@@ -7,11 +7,11 @@ const ctx: PrintContext = {
   printedAt: '05/10/2026 10:00',
   t: (text, vars) => Object.entries(vars ?? {}).reduce((s, [k, v]) => s.replace(`{${k}}`, String(v)), text),
   formatNumber: n => String(n),
-  sourceLabel: s => (s === 'shopify' ? 'Shopify' : s)
+  sourceLabel: s => (s === 'tiktok' ? 'TikTok Shop' : s)
 };
 
 const order = (id: string, extra: Partial<EcomOrder> = {}): EcomOrder => ({
-  id, src: 'shopify', ref: `#c${id}`, bill: '', cnee: 'Jane', ct: 'United States', items: 2, kg: 0, st: 'created', createdAt: '11/04/2025 07:02',
+  id, src: 'tiktok', ref: `#c${id}`, bill: '', cnee: 'Jane', ct: 'United States', items: 2, kg: 0, st: 'created', createdAt: '11/04/2025 07:02',
   value: 115, currency: 'USD',
   receiver: { name: 'Jane <b>Roe</b>', phone: '+19175550100', address1: '1 Main St', city: 'Glen Ridge', state: 'NJ', postal: '07028', countryCode: 'US', country: 'United States' },
   products: [{ name: 'Tee', sku: 'T1', qty: 2, fobPrice: 45, sellingPrice: 45 }],
@@ -28,7 +28,7 @@ describe('buildPrintHtml', () => {
     expect(html).not.toContain('<b>Roe</b>');
     expect(html).toContain('Shop A · PTA1');
     expect(html).toContain('Glen Ridge, NJ, 07028');
-    expect(html).toContain('<span>Shopify · 11/04/2025 07:02</span>');
+    expect(html).toContain('<span>TikTok Shop · 11/04/2025 07:02</span>');
   });
 
   it('phiếu đóng gói: bảng sản phẩm và tổng tiền', () => {

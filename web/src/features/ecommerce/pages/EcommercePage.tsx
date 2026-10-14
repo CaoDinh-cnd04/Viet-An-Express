@@ -29,7 +29,7 @@ export default function EcommercePage() {
 
   return (
     <>
-      <PageHeader title="E-commerce" description="Kết nối Shopify, TikTok Shop để đơn tự về, hoặc thêm đơn bằng file Excel." />
+      <PageHeader title="E-commerce" description="Thêm đơn E-commerce bằng tay hoặc từ file CSV, xác nhận gửi cho Việt An." />
       <div className={cx('page-stack', styles.compactPage)}>
         <Card flush>
           <Tabs ariaLabel={t('Chức năng E-commerce')} items={tabs} value={tab} onChange={k => setParams({ tab: k }, { replace: true })} />

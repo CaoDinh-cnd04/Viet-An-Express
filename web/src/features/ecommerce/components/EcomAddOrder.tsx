@@ -2,8 +2,9 @@ import { useState } from 'react';
 import { getErrorMessage, isNotImplemented } from '@/shared/api/http';
 import { useI18n } from '@/shared/i18n';
 import { readFileAsText } from '@/shared/lib/files';
-import { Card, FileDrop, Icon, LinkButton, Notice, SegmentedControl } from '@/shared/ui';
+import { Card, FileDrop, LinkButton, Notice, SegmentedControl } from '@/shared/ui';
 import { useImportEcomCsv, useStoreConnections } from '../api';
+import { ECOM_IMPORT_TEMPLATE_URL } from '../constants';
 import { ManualEcomForm } from './ManualEcomForm';
 import styles from './ecommerce.module.css';
 
@@ -22,12 +23,11 @@ export function EcomAddOrder() {
     <div className="page-stack">
       <div className={styles.addHead}>
         <SegmentedControl ariaLabel="Cách thêm đơn" options={METHODS} value={method} onChange={setMethod} />
-        <p className={styles.hint}>
-          {connected.length > 0
-            ? t('Đơn trên {shops} tự về tab Đơn hàng khi đồng bộ — ở đây chỉ thêm đơn bán ngoài shop đã kết nối.', { shops: connected.map(s => s.shopName).join(', ') })
-            : t('Bán trên Shopify? Kết nối shop để đơn tự về, không cần nhập tay.')}
-          {connected.length === 0 && <> <LinkButton to="/ecommerce?tab=connect" size="sm" variant="ghost"><Icon name="link" size={15} /> {t('Kết nối sàn')}</LinkButton></>}
-        </p>
+        {connected.length > 0 && (
+          <p className={styles.hint}>
+            {t('Đơn trên {shops} tự về tab Đơn hàng khi đồng bộ — ở đây chỉ thêm đơn bán ngoài shop đã kết nối.', { shops: connected.map(s => s.shopName).join(', ') })}
+          </p>
+        )}
       </div>
       {method === 'manual' ? <ManualEcomForm /> : <CsvImport />}
     </div>
@@ -50,29 +50,26 @@ function CsvImport() {
 
   const result = importCsv.data;
   return (
-    <Card title="Nhập đơn từ file Shopify">
+    <Card title="Nhập đơn từ file CSV">
       <ol className={styles.steps}>
-        <li>{t('Vào Shopify admin → Orders → Export.')}</li>
-        <li>{t('Chọn đơn cần gửi (vd "Current page" hoặc "All orders"), định dạng "CSV for Excel…", bấm Export orders.')}</li>
-        <li>{t('Kéo thả file .csv nhận được vào ô dưới.')}</li>
+        <li>{t('Tải file mẫu CSV của Việt An:')} <a href={ECOM_IMPORT_TEMPLATE_URL} download>{t('tải file mẫu')}</a></li>
+        <li>{t('Điền đơn theo đúng các cột của file mẫu, lưu dạng CSV UTF-8.')}</li>
+        <li>{t('Kéo thả file .csv vào ô dưới.')}</li>
       </ol>
-      <p className={styles.muted}>
-        {t('Đơn nhiều sản phẩm được gộp lại; đơn đã giao / đã hủy bị bỏ qua; đơn đã có trong danh sách thì cập nhật, không tạo trùng. File Shopify không có cân nặng và mã HS — bổ sung ở tab Đơn hàng.')}
-      </p>
       <div className={styles.spaced}>
         <FileDrop
           accept=".csv,text/csv"
           disabled={importCsv.isPending}
           onFile={f => void onFile(f)}
           title={importCsv.isPending ? t('Đang xử lý {name}…', { name: fileName }) : 'Kéo & thả file CSV hoặc bấm để chọn'}
-          hint="File .csv tải từ Shopify, tối đa 5 MB"
+          hint="File .csv theo mẫu Việt An, tối đa 5 MB"
         />
       </div>
       {badFile && <div className={styles.spaced}><Notice tone="danger">{t('Chỉ nhận file .csv. Với file Excel, hãy lưu lại dạng CSV UTF-8.')}</Notice></div>}
       {importCsv.isError && (
         <div className={styles.spaced}>
           {isNotImplemented(importCsv.error)
-            ? <Notice tone="warning">{t('Nhập đơn từ file đang được hoàn thiện ở máy chủ. Tạm thời hãy dùng "Nhập tay từng đơn" hoặc kết nối Shopify.')}</Notice>
+            ? <Notice tone="warning">{t('Nhập đơn từ file đang được hoàn thiện ở máy chủ. Tạm thời hãy dùng "Nhập tay từng đơn".')}</Notice>
             : <Notice tone="danger">{getErrorMessage(importCsv.error)}</Notice>}
         </div>
       )}

@@ -28,10 +28,10 @@ internal sealed class StoreConnection
     public long CustomerId { get; private set; }
     /// <summary>dbo.KenhTMDT.Ma_Kenh.</summary>
     public string ChannelCode { get; private set; } = "";
-    /// <summary>Định danh shop trên sàn: Shopify = "xxx.myshopify.com", TikTok = shop_id, Amazon = seller id…</summary>
+    /// <summary>Định danh shop trên sàn: TikTok = shop_id, Amazon = seller id…</summary>
     public string ShopId { get; private set; } = "";
     public string ShopName { get; private set; } = "";
-    /// <summary>Tên miền shop hiển thị (Shopify, WooCommerce).</summary>
+    /// <summary>Tên miền shop hiển thị (WooCommerce).</summary>
     public string? ShopDomain { get; private set; }
     /// <summary>TikTok Shop: shop_cipher bắt buộc khi gọi API theo shop.</summary>
     public string? ShopCipher { get; private set; }
@@ -80,7 +80,7 @@ internal sealed class StoreConnection
         ModifyDate = now;
     }
 
-    /// <summary>Đã làm mới token bằng refresh token (Shopify trả cặp mới, bỏ cặp cũ).</summary>
+    /// <summary>Đã làm mới token bằng refresh token (sàn trả cặp mới thì bỏ cặp cũ).</summary>
     public void RefreshTokens(string accessTokenEncrypted, DateTime? accessExpiresAt, string? refreshTokenEncrypted, DateTime? refreshExpiresAt, DateTime now)
     {
         AccessTokenEncrypted = accessTokenEncrypted;
@@ -115,23 +115,6 @@ internal sealed class StoreConnection
     {
         Status = Expired;
         LastError = null;
-        ModifyDate = now;
-    }
-
-    /// <summary>
-    /// Chủ shop gỡ app trên Shopify (webhook app/uninstalled): token không còn dùng được → xóa, chuyển "revoked".
-    /// Vẫn hiện trong danh sách để khách biết và ủy quyền lại.
-    /// </summary>
-    public void MarkUninstalled(DateTime now)
-    {
-        Status = Revoked;
-        AccessTokenEncrypted = null;
-        AccessTokenExpiresAt = null;
-        RefreshTokenEncrypted = null;
-        RefreshTokenExpiresAt = null;
-        WebhookIds = null;
-        LastError = "Ứng dụng Việt An đã bị gỡ khỏi cửa hàng Shopify";
-        LastErrorAt = now;
         ModifyDate = now;
     }
 

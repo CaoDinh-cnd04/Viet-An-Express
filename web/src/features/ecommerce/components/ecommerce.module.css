@@ -456,7 +456,7 @@
   font-size: var(--text-xs);
 }
 
-/* Các bước tải file export từ Shopify */
+/* Các bước nhập đơn từ file CSV */
 .steps {
   margin: 0 0 var(--space-2);
   padding-left: var(--space-5);

@@ -3,7 +3,7 @@ import type { EcomOrder } from '../types';
 import { fromEditForm, isLatin, toEditForm } from './order-edit';
 
 const order: EcomOrder = {
-  id: '7', src: 'shopify', ref: '#1002', bill: '', cnee: '山田 太郎', ct: 'Japan', items: 2, kg: 0, st: 'created', createdAt: '11/04/2025 08:21',
+  id: '7', src: 'tiktok', ref: '#1002', bill: '', cnee: '山田 太郎', ct: 'Japan', items: 2, kg: 0, st: 'created', createdAt: '11/04/2025 08:21',
   receiver: { name: '山田 太郎', phone: '+818000000000', address1: '中央三丁目3-1', city: '京田辺市', state: 'Kyoto', postal: '610-0313', countryCode: 'JP', country: 'Japan' },
   products: [{ name: 'T SHIRT - S', sku: '', qty: 2, fobPrice: 30, sellingPrice: 30 }],
   hub: 'SGN'

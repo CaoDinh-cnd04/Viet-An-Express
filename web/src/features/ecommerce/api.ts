@@ -64,7 +64,7 @@ export function useConfirmEcomOrders() {
   });
 }
 
-/** Xóa (ẩn) đơn chưa có bill; đơn Shopify đã xóa không bị đồng bộ / nhập file tạo lại. */
+/** Xóa (ẩn) đơn chưa có bill. */
 export function useDeleteEcomOrders() {
   const qc = useQueryClient();
   const toast = useToast();
@@ -78,7 +78,7 @@ export function useDeleteEcomOrders() {
   });
 }
 
-/** Gửi nội dung CSV (file Export orders của Shopify; mẫu 70 cột của Việt An đang hoàn thiện). Backend trả số đơn thành công + lỗi từng dòng. */
+/** Gửi nội dung CSV theo mẫu 70 cột của Việt An (backend chưa làm). Backend trả số đơn thành công + lỗi từng dòng. */
 export function useImportEcomCsv() {
   const qc = useQueryClient();
   return useMutation({
@@ -131,7 +131,7 @@ export function useTestWebhook() {
   });
 }
 
-/** Cửa hàng Shopify / TikTok Shop đã kết nối OAuth. Endpoint mới — xem API_CONTRACT.md §5.1. */
+/** Cửa hàng TikTok Shop… đã kết nối OAuth — xem API_CONTRACT.md §5.1. */
 export function useStoreConnections() {
   return useQuery({
     queryKey: ecomKeys.stores,
@@ -147,16 +147,6 @@ export function useStartStoreConnection() {
     mutationFn: (body: StartStoreConnection) => http.post<{ authorizeUrl: string }>('/ecom/stores/connect', body),
     onSuccess: res => window.location.assign(res.authorizeUrl),
     onError: e => toast.show(getErrorMessage(e, 'Chưa kết nối được sàn — chức năng đang được hoàn thiện ở máy chủ'), 'error')
-  });
-}
-
-/** Gắn shop vừa cài từ Shopify (backend giữ token trong cookie sau OAuth) vào tài khoản đang đăng nhập. */
-export function useClaimShopifyInstall() {
-  const qc = useQueryClient();
-  return useMutation({
-    // data null = không có shop đang chờ gắn (mở lại app khi shop đã kết nối).
-    mutationFn: () => http.post<{ data: StoreConnection | null }>('/ecom/stores/claim').then(r => r.data),
-    onSuccess: () => void qc.invalidateQueries({ queryKey: ecomKeys.stores })
   });
 }
 

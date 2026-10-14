@@ -2,7 +2,7 @@ namespace VietAnExpress.Ecommerce.Domain;
 
 /// <summary>
 /// Đơn E-commerce của khách (bảng <c>dbo.DonTMDT</c>) — khớp <c>EcomOrder</c> của frontend.
-/// Nguồn: kênh bán đã kết nối (Shopify…), sau này cả nhập tay / Excel / API. Chống trùng theo (khách, kênh, mã đơn sàn).
+/// Nguồn: kênh bán đã kết nối (TikTok Shop…), sau này cả nhập tay / Excel / API. Chống trùng theo (khách, kênh, mã đơn sàn).
 /// </summary>
 internal sealed class MarketplaceOrder
 {
@@ -33,9 +33,9 @@ internal sealed class MarketplaceOrder
     public long CustomerId { get; private set; }
     /// <summary>dbo.KetNoiTMDT.ID — null với đơn nhập tay / Excel / API.</summary>
     public long? StoreConnectionId { get; private set; }
-    /// <summary>Nguồn: mã kênh (shopify, tiktok…) hoặc manual / excel / api.</summary>
+    /// <summary>Nguồn: mã kênh (tiktok, amazon…) hoặc manual / excel / api.</summary>
     public string Source { get; private set; } = "";
-    /// <summary>Id đơn trên sàn (Shopify: số trong gid://shopify/Order/…).</summary>
+    /// <summary>Id đơn trên sàn.</summary>
     public string? PlatformOrderId { get; private set; }
     /// <summary>Mã đơn hiển thị của shop, vd "#1001".</summary>
     public string OrderName { get; private set; } = "";
@@ -125,7 +125,7 @@ internal sealed class MarketplaceOrder
         return true;
     }
 
-    /// <summary>Đơn đồng bộ từ shop đã kết nối (Shopify…): phản ánh đơn trên sàn — không xóa trong portal, đồng bộ luôn hiện lại.</summary>
+    /// <summary>Đơn đồng bộ từ shop đã kết nối: phản ánh đơn trên sàn — không xóa trong portal, đồng bộ luôn hiện lại.</summary>
     public bool IsSynced => StoreConnectionId is not null;
 
     /// <summary>Xóa được: đơn nhập tay / nhập file, chưa xác nhận gửi, chưa có bill.</summary>
@@ -156,20 +156,6 @@ internal sealed class MarketplaceOrder
         Apply(o);
         ModifyDate = now;
         return true;
-    }
-
-    /// <summary>
-    /// Xóa dữ liệu cá nhân của người mua theo yêu cầu Shopify (customers/redact, shop/redact): người nhận, ghi chú, khai báo hải quan.
-    /// Giữ sản phẩm / số tiền / bill để đối soát. Đánh dấu đã sửa để đồng bộ lại không ghi dữ liệu cũ vào nữa.
-    /// </summary>
-    public void RedactPersonalData(DateTime now)
-    {
-        // Bản sao mới: EF Core không cho nhiều đơn dùng chung 1 đối tượng owned.
-        Recipient = MarketplaceRecipient.Empty with { };
-        Note = null;
-        CustomsJson = null;
-        EditedAt ??= now;
-        ModifyDate = now;
     }
 
     /// <summary>Khách sửa đơn trước khi tạo bill. Đã có bill thì không sửa được (dữ liệu đã khai cho hãng).</summary>

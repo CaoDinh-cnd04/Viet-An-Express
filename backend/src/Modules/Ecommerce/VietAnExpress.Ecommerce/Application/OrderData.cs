@@ -1,13 +1,18 @@
 using System.Globalization;
 using System.Text.Json;
 using VietAnExpress.Ecommerce.Domain;
-using VietAnExpress.Ecommerce.Infrastructure.Shopify;
 
 namespace VietAnExpress.Ecommerce.Application;
+
+/// <summary>Dòng sản phẩm lưu trong dbo.DonTMDT.San_Pham — trùng <c>EcomProduct</c> của frontend.</summary>
+internal sealed record EcomProductDto(string Name, string Sku, int Qty, decimal FobPrice, decimal SellingPrice, string? HsCode = null);
 
 /// <summary>Chuẩn hóa trường dữ liệu đơn từ sàn / file và tìm chỗ cần bổ sung trước khi tạo bill. Hàm thuần — có test.</summary>
 internal static class OrderData
 {
+    /// <summary>JSON của cột San_Pham / khai báo hải quan (camelCase như frontend).</summary>
+    public static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
+
     /// <summary>Mã gọi quốc tế của các nước hay gửi — dùng thêm vào số nội địa (vd 080… ở Nhật → +8180…).</summary>
     private static readonly Dictionary<string, string> CallingCodes = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -71,5 +76,5 @@ internal static class OrderData
     }
 
     public static List<EcomProductDto> Products(MarketplaceOrder o) =>
-        o.ProductsJson is { } json ? JsonSerializer.Deserialize<List<EcomProductDto>>(json, ShopifyOrderMapper.Json) ?? [] : [];
+        o.ProductsJson is { } json ? JsonSerializer.Deserialize<List<EcomProductDto>>(json, Json) ?? [] : [];
 }

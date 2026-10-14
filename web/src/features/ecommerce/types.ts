@@ -117,7 +117,7 @@ export interface StoreConnection {
   id: string;
   platform: StorePlatform;
   shopName: string;
-  /** Shopify: xxx.myshopify.com · TikTok: mã shop / shop_cipher rút gọn */
+  /** TikTok: mã shop / shop_cipher rút gọn */
   shopDomain?: string;
   region?: string;
   status: StoreConnectionStatus;

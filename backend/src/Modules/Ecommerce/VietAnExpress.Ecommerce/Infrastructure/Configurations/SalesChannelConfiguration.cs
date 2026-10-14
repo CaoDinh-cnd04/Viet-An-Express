@@ -28,7 +28,7 @@ internal sealed class SalesChannelConfiguration : IEntityTypeConfiguration<Sales
         // Ma_Kenh là khóa thay thế (unique) — dbo.KetNoiTMDT tham chiếu theo mã thay vì ID.
         b.HasAlternateKey(x => x.Code).HasName("AK_KenhTMDT_Ma_Kenh");
 
-        // Hiện chỉ Shopify kết nối được; kênh khác bật Dang_Hoat_Dong khi có adapter.
+        // Seed giữ nguyên để khớp dữ liệu sẵn có; portal chưa có adapter kênh nào (StoreConnectionHandlers luôn báo chưa hỗ trợ).
         // Shopee / Lazada: đơn xuyên biên giới do sàn chỉ định vận chuyển → chỉ nhận đơn, không đẩy tracking.
         b.HasData(
             SalesChannel.Seed(1, SalesChannelCodes.Shopify, "Shopify", SalesChannel.OAuth2, "https://www.shopify.com", isActive: true, supportsTrackingPush: true),

@@ -10,7 +10,7 @@ interface Page { path: string; views: number; visitors: number }
 interface Mode { mode: string; views: number; visitors: number; starts: number; completed: number; switches: number }
 interface Report { views: number; visitors: number; pages: Page[]; modes: Mode[]; days: { date: string; views: number; visitors: number }[] }
 const labels: Record<string, string> = {
-  '/': 'Trang chủ', '/login': 'Đăng nhập', '/tracking': 'Tra cứu vận đơn', '/t': 'MyTracking công khai', '/privacy': 'Chính sách bảo mật', '/shopify': 'Kết nối Shopify',
+  '/': 'Trang chủ', '/login': 'Đăng nhập', '/tracking': 'Tra cứu vận đơn', '/t': 'MyTracking công khai',
   '/orders/new': 'Tạo đơn từng bước', '/orders/new/quick': 'Tạo đơn 1 trang', '/orders/import': 'Tạo đơn từ Excel', '/orders': 'Đơn hàng của tôi', '/drafts': 'Đơn nháp & chưa in',
   '/pricing': 'Giá & gợi ý dịch vụ', '/ecommerce': 'E-commerce', '/ecommerce/orders': 'Đơn hàng E-com', '/troubles': 'Quản lý sự cố', '/notifications': 'Thông báo', '/help': 'Trợ giúp & Góp ý',
   '/account/api-tracking': 'API Tracking', '/account/mytracking': 'MyTracking cá nhân', '/account/staff': 'Tài khoản nhân viên', '/account/password': 'Đổi mật khẩu', '/account/feedback': 'Góp ý'

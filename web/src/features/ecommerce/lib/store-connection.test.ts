@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { needsReauthorize, shopifyAppStoreUrl, readOAuthResult, resolveEcomTab, reconnectAction, formatSyncTime } from './store-connection';
+import { needsReauthorize, readOAuthResult, resolveEcomTab, formatSyncTime } from './store-connection';
 
 describe('needsReauthorize', () => {
   it('chỉ expired / revoked cần ủy quyền lại', () => {
@@ -12,7 +12,7 @@ describe('needsReauthorize', () => {
 
 describe('readOAuthResult', () => {
   it('đọc kết quả redirect', () => {
-    expect(readOAuthResult(new URLSearchParams('tab=connect&connected=shopify'))).toEqual({ ok: true, platform: 'shopify' });
+    expect(readOAuthResult(new URLSearchParams('tab=connect&connected=tiktok'))).toEqual({ ok: true, platform: 'tiktok' });
     expect(readOAuthResult(new URLSearchParams('tab=connect&error=Shop từ chối'))).toEqual({ ok: false, error: 'Shop từ chối' });
     expect(readOAuthResult(new URLSearchParams('tab=connect'))).toBeNull();
   });
@@ -38,27 +38,3 @@ describe('formatSyncTime', () => {
   });
 });
 
-describe('reconnectAction', () => {
-  it('Shopify đã gỡ app → cài lại từ Shopify; hết hạn hoặc TikTok → ủy quyền lại; đang chạy → không cần', () => {
-    expect(reconnectAction({ platform: 'shopify', status: 'revoked' })).toBe('reinstall');
-    expect(reconnectAction({ platform: 'shopify', status: 'expired' })).toBe('reauthorize');
-    expect(reconnectAction({ platform: 'tiktok', status: 'revoked' })).toBe('reauthorize');
-    expect(reconnectAction({ platform: 'shopify', status: 'active' })).toBeNull();
-    expect(reconnectAction({ platform: 'shopify', status: 'error' })).toBeNull();
-  });
-});
-
-describe('shopifyAppStoreUrl', () => {
-  it('nhận link trang app trên Shopify App Store', () => {
-    expect(shopifyAppStoreUrl('https://apps.shopify.com/viet-an-express')).toBe('https://apps.shopify.com/viet-an-express');
-    expect(shopifyAppStoreUrl(' https://apps.shopify.com/Viet-An-Express/ ')).toBe('https://apps.shopify.com/viet-an-express/');
-  });
-
-  it('chưa cấu hình hoặc link lạ → không hiện nút', () => {
-    expect(shopifyAppStoreUrl(undefined)).toBeNull();
-    expect(shopifyAppStoreUrl('')).toBeNull();
-    expect(shopifyAppStoreUrl('http://apps.shopify.com/viet-an-express')).toBeNull();
-    expect(shopifyAppStoreUrl('https://apps.shopify.com.evil.com/viet-an-express')).toBeNull();
-    expect(shopifyAppStoreUrl('https://example.com/viet-an-express')).toBeNull();
-  });
-});

@@ -3,13 +3,12 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using VietAnExpress.Ecommerce.Contracts;
 using VietAnExpress.Ecommerce.Infrastructure;
-using VietAnExpress.Ecommerce.Infrastructure.Shopify;
 using VietAnExpress.SharedKernel.Authorization;
 using VietAnExpress.SharedKernel.Persistence;
 
 namespace VietAnExpress.Ecommerce;
 
-/// <summary>Điểm vào DUY NHẤT (public) của module Ecommerce — kết nối shop trên các kênh bán (Shopify, sau này TikTok Shop, Amazon…).</summary>
+/// <summary>Điểm vào DUY NHẤT (public) của module Ecommerce — đơn E-commerce và shop trên các kênh bán (sau này TikTok Shop, Amazon…).</summary>
 public static class EcommerceModule
 {
     public static Assembly Assembly => typeof(EcommerceModule).Assembly;
@@ -17,26 +16,6 @@ public static class EcommerceModule
     public static IServiceCollection AddEcommerceModule(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddModuleDbContext<EcommerceDbContext>(configuration, EcommerceDbContext.Schema);
-        services.AddOptions<ShopifyOptions>()
-            .Bind(configuration.GetSection(ShopifyOptions.Section))
-            .ValidateDataAnnotations()
-            .ValidateOnStart();
-        services.Configure<EcommerceOptions>(configuration.GetSection(EcommerceOptions.Section));
-
-        services.AddSingleton<TokenProtector>();
-        services.AddSingleton<PortalHosts>();
-        services.AddHttpClient<ShopifyClient>(c =>
-        {
-            c.Timeout = TimeSpan.FromSeconds(15);
-            c.DefaultRequestHeaders.UserAgent.ParseAdd("VietAnExpress-Portal/1.0");
-        });
-        services.AddScoped<Application.StoreSyncService>();
-        // Webhook Shopify: chống trùng theo X-Shopify-Webhook-Id, đơn mới / sửa → đồng bộ nền.
-        services.AddMemoryCache();
-        services.AddSingleton<ShopifySyncQueue>();
-        services.AddSingleton<ShopifyWebhookQueue>();
-        services.AddHostedService<ShopifyWebhookWorker>();
-        services.AddHostedService<ShopifySyncWorker>();
         services.AddSingleton<IPermissionProvider, EcommercePermissionProvider>();
         return services;
     }

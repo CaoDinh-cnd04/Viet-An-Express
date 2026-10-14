@@ -3,6 +3,7 @@ import type { EcomSettings, EcomSource, EcomStatus, StoreConnectionStatus, Store
 
 export const ECOM_SOURCES: Record<EcomSource, { label: string }> = {
   tiktok: { label: 'TikTok Shop' },
+  // Đã bỏ tích hợp Shopify — giữ nhãn để hiện đơn cũ có nguồn shopify trong dbo.DonTMDT.
   shopify: { label: 'Shopify' },
   shopee: { label: 'Shopee' },
   lazada: { label: 'Lazada' },
@@ -25,6 +26,7 @@ export const ECOM_STATUS: Record<EcomStatus, { label: string; tone: Tone }> = {
 };
 
 export const STORE_PLATFORMS: Record<StorePlatform, { label: string }> = {
+  // Shop Shopify kết nối trước khi bỏ tích hợp vẫn có thể còn trong dbo.KetNoiTMDT (chỉ ngắt được).
   shopify: { label: 'Shopify' },
   tiktok: { label: 'TikTok Shop' }
 };
@@ -42,6 +44,9 @@ export const STORE_STATUS: Record<StoreConnectionStatus, { label: string; tone: 
 };
 
 export const WEBHOOK_EVENTS: ReadonlyArray<EcomSettings['webhookEvents'][number]> = ['created', 'picked_up', 'departed', 'delivered', 'exception'];
+
+/** File mẫu CSV 70 cột nhập đơn E-commerce. */
+export const ECOM_IMPORT_TEMPLATE_URL = '/templates/VietAn_Ecom_Import_Template.csv';
 
 export const MAX_PRODUCTS = 5;
 

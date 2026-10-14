@@ -184,11 +184,6 @@ export function EcomOrderDrawer({ order, onClose, onDelete, onConfirm, confirmin
                   </SheetBox>
                 )}
               </Sheet>
-              {!r?.address1 && o.src === 'shopify' && (
-                <p className={styles.muted}>
-                  {t('Chưa có địa chỉ người nhận: app Shopify cần được cấp quyền dữ liệu khách hàng (Protected customer data), rồi bấm Đồng bộ lại.')}
-                </p>
-              )}
             </>
           )}
         </div>

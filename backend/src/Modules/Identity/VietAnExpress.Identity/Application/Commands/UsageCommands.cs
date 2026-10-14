@@ -17,7 +17,7 @@ internal sealed record UsageReport(int Views, int Visitors, IReadOnlyList<UsageP
 
 internal static class UsageRules
 {
-    internal static readonly HashSet<string> Paths = ["/", "/login", "/tracking", "/t", "/privacy", "/shopify",
+    internal static readonly HashSet<string> Paths = ["/", "/login", "/tracking", "/t",
         "/orders/new", "/orders/new/quick", "/orders/import", "/orders", "/drafts", "/pricing", "/ecommerce", "/ecommerce/orders",
         "/troubles", "/notifications", "/help", "/account/api-tracking", "/account/mytracking", "/account/staff", "/account/password", "/account/feedback", "/account/sender-info"];
     internal static readonly Error Invalid = Error.Validation("INVALID_USAGE", "Dữ liệu thống kê không hợp lệ");
@@ -38,7 +38,7 @@ internal sealed class TrackUsageHandler(IdentityDbContext db, ICurrentUser user,
         // The admin has CustomerId=0. Never include admin activity or trust a client-supplied audience.
         if (user.IsAuthenticated && user.CustomerId is not > 0) return true;
         if (c.Kind != "page_view" && (!user.IsAuthenticated || user.CustomerId is not > 0)) return UsageRules.Invalid;
-        if (!user.IsAuthenticated && c.Path is not ("/" or "/login" or "/tracking" or "/t" or "/privacy" or "/shopify")) return UsageRules.Invalid;
+        if (!user.IsAuthenticated && c.Path is not ("/" or "/login" or "/tracking" or "/t")) return UsageRules.Invalid;
         if (await db.UsageEvents.AnyAsync(x => x.Id == c.Id, ct)) return true;
         var e = new UsageEvent
         {

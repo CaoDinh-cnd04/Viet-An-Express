@@ -8,7 +8,7 @@ import { EcomOrderList } from '../components/EcomOrderList';
 export default function EcomOrdersPage() {
   return (
     <>
-      <PageHeader title="Đơn hàng E-com" description="Đơn từ Shopify, file Excel hoặc nhập tay đã xác nhận gửi — in nhãn, phiếu đóng gói, bảng kê giao cho Việt An." />
+      <PageHeader title="Đơn hàng E-com" description="Đơn từ file CSV hoặc nhập tay đã xác nhận gửi — in nhãn, phiếu đóng gói, bảng kê giao cho Việt An." />
       <EcomOrderList scope="mine" />
     </>
   );

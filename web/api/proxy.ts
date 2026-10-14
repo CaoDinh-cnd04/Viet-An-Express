@@ -28,7 +28,7 @@ export default async function handler(request: Request): Promise<Response> {
   const path = url.searchParams.get('__path') ?? '';
   url.searchParams.delete('__path');
   // Vercel tự gắn tham số tên `path` (từ `:path*` của rewrite) vào query — bỏ đi để backend nhận đúng query gốc
-  // (callback OAuth Shopify ký HMAC trên toàn bộ query, thừa 1 tham số là sai chữ ký).
+  // (callback OAuth của sàn thường ký HMAC trên toàn bộ query, thừa 1 tham số là sai chữ ký).
   if (url.searchParams.get('path') === path) url.searchParams.delete('path');
   // Chỉ cho phép đường dẫn API bình thường — chặn "../" để không vượt ra ngoài /api.
   if (path.split('/').some(segment => segment === '..' || segment === '.')) {

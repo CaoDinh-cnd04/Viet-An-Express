@@ -45,7 +45,7 @@ const defaults = (): FormValues => ({
 });
 
 /** Nguồn chọn được khi nhập tay: tự nhập, hoặc đơn bán trên 1 sàn chưa kết nối (không có API / Excel — đó là cách nhập khác). */
-const MANUAL_SOURCES: ReadonlyArray<EcomSource> = ['manual', 'shopify', 'tiktok', 'shopee', 'lazada', 'amazon', 'ebay', 'etsy', 'woocommerce'];
+const MANUAL_SOURCES: ReadonlyArray<EcomSource> = ['manual', 'tiktok', 'shopee', 'lazada', 'amazon', 'ebay', 'etsy', 'woocommerce'];
 const SOURCE_OPTIONS = MANUAL_SOURCES.map(k => ({ value: k, label: ECOM_SOURCES[k].label }));
 
 /** Thêm 1 đơn bán ngoài sàn đã kết nối (1–5 sản phẩm). Lưu xong vào thẳng trang "Đơn hàng E-com". */

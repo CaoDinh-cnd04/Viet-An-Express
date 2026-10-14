@@ -3,7 +3,7 @@ import type { EcomOrder } from '../types';
 import { countByView, displayStatus, filterByView, formatMoney, receiverLines } from './order-view';
 
 const order = (id: string, st: EcomOrder['st'], bill = '', extra: Partial<EcomOrder> = {}): EcomOrder =>
-  ({ id, src: 'shopify', ref: id, bill, cnee: 'A', ct: 'US', items: 1, kg: 1, st, createdAt: '05/10/2026 09:00', ...extra });
+  ({ id, src: 'tiktok', ref: id, bill, cnee: 'A', ct: 'US', items: 1, kg: 1, st, createdAt: '05/10/2026 09:00', ...extra });
 
 const inbox = [order('1', 'created', '', { issues: ['Thiếu số điện thoại người nhận'] }), order('2', 'created')];
 const mine = [order('3', 'created', '', { confirmed: true }), order('4', 'exception', '', { confirmed: true }), order('5', 'delivered', 'VA2', { confirmed: true })];

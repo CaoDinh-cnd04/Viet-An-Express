@@ -6,7 +6,6 @@ using Microsoft.Extensions.Logging;
 using VietAnExpress.Ecommerce.Contracts;
 using VietAnExpress.Ecommerce.Domain;
 using VietAnExpress.Ecommerce.Infrastructure;
-using VietAnExpress.Ecommerce.Infrastructure.Shopify;
 using VietAnExpress.SharedKernel.Application;
 using VietAnExpress.SharedKernel.Results;
 
@@ -24,7 +23,7 @@ internal sealed record EcomReceiverDto(
     string? Name, string? Company, string? Phone, string? Email, string? Address1, string? Address2,
     string? City, string? State, string? Postal, string? CountryCode, string? Country);
 
-/// <param name="Source">shopify / tiktok / … — trống = mọi nguồn.</param>
+/// <param name="Source">tiktok / manual / … — trống = mọi nguồn.</param>
 /// <param name="Search">Tìm theo mã đơn, người nhận, bill.</param>
 /// <param name="Scope">"inbox" = tab Đơn hàng (chưa xác nhận), "mine" = Đơn hàng của tôi (đã xác nhận gửi), trống = tất cả.</param>
 internal sealed record GetEcomOrdersQuery(string? Source, string? Search, string? Scope = null) : IRequest<IReadOnlyList<EcomOrderDto>>;
@@ -34,13 +33,7 @@ internal sealed record SyncStoreCommand(long StoreId) : IRequest<Result<SyncResu
 /// <summary>Frontend đọc thẳng <c>message</c>, <c>importedCount</c> (không bọc trong data).</summary>
 internal sealed record SyncResult(string Message, int ImportedCount);
 
-internal static class SyncErrors
-{
-    public static readonly Error NeedsReauthorize = Error.BusinessRule("ECOM_REAUTHORIZE", "Kết nối Shopify đã hết hạn, vui lòng bấm Ủy quyền lại");
-    public static Error Failed(string detail) => Error.BusinessRule("ECOM_SYNC_FAILED", $"Không đồng bộ được đơn từ Shopify: {detail}");
-}
-
-internal sealed class EcomOrderHandlers(EcommerceDbContext db, ICurrentUser user, StoreSyncService sync) :
+internal sealed class EcomOrderHandlers(EcommerceDbContext db, ICurrentUser user) :
     IRequestHandler<GetEcomOrdersQuery, IReadOnlyList<EcomOrderDto>>,
     IRequestHandler<SyncStoreCommand, Result<SyncResult>>
 {
@@ -65,14 +58,8 @@ internal sealed class EcomOrderHandlers(EcommerceDbContext db, ICurrentUser user
         if (user.CustomerId is not { } customerId) return StoreErrors.NotLoggedIn;
         var store = await db.StoreConnections.FirstOrDefaultAsync(s => s.Id == c.StoreId && s.CustomerId == customerId && s.DisconnectedAt == null, ct);
         if (store is null) return StoreErrors.NotFound;
-
-        var result = await sync.SyncAsync(store, ct);
-        if (result.IsFailure) return result.Error;
-        var (total, added) = result.Value;
-        var message = added > 0
-            ? $"Đã nhận {added} đơn mới từ {store.ShopName}"
-            : total > 0 ? $"Không có đơn mới — {total} đơn chưa giao đã có trong danh sách" : "Shop chưa có đơn nào cần giao";
-        return new SyncResult(message, added);
+        // Chưa có adapter kênh nào để kéo đơn.
+        return StoreErrors.ChannelUnavailable(store.ChannelCode);
     }
 
     public static EcomOrderDto ToDto(MarketplaceOrder o)

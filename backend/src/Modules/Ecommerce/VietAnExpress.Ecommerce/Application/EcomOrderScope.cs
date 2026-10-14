@@ -16,8 +16,4 @@ internal static class EcomOrderScope
         query = query.Where(o => o.CustomerId == customerId);
         return user.RestrictedStaffId(EcommercePermissions.ViewAll) is { } staffId ? query.Where(o => o.CreatedByStaffId == staffId) : query;
     }
-
-    /// <summary>Đơn Shopify theo mã đơn trên sàn (Ma_Don_San) — đồng bộ, nhập CSV, webhook compliance dùng chung.</summary>
-    public static IQueryable<MarketplaceOrder> ShopifyOrdersIn(this IQueryable<MarketplaceOrder> query, IReadOnlyCollection<string> platformOrderIds) =>
-        query.Where(o => o.Source == SalesChannelCodes.Shopify && o.PlatformOrderId != null && platformOrderIds.Contains(o.PlatformOrderId));
 }

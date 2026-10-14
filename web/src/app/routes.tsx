@@ -21,8 +21,6 @@ function RedirectKeepQuery({ to }: { to: string }) {
 // Mỗi trang tách chunk riêng, chỉ tải khi mở.
 const CreateOrderPage = lazy(() => import('@/features/create-order/pages/CreateOrderPage'));
 const PublicMyTrackingPage = lazy(() => import('@/features/mytracking/pages/PublicMyTrackingPage'));
-const PrivacyPage = lazy(() => import('@/features/landing/pages/PrivacyPage'));
-const ShopifyConnectPage = lazy(() => import('@/features/ecommerce/pages/ShopifyConnectPage'));
 const AdminPage = lazy(() => import('@/features/admin/pages/AdminPage'));
 const pages = {
   senderInfo: lazy(() => import('@/features/sender-info/pages/SenderInfoPage')),
@@ -64,10 +62,6 @@ const routes: RouteObject[] = [
   { path: '/tracking/:bills?', element: <TrackingPage /> },
   // Trang MyTracking công khai của khách: /t/{đường dẫn} (?bills= mã đang tra).
   { path: '/t/:slug', element: <Suspense fallback={null}><PublicMyTrackingPage /></Suspense> },
-  // Chính sách bảo mật app Shopify (link khai trong App Store listing).
-  { path: '/privacy', element: <Suspense fallback={null}><PrivacyPage /></Suspense> },
-  // Mở app từ Shopify (backend OAuth xong chuyển về đây): công khai, tự đăng nhập tại chỗ rồi gắn shop vào tài khoản.
-  { path: '/shopify', element: <Suspense fallback={null}><ShopifyConnectPage /></Suspense> },
   // Trang quản trị Việt An: đăng nhập tài khoản quản trị riêng (không phải tài khoản khách).
   { path: '/admin', element: <Suspense fallback={null}><AdminPage /></Suspense> },
   // Portal: phải đăng nhập, chưa có phiên thì chuyển về /login?next=...
@@ -91,8 +85,6 @@ const routes: RouteObject[] = [
       page('pricing', 'Giá & gợi ý dịch vụ', pages.pricing),
       page('ecommerce', 'E-commerce', pages.ecommerce, PERMISSIONS.ecommerceView),
       page('ecommerce/orders', 'Đơn hàng E-com', pages.ecomOrders, PERMISSIONS.ecommerceView),
-      // Đường cũ của trang mở app từ Shopify — giữ để link cũ vẫn chạy.
-      { path: 'ecommerce/shopify', element: <Navigate to="/shopify" replace /> },
       page('troubles', 'Quản lý sự cố', pages.troubles),
       page('notifications', 'Thông báo', pages.notifications),
       page('help', 'Trợ giúp & Góp ý', pages.support),

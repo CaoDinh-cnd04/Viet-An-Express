@@ -121,9 +121,9 @@ export const landing: Record<string, string> = {
   'In bill & nhãn': 'Print bills & labels',
   'In khổ A4 hoặc A6, mã vận đơn được cấp ngay khi in.': 'Print on A4 or A6; the bill number is issued on printing.',
   'Tra cước theo cân và điểm đến, chọn dịch vụ phù hợp.': 'Check rates by weight and destination and choose the right service.',
+  'Đưa đơn E-commerce lên bằng file CSV hoặc nhập tay, in nhãn và bảng kê.': 'Upload E-commerce orders by CSV file or manual entry, then print labels and manifests.',
   'Báo & theo dõi sự cố': 'Report & track issues',
   'Báo sự cố theo mã vận đơn, trao đổi và nhận phản hồi của CS ngay trên portal.': 'Report an issue by waybill number, chat and get CS replies right in the portal.',
-  'Kết nối Shopify, TikTok Shop hoặc đưa đơn E-commerce lên bằng file CSV.': 'Connect Shopify, TikTok Shop or upload E-commerce orders with a CSV file.',
   'Chưa có tài khoản? Gọi': "Don't have an account? Call",
   'để được cấp.': 'to get one.',
 
