@@ -1,0 +1,32 @@
+/* Riêng trang Tài khoản nhân viên (bố cục chung ở shared/ui/Workspace.module.css) */
+.row td {
+  vertical-align: top;
+}
+
+.group {
+  color: var(--color-text-faint);
+}
+
+.muted {
+  color: var(--color-text-faint);
+}
+
+.active {
+  color: var(--color-success);
+  font-weight: 600;
+}
+
+.locked {
+  color: var(--color-text-faint);
+  font-weight: 600;
+}
+
+.actions {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+}
+
+.emptyText {
+  margin: 0 0 var(--space-3);
+}

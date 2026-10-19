@@ -4,6 +4,7 @@ using System.Text;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using VietAnExpress.SharedKernel.Application;
+using VietAnExpress.SharedKernel.Persistence;
 using VietAnExpress.SharedKernel.Results;
 using VietAnExpress.Shipments.Domain;
 using VietAnExpress.Shipments.Infrastructure;
@@ -167,7 +168,18 @@ internal static class CatalogMarkStore
             db.CatalogMarks.Add(mark);
         }
         apply(mark);
-        await db.SaveChangesAsync(ct);
+        try
+        {
+            await db.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException ex) when (DbConcurrency.IsUniqueViolation(ex))
+        {
+            // 2 thao tác cùng tạo đánh dấu này (2 tab / bấm 2 lần): dòng đã có → đọc lại và áp thay đổi lên dòng đó.
+            db.Entry(mark).State = EntityState.Detached;
+            var existing = await db.CatalogMarks.FirstAsync(m => m.CustomerId == customerId && m.Kind == kind && m.Key == key, ct);
+            apply(existing);
+            await db.SaveChangesAsync(ct);
+        }
     }
 }
 

@@ -1,6 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ApiError, apiUrl, toError } from '@/shared/api/http';
-import type { AdminFeedbackDetail, AdminFeedbackItem } from '@/features/feedback/types';
+import { apiUrl, toError } from '@/shared/api/http';
 import type { TroubleStatus, TroubleTicket } from '@/features/troubles';
 
 /**
@@ -41,7 +40,7 @@ export async function adminFetch(path: string, init: RequestInit = {}): Promise<
   return res;
 }
 
-const adminKey = ['admin', 'feedback'] as const;
+const adminKey = ['admin'] as const;
 
 export function useAdminLogin() {
   const qc = useQueryClient();
@@ -58,46 +57,6 @@ export function useAdminLogin() {
 
 export function adminLogout() {
   setAdminToken(null);
-}
-
-export function useAdminFeedback(enabled: boolean) {
-  return useQuery({
-    queryKey: adminKey,
-    queryFn: async () => ((await (await adminFetch('/admin/feedback')).json()) as { data: AdminFeedbackItem[] }).data,
-    enabled,
-    retry: (count, e) => !(e instanceof ApiError && e.status === 401) && count < 1
-  });
-}
-
-/** Chi tiết 1 góp ý — mở là backend tự đánh dấu đã xem, nên cập nhật lại danh sách. */
-export function useAdminFeedbackDetail(id: string | null) {
-  const qc = useQueryClient();
-  return useQuery({
-    queryKey: ['admin', 'feedback', 'detail', id],
-    queryFn: async () => {
-      const data = ((await (await adminFetch(`/admin/feedback/${encodeURIComponent(id!)}`)).json()) as { data: AdminFeedbackDetail }).data;
-      void qc.invalidateQueries({ queryKey: adminKey, exact: true });
-      return data;
-    },
-    enabled: !!id
-  });
-}
-
-export function useMarkSeen() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (id: string) => adminFetch(`/admin/feedback/${encodeURIComponent(id)}/seen`, { method: 'POST' }),
-    onSuccess: () => void qc.invalidateQueries({ queryKey: adminKey })
-  });
-}
-
-/** Xóa hẳn góp ý và ảnh đính kèm — không khôi phục được. */
-export function useDeleteFeedback() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (id: string) => adminFetch(`/admin/feedback/${encodeURIComponent(id)}`, { method: 'DELETE' }),
-    onSuccess: () => void qc.invalidateQueries({ queryKey: adminKey, exact: true })
-  });
 }
 
 /** Thông báo gửi khách — GET /admin/notifications. */
@@ -160,15 +119,12 @@ export function useDeleteNotification() {
   });
 }
 
-/** Sự cố ở trang quản trị — GET /admin/troubles. */
+/** Yêu cầu hỗ trợ & sự cố ở trang quản trị — GET /admin/troubles. */
 export interface AdminTrouble {
   ticket: TroubleTicket;
   customerCode: string;
   companyName: string;
-  userName: string;
   isStaff: boolean;
-  /** 'dd/MM/yyyy HH:mm' — lần trao đổi gần nhất. */
-  updatedAt: string;
 }
 
 const troubleKey = ['admin', 'troubles'] as const;
@@ -182,7 +138,7 @@ export function useAdminTroubles(enabled: boolean) {
   });
 }
 
-/** Trả lời và / hoặc đổi trạng thái — khách nhận thông báo riêng trên portal. */
+/** Đổi trạng thái và / hoặc ghi chú cho khách — khách nhận thông báo riêng trên portal (ghi chú không lưu ở yêu cầu). */
 export function useReplyAdminTrouble() {
   const qc = useQueryClient();
   return useMutation({
@@ -193,15 +149,5 @@ export function useReplyAdminTrouble() {
         body: JSON.stringify({ reply: reply.trim() || null, status: status ?? null })
       })).json()) as { message: string; data: AdminTrouble }),
     onSuccess: () => void qc.invalidateQueries({ queryKey: troubleKey })
-  });
-}
-
-/** Ảnh góp ý cho trang quản trị: tải kèm token rồi tạo object URL (thẻ img không gửi được header). */
-export function useAdminImage(id: string) {
-  return useQuery({
-    queryKey: ['admin', 'image', id],
-    queryFn: async () => URL.createObjectURL(await (await adminFetch(`/account/feedback/images/${encodeURIComponent(id)}`)).blob()),
-    staleTime: Infinity,
-    gcTime: 10 * 60_000
   });
 }

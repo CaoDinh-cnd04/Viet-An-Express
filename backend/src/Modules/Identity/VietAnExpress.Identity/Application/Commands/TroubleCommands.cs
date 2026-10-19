@@ -11,121 +11,149 @@ using VietAnExpress.Shipments.Contracts;
 
 namespace VietAnExpress.Identity.Application.Commands;
 
-/// <summary>1 lượt trao đổi: <c>from</c> = "customer" | "vietan"; <c>status</c> = trạng thái mới nếu lượt này đổi trạng thái.</summary>
-internal sealed record TroubleMessageDto(string From, string Author, string Message, string Date, string? Status);
-
-/// <summary>Sự cố — tên trường khớp frontend (<c>features/troubles/types.ts</c>).</summary>
+/// <summary>Yêu cầu hỗ trợ &amp; sự cố — tên trường khớp frontend (<c>features/troubles/types.ts</c>).</summary>
 internal sealed record TroubleDto(
-    string Id, string Bill, string Cnee, string Ct, string Type, string Lv, string Desc, string Req, string Contact,
-    string Date, string Status, string? Reply, IReadOnlyList<TroubleMessageDto> Messages);
+    string Id, string Kind, string Bill, string Cnee, string Ct, string Type, string? Subject, string Lv, string Desc, string Req, string Contact,
+    string Date, string Status, string UpdatedAt);
 
-/// <summary>Sự cố ở trang quản trị: kèm khách / người báo.</summary>
-internal sealed record AdminTroubleDto(TroubleDto Ticket, string CustomerCode, string CompanyName, string UserName, bool IsStaff, string UpdatedAt);
+/// <summary>Yêu cầu ở trang quản trị: kèm khách gửi.</summary>
+internal sealed record AdminTroubleDto(TroubleDto Ticket, string CustomerCode, string CompanyName, bool IsStaff);
 
-internal sealed record NewTroubleRequest(string? Bill, string? Cnee, string? Ct, string? Type, string? Lv, string? Desc, string? Req, string? Contact);
+/// <summary><c>kind</c>: su_co (mặc định) / ho_tro / gop_y. <c>bill</c> chỉ bắt buộc với sự cố; <c>subject</c> bắt buộc với yêu cầu hỗ trợ.</summary>
+internal sealed record NewTroubleRequest(
+    string? Kind, string? Bill, string? Cnee, string? Ct, string? Type, string? Subject, string? Lv, string? Desc, string? Req, string? Contact);
 
 internal static class TroubleErrors
 {
+    public static readonly Error Kind = Error.Validation("TROUBLE_KIND", "Chọn loại yêu cầu");
     public static readonly Error Bill = Error.Validation("TROUBLE_BILL", "Nhập mã vận đơn");
     public static readonly Error BillNotFound = Error.Validation("TROUBLE_BILL_NOT_FOUND", "Không tìm thấy vận đơn này trong đơn hàng của bạn");
-    public static readonly Error Type = Error.Validation("TROUBLE_TYPE", "Chọn loại sự cố");
+    public static readonly Error Type = Error.Validation("TROUBLE_TYPE", "Chọn loại sự cố / chủ đề");
+    public static readonly Error Subject = Error.Validation("TROUBLE_SUBJECT", $"Tiêu đề từ {Trouble.SubjectMinLength} đến {Trouble.SubjectMaxLength} ký tự");
     public static readonly Error Priority = Error.Validation("TROUBLE_PRIORITY", "Mức độ không hợp lệ");
-    public static readonly Error Description = Error.Validation("TROUBLE_DESC", $"Mô tả từ 10 đến {Trouble.DescriptionMaxLength} ký tự");
+    public static readonly Error Description = Error.Validation("TROUBLE_DESC", $"Nội dung từ {Trouble.DescriptionMinLength} đến {Trouble.DescriptionMaxLength} ký tự");
     public static readonly Error Requester = Error.Validation("TROUBLE_REQUESTER", "Nhập người yêu cầu");
     public static readonly Error Contact = Error.Validation("TROUBLE_CONTACT", "Nhập SĐT hoặc email liên hệ");
-    public static readonly Error Reply = Error.Validation("TROUBLE_REPLY", $"Nhập nội dung (tối đa {TroubleMessage.MessageMaxLength} ký tự)");
+    public static readonly Error FileTooLarge = Error.Validation("TROUBLE_FILE_TOO_LARGE", "Tệp đính kèm tối đa 10 MB");
+    public static readonly Error FileType = Error.Validation("TROUBLE_FILE_TYPE", "Chỉ nhận ảnh, PDF, Excel, CSV hoặc Word");
+    public static readonly Error Note = Error.Validation("TROUBLE_NOTE", "Ghi chú tối đa 4000 ký tự");
     public static readonly Error Status = Error.Validation("TROUBLE_STATUS", "Trạng thái không hợp lệ");
-    public static readonly Error Closed = Error.BusinessRule("TROUBLE_CLOSED", "Sự cố đã xử lý xong — vui lòng báo sự cố mới nếu cần");
-    public static readonly Error NothingToSend = Error.Validation("TROUBLE_EMPTY", "Nhập phản hồi hoặc đổi trạng thái");
-    public static readonly Error NotFound = Error.NotFound("TROUBLE_NOT_FOUND", "Không tìm thấy sự cố");
+    public static readonly Error NothingToSend = Error.Validation("TROUBLE_EMPTY", "Nhập ghi chú hoặc đổi trạng thái");
+    public static readonly Error NotFound = Error.NotFound("TROUBLE_NOT_FOUND", "Không tìm thấy yêu cầu");
 }
 
-/// <summary>Quy tắc sự cố — hàm thuần, có test.</summary>
+/// <summary>Quy tắc yêu cầu hỗ trợ &amp; sự cố — hàm thuần, có test.</summary>
 internal static class TroubleRules
 {
-    public static Error? Validate(NewTroubleRequest r)
+    /// <summary>Chủ đề lưu cho góp ý (khách không chọn).</summary>
+    public const string FeedbackType = "Góp ý";
+    public const int NoteMaxLength = 4000;
+
+    public static string KindOf(NewTroubleRequest r) => string.IsNullOrWhiteSpace(r.Kind) ? TroubleKind.Incident : r.Kind.Trim();
+
+    public static Error? Validate(NewTroubleRequest r, TroubleFile? file = null)
     {
-        if ((r.Bill?.Trim().Length ?? 0) is 0 or > Trouble.BillMaxLength) return TroubleErrors.Bill;
-        if ((r.Type?.Trim().Length ?? 0) is 0 or > Trouble.TypeMaxLength) return TroubleErrors.Type;
-        if (r.Lv is null || !TroublePriority.All.Contains(r.Lv)) return TroubleErrors.Priority;
-        if ((r.Desc?.Trim().Length ?? 0) is < 10 or > Trouble.DescriptionMaxLength) return TroubleErrors.Description;
-        if ((r.Req?.Trim().Length ?? 0) is 0 or > Trouble.RequesterMaxLength) return TroubleErrors.Requester;
-        if ((r.Contact?.Trim().Length ?? 0) is 0 or > Trouble.ContactMaxLength) return TroubleErrors.Contact;
+        var kind = KindOf(r);
+        if (!TroubleKind.All.Contains(kind)) return TroubleErrors.Kind;
+        var incident = kind == TroubleKind.Incident;
+
+        if (incident && (r.Bill?.Trim().Length ?? 0) is 0 or > Trouble.BillMaxLength) return TroubleErrors.Bill;
+        if (kind != TroubleKind.Feedback && (r.Type?.Trim().Length ?? 0) is 0 or > Trouble.TypeMaxLength) return TroubleErrors.Type;
+        if (kind == TroubleKind.Support && (r.Subject?.Trim().Length ?? 0) is < Trouble.SubjectMinLength or > Trouble.SubjectMaxLength) return TroubleErrors.Subject;
+        if (incident ? r.Lv is null || !TroublePriority.All.Contains(r.Lv) : r.Lv is not null && !TroublePriority.All.Contains(r.Lv))
+            return TroubleErrors.Priority;
+        if ((r.Desc?.Trim().Length ?? 0) is < Trouble.DescriptionMinLength or > Trouble.DescriptionMaxLength) return TroubleErrors.Description;
+        var req = r.Req?.Trim().Length ?? 0;
+        if ((incident && req == 0) || req > Trouble.RequesterMaxLength) return TroubleErrors.Requester;
+        var contact = r.Contact?.Trim().Length ?? 0;
+        if ((kind != TroubleKind.Feedback && contact == 0) || contact > Trouble.ContactMaxLength) return TroubleErrors.Contact;
+        if (file is not null)
+        {
+            if (file.Data.Length is 0 or > Trouble.FileMaxBytes) return TroubleErrors.FileTooLarge;
+            if (!Trouble.FileExtensions.Contains(Path.GetExtension(file.Name))) return TroubleErrors.FileType;
+        }
         return null;
     }
 
     public static string Time(DateTime value) => value.ToString("dd/MM/yyyy HH:mm", CultureInfo.InvariantCulture);
 
-    public static TroubleDto ToDto(Trouble t)
-    {
-        var messages = t.Messages.OrderBy(m => m.CreatedAt).ThenBy(m => m.Id).ToList();
-        return new TroubleDto(
-            t.Code, t.Bill, t.ConsigneeName ?? "", t.Country ?? "", t.Type, t.Priority, t.Description, t.Requester, t.Contact,
-            Time(t.CreatedAt), t.Status,
-            messages.LastOrDefault(m => m.FromVietAn && m.Message.Length > 0)?.Message,
-            messages.Select(m => new TroubleMessageDto(m.FromVietAn ? "vietan" : "customer", m.Author, m.Message, Time(m.CreatedAt), m.NewStatus)).ToList());
-    }
+    public static TroubleDto ToDto(Trouble t) => new(
+        t.Code, t.Kind, t.Bill ?? "", t.ConsigneeName ?? "", t.Country ?? "", t.Type, t.Subject, t.Priority,
+        t.Description, t.Requester, t.Contact, Time(t.CreatedAt), t.Status, Time(t.UpdatedAt));
 
-    /// <summary>Thông báo riêng cho khách khi Việt An trả lời / đổi trạng thái (hiện ở Trung tâm thông báo, nút "Xem tại đây" mở trang Sự cố).</summary>
-    public static Notification CustomerNotice(Trouble t, string? reply, bool statusChanged, string author, string? link, DateTime now)
+    /// <summary>Tên hiển thị: "Sự cố TRB-12" / "Yêu cầu hỗ trợ TRB-13" / "Góp ý TRB-14".</summary>
+    public static string Title(Trouble t) => $"{TroubleKind.Label(t.Kind)} {t.Code}";
+
+    /// <summary>Dòng đầu nội dung thông báo / email: vận đơn (sự cố) hoặc tiêu đề (hỗ trợ) kèm loại / chủ đề.</summary>
+    public static string Summary(Trouble t) =>
+        t.Bill is { Length: > 0 } bill ? $"Mã vận đơn: {bill} · {t.Type}"
+        : t.Subject is { Length: > 0 } subject ? $"{subject} · {t.Type}"
+        : t.Type;
+
+    /// <summary>Thông báo riêng cho khách khi Việt An đổi trạng thái / gửi ghi chú (Trung tâm thông báo, nút "Xem tại đây" mở đúng yêu cầu).</summary>
+    public static Notification CustomerNotice(Trouble t, string? note, bool statusChanged, string author, string? link, DateTime now)
     {
         var title = statusChanged
-            ? $"Sự cố {t.Code}: {TroubleStatus.Label(t.Status)}"
-            : $"Việt An đã phản hồi sự cố {t.Code}";
-        var body = $"Mã vận đơn: {t.Bill} · {t.Type}\n\n"
-            + (string.IsNullOrWhiteSpace(reply) ? $"Trạng thái sự cố đã chuyển sang \"{TroubleStatus.Label(t.Status)}\"." : reply.Trim());
+            ? $"{Title(t)}: {TroubleStatus.Label(t.Status)}"
+            : $"Việt An đã phản hồi {TroubleKind.Label(t.Kind).ToLowerInvariant()} {t.Code}";
+        var body = $"{Summary(t)}\n\n"
+            + (string.IsNullOrWhiteSpace(note) ? $"Trạng thái đã chuyển sang \"{TroubleStatus.Label(t.Status)}\"." : note.Trim());
         return Notification.Create(title, body, important: false, sendEmail: false, author, now, link, t.CustomerId);
     }
 
-    /// <summary>Email báo sự cố mới về hộp thư Việt An.</summary>
-    public static EmailMessage InboxEmail(Trouble t, CustomerSummary? customer, EmailCompany company)
+    /// <summary>Email báo yêu cầu mới về hộp thư Việt An — kèm tệp khách đính kèm (tệp không lưu database).</summary>
+    public static EmailMessage InboxEmail(Trouble t, CustomerSummary? customer, string? userName, TroubleFile? file, EmailCompany company)
     {
         var replyTo = SupportRules.ReplyTo(t.Contact, customer?.Email);
+        var incident = t.Kind == TroubleKind.Incident;
+        var heading = t.Subject is { Length: > 0 } subject ? subject : t.Type;
         var content = new EmailContent(
-            Title: $"Sự cố {t.Code}: {t.Type}",
-            Badge: t.Priority switch { "high" => "Rất gấp", "mid" => "Gấp", _ => "Thường" },
-            Meta: $"Vận đơn {t.Bill} · {t.CompanyName} ({t.CustomerCode}) · {Time(t.CreatedAt)}",
+            Title: $"{Title(t)}: {heading}",
+            Badge: incident ? t.Priority switch { "high" => "Rất gấp", "mid" => "Gấp", _ => "Thường" } : $"{TroubleKind.Label(t.Kind)} · {t.Type}",
+            Meta: $"{(incident ? $"Vận đơn {t.Bill} · " : "")}{t.CompanyName} ({customer?.Code ?? "?"}) · {Time(t.CreatedAt)}",
             Sections:
             [
-                new EmailSection("Mô tả", t.Description),
-                new EmailSection("Vận đơn", Fields:
-                [
-                    new EmailField("Mã vận đơn", t.Bill),
-                    new EmailField("Người nhận", t.ConsigneeName ?? "—"),
-                    new EmailField("Quốc gia", t.Country ?? "—"),
-                    new EmailField("Người yêu cầu", t.Requester)
-                ]),
-                new EmailSection("Thông tin khách", Fields: SupportRules.CustomerFields(customer, t.SenderUserName, t.StaffId is not null, t.Contact))
+                new EmailSection("Nội dung", t.Description),
+                .. incident
+                    ? [new EmailSection("Vận đơn", Fields:
+                        [
+                            new EmailField("Mã vận đơn", t.Bill ?? "—"),
+                            new EmailField("Người nhận", t.ConsigneeName ?? "—"),
+                            new EmailField("Quốc gia", t.Country ?? "—"),
+                            new EmailField("Người yêu cầu", t.Requester)
+                        ])]
+                    : Array.Empty<EmailSection>(),
+                new EmailSection("Thông tin khách", Fields: SupportRules.CustomerFields(customer, userName, t.StaffId is not null, t.Contact))
             ],
             Button: company.Portal("/admin") is { } admin ? new EmailLink("Xử lý trong trang quản trị", admin) : null,
             FooterNote: SupportRules.ReplyNote(replyTo, t.Contact));
         return new EmailMessage(
-            $"[Sự cố portal] {t.Code} — {t.Type} — {t.Bill} ({t.CustomerCode})",
+            $"[{TroubleKind.Label(t.Kind)} portal] {t.Code} — {heading}{(incident ? $" — {t.Bill}" : "")} ({customer?.Code ?? "?"})",
             EmailTemplate.PlainText(content, company),
             ReplyTo: replyTo,
+            Attachments: file is null ? null : [new EmailAttachment(file.Name, file.ContentType, file.Data)],
             HtmlBody: EmailTemplate.Html(content, company));
     }
+
+    public static string? Cut(string? value, int max) =>
+        string.IsNullOrWhiteSpace(value) ? null : value.Trim() is var v && v.Length > max ? v[..max] : value.Trim();
 }
 
 // ---------------- Khách ----------------
 
 internal sealed record GetTroublesQuery : IRequest<Result<IReadOnlyList<TroubleDto>>>;
 
-internal sealed record CreateTroubleCommand(NewTroubleRequest Request) : IRequest<Result<TroubleDto>>;
-
-/// <summary>Khách gửi thêm thông tin; <c>Status</c> chỉ nhận "done" (khách tự đóng sự cố).</summary>
-internal sealed record ReplyTroubleCommand(string Id, string? Reply, string? Status) : IRequest<Result<TroubleDto>>;
+internal sealed record CreateTroubleCommand(NewTroubleRequest Request, TroubleFile? File = null) : IRequest<Result<TroubleDto>>;
 
 internal sealed class CustomerTroubleHandlers(
     IdentityDbContext db, ICurrentUser user, ICustomersApi customers, IShipmentsApi shipments, IBackgroundJobQueue jobs,
     EmailCompany company, TimeProvider clock) :
     IRequestHandler<GetTroublesQuery, Result<IReadOnlyList<TroubleDto>>>,
-    IRequestHandler<CreateTroubleCommand, Result<TroubleDto>>,
-    IRequestHandler<ReplyTroubleCommand, Result<TroubleDto>>
+    IRequestHandler<CreateTroubleCommand, Result<TroubleDto>>
 {
     private const int ListLimit = 200;
 
-    /// <summary>Tài khoản chính thấy mọi sự cố của công ty; tài khoản con chỉ thấy sự cố mình báo.</summary>
+    /// <summary>Tài khoản chính thấy mọi yêu cầu của công ty; tài khoản con chỉ thấy yêu cầu mình gửi.</summary>
     private IQueryable<Trouble> Mine(long customerId)
     {
         var query = db.Troubles.Where(t => t.CustomerId == customerId);
@@ -134,8 +162,8 @@ internal sealed class CustomerTroubleHandlers(
 
     public async Task<Result<IReadOnlyList<TroubleDto>>> Handle(GetTroublesQuery q, CancellationToken ct)
     {
-        if (user.CustomerId is not { } customerId || customerId <= 0) return FeedbackErrors.NotLoggedIn;
-        var rows = await Mine(customerId).AsNoTracking().Include(t => t.Messages)
+        if (user.CustomerId is not { } customerId || customerId <= 0) return IdentityErrors.NotLoggedIn;
+        var rows = await Mine(customerId).AsNoTracking()
             .OrderByDescending(t => t.UpdatedAt).ThenByDescending(t => t.Id)
             .Take(ListLimit)
             .ToListAsync(ct);
@@ -144,54 +172,49 @@ internal sealed class CustomerTroubleHandlers(
 
     public async Task<Result<TroubleDto>> Handle(CreateTroubleCommand c, CancellationToken ct)
     {
-        if (user.CustomerId is not { } customerId || customerId <= 0) return FeedbackErrors.NotLoggedIn;
+        if (user.CustomerId is not { } customerId || customerId <= 0) return IdentityErrors.NotLoggedIn;
         var r = c.Request;
-        if (TroubleRules.Validate(r) is { } error) return error;
-        var bill = await shipments.FindBillAsync(customerId, r.Bill!, ct);
-        if (bill is null) return TroubleErrors.BillNotFound;
+        if (TroubleRules.Validate(r, c.File) is { } error) return error;
+        var kind = TroubleRules.KindOf(r);
+
+        string? bill = null, consignee = null, country = null;
+        if (kind == TroubleKind.Incident)
+        {
+            var found = await shipments.FindBillAsync(customerId, r.Bill!, ct);
+            if (found is null) return TroubleErrors.BillNotFound;
+            bill = found.Bill;
+            consignee = TroubleRules.Cut(string.IsNullOrWhiteSpace(r.Cnee) ? found.ConsigneeName : r.Cnee, Trouble.NameMaxLength);
+            country = TroubleRules.Cut(string.IsNullOrWhiteSpace(r.Ct) ? found.ConsigneeCountry : r.Ct, Trouble.CountryMaxLength);
+        }
 
         var customer = await customers.GetByIdAsync(customerId, ct);
-        var trouble = Trouble.Create(customerId, customer?.Code ?? "", customer?.CompanyName ?? "", user.StaffId, user.UserName ?? "",
-            bill.Bill,
-            Cut(string.IsNullOrWhiteSpace(r.Cnee) ? bill.ConsigneeName : r.Cnee, Trouble.NameMaxLength),
-            Cut(string.IsNullOrWhiteSpace(r.Ct) ? bill.ConsigneeCountry : r.Ct, Trouble.CountryMaxLength),
-            r.Type!.Trim(), r.Lv!, r.Desc!.Trim(), r.Req!.Trim(), r.Contact!.Trim(), VietnamTime.Now(clock));
+        var userName = user.UserName ?? "";
+        var contact = r.Contact?.Trim() ?? "";
+        var trouble = Trouble.Create(kind, customerId, customer?.CompanyName ?? "", user.StaffId,
+            bill, consignee, country,
+            kind == TroubleKind.Feedback && string.IsNullOrWhiteSpace(r.Type) ? TroubleRules.FeedbackType : r.Type!.Trim(),
+            kind == TroubleKind.Support ? r.Subject!.Trim() : null,
+            r.Lv ?? "low", r.Desc!.Trim(),
+            string.IsNullOrWhiteSpace(r.Req) ? userName : r.Req.Trim(),
+            contact, SupportRules.IsEmail(contact) ? contact : null, VietnamTime.Now(clock));
+        var file = c.File is { } f ? f with { Name = SupportRules.SafeFileName(f.Name) } : null;
+        if (file is not null) trouble.NoteAttachment(file.Name);
         db.Troubles.Add(trouble);
         await db.SaveChangesAsync(ct);
-        // Báo về hộp thư Việt An ở nền — sự cố đã lưu, xử lý ở trang /admin.
-        jobs.EnqueueEmail($"email sự cố {trouble.Code}", TroubleRules.InboxEmail(trouble, customer, company));
+        // Báo về hộp thư Việt An ở nền (kèm tệp) — yêu cầu đã lưu ở dbo.TContact, xử lý ở phần mềm cũ / trang /admin.
+        jobs.EnqueueEmail($"email {trouble.Code}", TroubleRules.InboxEmail(trouble, customer, userName, file, company));
         return TroubleRules.ToDto(trouble);
     }
-
-    public async Task<Result<TroubleDto>> Handle(ReplyTroubleCommand c, CancellationToken ct)
-    {
-        if (user.CustomerId is not { } customerId || customerId <= 0) return FeedbackErrors.NotLoggedIn;
-        if (c.Status is not (null or TroubleStatus.Done)) return TroubleErrors.Status;
-        var text = c.Reply?.Trim() ?? "";
-        if (text.Length is 0 or > TroubleMessage.MessageMaxLength) return TroubleErrors.Reply;
-        if (Trouble.ParseCode(c.Id) is not { } id) return TroubleErrors.NotFound;
-
-        var trouble = await Mine(customerId).Include(t => t.Messages).FirstOrDefaultAsync(t => t.Id == id, ct);
-        if (trouble is null) return TroubleErrors.NotFound;
-        if (trouble.Status == TroubleStatus.Done) return TroubleErrors.Closed;
-
-        trouble.CustomerReply(user.UserName ?? trouble.Requester, text, c.Status == TroubleStatus.Done, VietnamTime.Now(clock));
-        await db.SaveChangesAsync(ct);
-        return TroubleRules.ToDto(trouble);
-    }
-
-    private static string? Cut(string? value, int max) =>
-        string.IsNullOrWhiteSpace(value) ? null : value.Trim() is var v && v.Length > max ? v[..max] : value.Trim();
 }
 
 // ---------------- Quản trị Việt An ----------------
 
 internal sealed record GetAdminTroublesQuery : IRequest<IReadOnlyList<AdminTroubleDto>>;
 
-/// <summary>Việt An trả lời và / hoặc đổi trạng thái → thông báo riêng cho khách.</summary>
+/// <summary>Việt An đổi trạng thái và / hoặc gửi ghi chú → thông báo riêng cho khách (ghi chú chỉ nằm trong thông báo).</summary>
 internal sealed record AdminReplyTroubleCommand(string Id, string? Reply, string? Status) : IRequest<Result<AdminTroubleDto>>;
 
-internal sealed class AdminTroubleHandlers(IdentityDbContext db, ICurrentUser user, EmailCompany company, TimeProvider clock) :
+internal sealed class AdminTroubleHandlers(IdentityDbContext db, ICurrentUser user, ICustomersApi customers, EmailCompany company, TimeProvider clock) :
     IRequestHandler<GetAdminTroublesQuery, IReadOnlyList<AdminTroubleDto>>,
     IRequestHandler<AdminReplyTroubleCommand, Result<AdminTroubleDto>>
 {
@@ -199,31 +222,32 @@ internal sealed class AdminTroubleHandlers(IdentityDbContext db, ICurrentUser us
 
     public async Task<IReadOnlyList<AdminTroubleDto>> Handle(GetAdminTroublesQuery q, CancellationToken ct)
     {
-        var rows = await db.Troubles.AsNoTracking().Include(t => t.Messages)
+        var rows = await db.Troubles.AsNoTracking()
             .OrderByDescending(t => t.UpdatedAt).ThenByDescending(t => t.Id)
             .Take(ListLimit)
             .ToListAsync(ct);
-        return rows.Select(ToDto).ToList();
+        var codes = (await customers.GetByIdsAsync(rows.Select(t => t.CustomerId).Distinct().ToList(), ct)).ToDictionary(c => c.Id, c => c.Code);
+        return rows.Select(t => ToDto(t, codes.GetValueOrDefault(t.CustomerId))).ToList();
     }
 
     public async Task<Result<AdminTroubleDto>> Handle(AdminReplyTroubleCommand c, CancellationToken ct)
     {
         if (c.Status is { } status && !TroubleStatus.All.Contains(status)) return TroubleErrors.Status;
-        if ((c.Reply?.Trim().Length ?? 0) > TroubleMessage.MessageMaxLength) return TroubleErrors.Reply;
+        if ((c.Reply?.Trim().Length ?? 0) > TroubleRules.NoteMaxLength) return TroubleErrors.Note;
         if (Trouble.ParseCode(c.Id) is not { } id) return TroubleErrors.NotFound;
-        var trouble = await db.Troubles.Include(t => t.Messages).FirstOrDefaultAsync(t => t.Id == id, ct);
+        var trouble = await db.Troubles.FirstOrDefaultAsync(t => t.Id == id, ct);
         if (trouble is null) return TroubleErrors.NotFound;
 
         var now = VietnamTime.Now(clock);
-        var before = trouble.Status;
-        var author = "CS Việt An";
-        if (!trouble.VietAnReply(author, c.Reply, c.Status, now)) return TroubleErrors.NothingToSend;
-        db.Notifications.Add(TroubleRules.CustomerNotice(trouble, c.Reply, trouble.Status != before, user.UserName ?? author,
-            company.Portal("/troubles"), now));
+        var changed = c.Status is { } next && trouble.ChangeStatus(next, now);
+        if (!changed && string.IsNullOrWhiteSpace(c.Reply)) return TroubleErrors.NothingToSend;
+        db.Notifications.Add(TroubleRules.CustomerNotice(trouble, c.Reply, changed, user.UserName ?? "CS Việt An",
+            company.Portal($"/troubles?id={trouble.Code}"), now));
         await db.SaveChangesAsync(ct);
-        return ToDto(trouble);
+        var customer = await customers.GetByIdAsync(trouble.CustomerId, ct);
+        return ToDto(trouble, customer?.Code);
     }
 
-    private static AdminTroubleDto ToDto(Trouble t) => new(
-        TroubleRules.ToDto(t), t.CustomerCode, t.CompanyName, t.SenderUserName, t.StaffId is not null, TroubleRules.Time(t.UpdatedAt));
+    private static AdminTroubleDto ToDto(Trouble t, string? customerCode) =>
+        new(TroubleRules.ToDto(t), customerCode ?? "", t.CompanyName, t.StaffId is not null);
 }

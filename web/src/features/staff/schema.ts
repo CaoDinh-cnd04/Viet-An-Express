@@ -9,6 +9,8 @@ const profile = {
   fullName: z.string().trim().min(1, 'Nhập họ tên nhân viên').max(100, 'Họ tên tối đa 100 ký tự'),
   email: z.union([z.literal(''), z.email('Email không hợp lệ').max(150)]),
   phone: z.string().trim().max(30, 'Số điện thoại tối đa 30 ký tự').refine(v => !v || isPhone(v), PHONE_MESSAGE),
+  phone2: z.string().trim().max(30, 'Số điện thoại tối đa 30 ký tự').refine(v => !v || isPhone(v), PHONE_MESSAGE),
+  email2: z.union([z.literal(''), z.email('Email không hợp lệ').max(150)]),
   permissions: z.array(z.string())
 };
 

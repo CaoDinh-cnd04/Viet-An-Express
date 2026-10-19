@@ -128,7 +128,7 @@ export function OrderDrawer({ order, onClose, actions }: OrderDrawerProps) {
                           <StatusPill tone={TROUBLE_STATUS[x.status].tone}>{t(TROUBLE_STATUS[x.status].label)}</StatusPill>
                         </span>
                         <span className={styles.troubleSub}>
-                          {x.date}{x.reply ? ` · ${t('CS Việt An')}: ${x.reply}` : ` · ${t('Chưa có phản hồi.')}`}
+                          {x.updatedAt ?? x.date} · {x.desc}
                         </span>
                       </button>
                     </li>

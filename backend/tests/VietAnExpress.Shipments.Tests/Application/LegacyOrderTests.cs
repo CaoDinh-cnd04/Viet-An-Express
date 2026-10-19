@@ -25,13 +25,15 @@ public class LegacyOrderFactoryTests
     public void Ghi_dung_dinh_dang_cot_he_thong_cu()
     {
         var o = LegacyOrderFactory.FromPayload(Payload("PACK", new OrderPayload.PackagePart { Qty = "2", Weight = "3", Length = "50", Width = "40", Height = "30" }),
-            Customer, 90000001, Today);
+            Customer, 90000001, Today, consigneeCountryId: 191);
 
         Assert.Equal(201008, o.CustomerId);
         Assert.Equal(90000001, o.OrderNumber);
         Assert.Equal(231, o.SenderCountryId); // Việt Nam theo danh mục nước của hệ thống cũ, không để NULL
         Assert.Equal("DHL|Singapore", o.ServiceName);
         Assert.Equal("Jason Teo", o.ConsigneeName);
+        Assert.Equal(191, o.ConsigneeCountryId);
+        Assert.Equal("Singapore", o.ConsigneeCountry);
         Assert.Equal("", o.ConsigneeEmail); // cột NOT NULL
         Assert.Equal(24m, o.WeightKg);      // max(2×3 = 6, 2×50×40×30/5000 = 24)
         Assert.Equal(10m, o.GoodsValue);    // 2 × 5

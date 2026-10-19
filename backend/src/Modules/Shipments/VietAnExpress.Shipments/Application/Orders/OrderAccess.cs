@@ -12,6 +12,8 @@ internal static class OrderErrors
 {
     public static Error NotFound(string bill) => Error.NotFound("ORDER_NOT_FOUND", $"Không tìm thấy đơn {bill}");
     public static readonly Error DraftNotFound = Error.NotFound("DRAFT_NOT_FOUND", "Không tìm thấy đơn nháp");
+    public static readonly Error DraftChanged = Error.Conflict("DRAFT_CHANGED",
+        "Đơn này vừa được in hoặc xóa ở nơi khác — vui lòng tải lại danh sách");
     public static readonly Error DraftNotReady =
         Error.BusinessRule("DRAFT_NOT_READY", "Đơn chưa khai đủ thông tin — mở đơn, hoàn tất rồi bấm In");
     public static readonly Error InvalidPayload =
@@ -24,7 +26,7 @@ internal static class OrderErrors
 
 /// <summary>
 /// Phạm vi đơn trong dbo.MaVanDon: <paramref name="CustomerId"/> của khách; <paramref name="StaffId"/> có giá trị thì
-/// chỉ lấy đơn tài khoản con đó tạo (dbo.VanDonNguoiTao).
+/// chỉ lấy đơn tài khoản con đó tạo (MaVanDon.Customer_Staff_ID).
 /// </summary>
 internal sealed record OrderScope(long CustomerId, long? StaffId);
 
@@ -32,14 +34,14 @@ internal sealed record OrderScope(long CustomerId, long? StaffId);
 /// Phạm vi đơn: khách chỉ thấy / ghi đơn có CustomerID = mã khách của mình (dbo.TCustomer.CustomerID).
 /// Tài khoản con không có quyền <see cref="ShipmentsPermissions.ViewAll"/> chỉ thấy đơn và nháp mình tạo.
 /// </summary>
-internal sealed class OrderAccess(ICurrentUser user, ICustomersApi customers, ShipmentsDbContext db)
+internal sealed class OrderAccess(ICurrentUser user, ICustomersApi customers)
 {
     /// <summary>Chưa đăng nhập bằng tài khoản khách → không thấy đơn nào (Id không tồn tại).</summary>
     private const long NoCustomer = -1;
 
     public bool IsCustomer => user.CustomerId is not null;
 
-    /// <summary>Tài khoản con đang đăng nhập (ghi vào nháp / dbo.VanDonNguoiTao khi tạo đơn); null = tài khoản chính.</summary>
+    /// <summary>Tài khoản con đang đăng nhập (ghi vào MaVanDon.Customer_Staff_ID khi tạo đơn); null = tài khoản chính.</summary>
     public long? CreatorStaffId => user.StaffId;
 
     public Task<OrderScope> ScopeAsync(CancellationToken ct) =>
@@ -49,16 +51,15 @@ internal sealed class OrderAccess(ICurrentUser user, ICustomersApi customers, Sh
     {
         query = query.Where(o => o.CustomerId == scope.CustomerId);
         return scope.StaffId is { } staffId
-            ? query.Where(o => db.OrderCreators.Any(c => c.OrderId == o.Id && c.StaffId == staffId))
+            ? query.Where(o => o.CustomerStaffId == staffId)
             : query;
     }
 
-    /// <summary>Ghi người tạo cho các vận đơn vừa lưu (đã có MaVanDon.ID) — chỉ khi người tạo là tài khoản con.</summary>
-    public static void RecordCreators(ShipmentsDbContext db, IEnumerable<LegacyOrder> orders, long? staffId, DateTime now)
-    {
-        if (staffId is not { } sid) return;
-        db.OrderCreators.AddRange(orders.Select(o => new OrderCreator(o.Id, o.CustomerId ?? 0, sid, now)));
-    }
+    /// <summary>
+    /// Ghi người tạo vào MaVanDon.Customer_Staff_ID (cột hệ thống cũ = người liên hệ / nhân viên của khách,
+    /// dbo.TCustomer_NguoiLienLac.ID): tài khoản con → ID của mình, tài khoản chính → 0 như hệ thống cũ.
+    /// </summary>
+    public void StampCreator(LegacyOrder order) => order.CustomerStaffId = CreatorStaffId ?? 0;
 
     /// <summary>Khách ghi đơn vào dbo.MaVanDon — kèm tên công ty, người liên hệ để điền người gửi.</summary>
     public async Task<Result<LegacyCustomerRef>> WriterAsync(CancellationToken ct)

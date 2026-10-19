@@ -8,8 +8,6 @@ internal sealed class ShipmentsDbContext(DbContextOptions<ShipmentsDbContext> op
 {
     public const string Schema = "shipments";
 
-    public DbSet<OrderDraft> OrderDrafts => Set<OrderDraft>();
-
     /// <summary>Nhóm hàng hóa (dbo.NhomHangHoa) — bảng mới do portal tạo bằng migration.</summary>
     public DbSet<GoodsCategory> GoodsCategories => Set<GoodsCategory>();
 
@@ -17,7 +15,6 @@ internal sealed class ShipmentsDbContext(DbContextOptions<ShipmentsDbContext> op
     public DbSet<CatalogMark> CatalogMarks => Set<CatalogMark>();
 
     /// <summary>Nhân viên (tài khoản con) đã tạo vận đơn (dbo.VanDonNguoiTao) — bảng phụ mới, người dùng đã đồng ý.</summary>
-    public DbSet<OrderCreator> OrderCreators => Set<OrderCreator>();
 
     /// <summary>Bảng vận đơn hệ thống cũ dbo.MaVanDon — không thuộc migration của module.</summary>
     public DbSet<Legacy.LegacyOrder> LegacyOrders => Set<Legacy.LegacyOrder>();

@@ -26,8 +26,11 @@ async function check(name, fn) {
  const errors = [];
  page.on('pageerror',error=>errors.push(error.message));
  await context.route(url=>url.pathname.startsWith('/api/'),route=> {
-   const me = new URL(route.request().url()).pathname.endsWith('/me');
-   return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(me ? {data:{customerCode:'TEST-MYTRACKING',companyName:'Test Customer',contactName:'Tester',userName:'test',roles:['customer'],permissions:[]}} : {data:[],count:0})});
+   const path = new URL(route.request().url()).pathname;
+   const me = path.endsWith('/me') || path.endsWith('/auth/session');
+   // Kịch bản này kiểm chế độ lưu bản thử nghiệm trên trình duyệt (backend chưa có API MyTracking → 404).
+   if (path.endsWith('/account/mytracking')) return route.fulfill({status:404,contentType:'application/json',body:'{}'});
+   return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(me ? {data:{customerCode:'TEST-MYTRACKING',companyName:'Test Customer',contactName:'Tester',userName:'test',roles:['customer'],permissions:['account.mytracking']}} : {data:[],count:0})});
  });
  await page.goto(base+'/account/mytracking');
  await page.getByRole('heading',{name:'Thông tin thương hiệu',exact:true}).waitFor();
@@ -253,7 +256,12 @@ async function check(name, fn) {
        Storage.prototype.setItem=function(k,v){if(k.startsWith('mytracking-draft:'))throw new DOMException('Blocked','SecurityError');return set.call(this,k,v);};
      }
    },{code,mode:init});
-   await isolated.route(url=>url.pathname.startsWith('/api/'),route=>route.fulfill({contentType:'application/json',body:JSON.stringify(new URL(route.request().url()).pathname.endsWith('/me')?{data:{customerCode:code,companyName:'Test',roles:['customer'],permissions:[]}}:{data:[],count:0})}));
+   await isolated.route(url=>url.pathname.startsWith('/api/'),route=>{
+     const path=new URL(route.request().url()).pathname;
+     if(path.endsWith('/account/mytracking'))return route.fulfill({status:404,contentType:'application/json',body:'{}'});
+     const me=path.endsWith('/me')||path.endsWith('/auth/session');
+     return route.fulfill({contentType:'application/json',body:JSON.stringify(me?{data:{customerCode:code,companyName:'Test',roles:['customer'],permissions:['account.mytracking']}}:{data:[],count:0})});
+   });
    const p=await isolated.newPage();await p.goto(base+'/account/mytracking');
    await p.getByRole('heading',{name:'Thông tin thương hiệu',exact:true}).waitFor();
    return {isolated,p};
@@ -275,7 +283,11 @@ async function check(name, fn) {
      await p.getByRole('button',{name:'Lưu bản thử nghiệm',exact:true}).click();
      await p.getByText('Không đủ dung lượng lưu hoặc bộ nhớ bị chặn. Bản thử nghiệm vẫn được giữ trong phiên này.',{exact:true}).waitFor();
      assert.equal(await p.locator('input[name=title]').inputValue(),'Retained config');
-     await p.locator('a[href="/account/password"]').click();
+     // Menu trái gom nhóm thu gọn: mở nhóm Hỗ trợ rồi sang trang khác trong cùng phiên.
+     await p.getByRole('button',{name:/Hỗ trợ/}).first().click();
+     await p.locator('a[href="/notifications"]').click();
+     await p.waitForURL('**/notifications');
+     await p.getByRole('button',{name:/Tài khoản/}).first().click();
      await p.locator('a[href="/account/mytracking"]').click();
      await p.locator('input[name=title]').waitFor();
      assert.equal(await p.locator('input[name=title]').inputValue(),'Retained config');
@@ -290,7 +302,7 @@ async function check(name, fn) {
      await p.locator('input[name=title]').fill('Config account A');
      await p.getByRole('button',{name:'Lưu bản thử nghiệm',exact:true}).click();
      await p.getByText('Đã lưu bản thử nghiệm trên trình duyệt',{exact:true}).waitFor();
-     await isolated.route(url=>url.pathname==='/api/v1/me',route=>route.fulfill({contentType:'application/json',body:JSON.stringify({data:{customerCode:'ACCOUNT-B',companyName:'Test B',roles:['customer'],permissions:[]}})}));
+     await isolated.route(url=>url.pathname==='/api/v1/me'||url.pathname==='/api/v1/auth/session',route=>route.fulfill({contentType:'application/json',body:JSON.stringify({data:{customerCode:'ACCOUNT-B',companyName:'Test B',roles:['customer'],permissions:['account.mytracking']}})}));
      await p.evaluate(()=>localStorage.setItem('va.tour.v1.ACCOUNT-B','1'));
      await p.reload();await p.locator('input[name=title]').waitFor();
      assert.equal(await p.locator('input[name=title]').inputValue(),'DỊCH VỤ TIÊU BIỂU');

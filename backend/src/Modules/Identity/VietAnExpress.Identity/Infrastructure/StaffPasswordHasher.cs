@@ -4,8 +4,8 @@ using System.Security.Cryptography;
 namespace VietAnExpress.Identity.Infrastructure;
 
 /// <summary>
-/// Băm mật khẩu tài khoản con bằng PBKDF2-SHA256 (bảng mới, không phải dùng chung với hệ thống cũ như dbo.TCustomer).
-/// Dạng lưu: <c>pbkdf2$&lt;số vòng&gt;$&lt;salt base64&gt;$&lt;hash base64&gt;</c>.
+/// Băm mật khẩu bằng PBKDF2-SHA256 — dùng cho tài khoản quản trị /admin, và để đọc mật khẩu tài khoản con tạo trước khi chuyển sang
+/// dbo.TCustomer_NguoiLienLac (nay lưu như hệ thống cũ). Dạng lưu: <c>pbkdf2$&lt;số vòng&gt;$&lt;salt base64&gt;$&lt;hash base64&gt;</c>.
 /// </summary>
 internal static class StaffPasswordHasher
 {
@@ -20,6 +20,15 @@ internal static class StaffPasswordHasher
         var hash = Rfc2898DeriveBytes.Pbkdf2(password, salt, Iterations, HashAlgorithmName.SHA256, HashBytes);
         return string.Create(CultureInfo.InvariantCulture, $"{Prefix}${Iterations}${Convert.ToBase64String(salt)}${Convert.ToBase64String(hash)}");
     }
+
+    public static bool IsHash(string? stored) => stored is not null && stored.StartsWith(Prefix + "$", StringComparison.Ordinal);
+
+    /// <summary>
+    /// So mật khẩu tài khoản con: giá trị lưu là mã băm (tài khoản cũ chưa đặt lại mật khẩu) thì kiểm PBKDF2,
+    /// không thì so như hệ thống cũ (chuỗi giống hệt, thời gian cố định).
+    /// </summary>
+    public static bool Matches(string? stored, string password) =>
+        !string.IsNullOrEmpty(stored) && (IsHash(stored) ? Verify(stored, password) : JwtTokenService.FixedTimeEquals(stored, password));
 
     public static bool Verify(string storedHash, string password)
     {

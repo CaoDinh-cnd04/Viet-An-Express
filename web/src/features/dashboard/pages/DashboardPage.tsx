@@ -7,7 +7,7 @@ import { useNotifications } from '@/features/notifications';
 import { useOrders } from '@/features/orders/api';
 import { DEFAULT_FILTERS, ORDER_STATUS } from '@/features/orders/constants';
 import type { Order } from '@/features/orders/types';
-import { useTroubles } from '@/features/troubles';
+import { kindOf, useTroubles } from '@/features/troubles';
 import styles from './DashboardPage.module.css';
 
 const RECENT = { ...DEFAULT_FILTERS, pageSize: 6 };
@@ -35,7 +35,7 @@ export default function DashboardPage() {
   const notifications = useNotifications();
 
   const counts = orders.data?.summary.statusCounts;
-  const openTroubles = (troubles.data ?? []).filter(x => x.status !== 'done').length;
+  const openTroubles = (troubles.data ?? []).filter(x => kindOf(x) === 'su_co' && x.status !== 'done').length;
   const readyDrafts = (drafts.data ?? []).filter(d => d.stt === 'ready').length;
   const latestNotices = (notifications.data?.data ?? []).slice(0, 4);
 

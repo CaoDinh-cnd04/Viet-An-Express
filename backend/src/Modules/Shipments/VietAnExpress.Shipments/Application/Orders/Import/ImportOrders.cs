@@ -7,6 +7,7 @@ using VietAnExpress.SharedKernel.Results;
 using VietAnExpress.Shipments.Domain;
 using VietAnExpress.Shipments.Infrastructure;
 using VietAnExpress.Shipments.Infrastructure.Geo;
+using VietAnExpress.Shipments.Infrastructure.Legacy;
 
 namespace VietAnExpress.Shipments.Application.Orders.Import;
 
@@ -124,7 +125,7 @@ internal sealed class ImportOrdersHandler(
     }
 
     /// <summary>
-    /// Ghi các đơn vào dbo.MaVanDon + chi tiết kiện / dòng hàng vào 2 bảng chi tiết; kèm lưu form (nháp đã in, xoá mềm) để nhân bản đơn.
+    /// Ghi các đơn vào dbo.MaVanDon + chi tiết kiện / dòng hàng vào 2 bảng chi tiết.
     /// Tất cả trong 1 transaction: lỗi thì không đơn nào được tạo.
     /// </summary>
     private async Task<Dictionary<int, string>> CreateAsync(List<ImportedRow> rows, LegacyCustomerRef customer, string branch, CancellationToken ct)
@@ -135,6 +136,7 @@ internal sealed class ImportOrdersHandler(
         // VSVX từng dòng, tra trước transaction (bảng tĩnh, cache theo nước) để ghi vào đơn như hệ thống cũ.
         var remote = new Dictionary<int, IReadOnlyList<RemoteAreaHit>>();
         var countryList = await geo.GetCountriesAsync(ct);
+        var legacyCountries = await LegacyCountryLookup.LoadAsync(db, ct);
         foreach (var row in rows)
             remote[row.Line] = await remoteAreas.FindAsync(RemoteAreaColumns.CountryCode(row.Payload, countryList), row.Payload.Receiver.Postal, row.Payload.Receiver.City, ct);
 
@@ -150,45 +152,27 @@ internal sealed class ImportOrdersHandler(
             codes.Clear(); // chạy lại khi lỗi tạm thời: cấp lại số từ đầu
             planned.AddRange(rows.Select((row, i) => (row, issued[i])));
 
-            var drafts = new List<OrderDraft>();
             var saved = new List<(Infrastructure.Legacy.LegacyOrder, OrderPayload)>();
             foreach (var (row, number) in planned)
             {
-                var order = LegacyOrderFactory.FromPayload(row.Payload, customer, number, today);
+                var countryId = LegacyCountryLookup.FindId(legacyCountries, row.CountryCode, row.Payload.Receiver.Country);
+                var order = LegacyOrderFactory.FromPayload(row.Payload, customer, number, today, countryId);
                 codes[row.Line] = order.VaBill ?? number.ToString(CultureInfo.InvariantCulture);
                 RemoteAreaColumns.Apply(order, remote[row.Line]);
+                access.StampCreator(order);
                 db.LegacyOrders.Add(order);
                 saved.Add((order, row.Payload));
-                var draft = new OrderDraft(customer.LegacyCustomerId, Summary(row, order, branch), JsonSerializer.Serialize(row.Payload, Json),
-                    access.CreatorStaffId);
-                draft.MarkPrinted(number);
-                drafts.Add(draft);
             }
-            db.OrderDrafts.AddRange(drafts);
             await db.SaveChangesAsync(ct);
 
             // Có MaVanDon.ID rồi mới ghi chi tiết kiện (MaVanDon_PCS_DIM) và dòng hàng (MaVanDon_ChiTietHang).
             await LegacyOrderLinesWriter.AddAsync(db, saved, ct);
-            OrderAccess.RecordCreators(db, saved.Select(s => s.Item1), access.CreatorStaffId, VietnamTime.Now(clock));
-
-            // Xoá mềm ngay để không hiện trong "Đơn nháp & chưa in" — chỉ giữ để in chứng từ.
-            db.OrderDrafts.RemoveRange(drafts);
             await db.SaveChangesAsync(ct);
             await tx.CommitAsync(ct);
         });
 
         return codes;
     }
-
-    private static OrderDraftSummary Summary(ImportedRow row, Infrastructure.Legacy.LegacyOrder order, string branch) => new(
-        OrderDraft.StatusReady,
-        order.ConsigneeName ?? "",
-        order.ConsigneeCountry ?? "",
-        order.ServiceName?.Replace("|", " - ") ?? "",
-        branch,
-        order.CustomerBill ?? "",
-        $"{order.Pieces ?? 1} kiện · {row.ChargeableKg.ToString("0.##", CultureInfo.InvariantCulture)} kg",
-        order.GoodsName ?? "");
 
     private static ImportRowDto ToDto(ImportedRow r, List<string>? extraWarnings, string? bill)
     {

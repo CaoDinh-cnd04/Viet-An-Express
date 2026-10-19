@@ -191,11 +191,17 @@ export interface HsLookupItem {
   nationalDescription?: string | null;
   /** Ghi chú của Việt An (chất liệu, quy cách đóng gói ảnh hưởng mã…). */
   note?: string | null;
+  /** Đơn vị tính thống kê của biểu thuế (kg, No., doz., kg…). */
+  unit?: string | null;
+  /** Mặt hàng Việt An đã gửi thực tế và rà soát mã. */
+  isVerified?: boolean;
+  /** Các cấp cha trong biểu thuế (US), từ nhóm lớn đến nhỏ — rỗng nếu biểu thuế không có. */
+  path?: string[];
 }
 
 /**
- * Tra mã HS đã xác minh theo nước nhập khẩu (`mode=verified`: mặt hàng Việt An đã gửi thực tế;
- * `mode=catalog`: tra danh mục mã của biểu thuế nước đó). Endpoint mới — API_CONTRACT §3; chưa có thì UI dùng dữ liệu HS6 sẵn có.
+ * Tra mã HS theo nước nhập khẩu từ dbo.Catalog_HsCode (`mode=verified`: chỉ mặt hàng Việt An đã xác minh;
+ * `mode=catalog`: toàn bộ biểu thuế nước đó) — API_CONTRACT §3. Backend chưa có endpoint thì UI dùng dữ liệu HS6 sẵn có.
  */
 export function useHsLookup(country: string, query: string, mode: 'verified' | 'catalog') {
   return useQuery({

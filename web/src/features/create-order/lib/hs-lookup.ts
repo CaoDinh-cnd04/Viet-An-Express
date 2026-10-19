@@ -23,3 +23,39 @@ export const hs6Of = (code: string | null | undefined): string => {
   const d = (code ?? '').replace(/\D/g, '');
   return d.length >= 6 ? formatHs(d.slice(0, 6)) : '';
 };
+
+/** Đủ trường để gom nhóm — khớp HsLookupItem của api.ts (tránh import vòng). */
+export interface HsGroupable {
+  hs6: string;
+  path?: readonly string[] | null;
+}
+
+export interface HsGroup<T extends HsGroupable> {
+  hs6: string;
+  /** Các cấp cha chung của mọi dòng trong nhóm (đưa lên tiêu đề nhóm). */
+  path: string[];
+  /** Mỗi dòng kèm phần đường dẫn còn lại riêng của nó. */
+  lines: { item: T; rest: string[] }[];
+}
+
+/**
+ * Gom kết quả tra HS theo HS6 (giữ thứ tự backend trả), tách đường dẫn biểu thuế:
+ * phần chung của cả nhóm lên tiêu đề, phần riêng ở từng dòng. Hàm thuần — có test.
+ */
+export function groupByHs6<T extends HsGroupable>(items: readonly T[]): HsGroup<T>[] {
+  const groups = new Map<string, T[]>();
+  for (const item of items) {
+    const key = formatHs(item.hs6);
+    groups.set(key, [...(groups.get(key) ?? []), item]);
+  }
+  return [...groups].map(([hs6, list]) => {
+    const paths = list.map(i => [...(i.path ?? [])]);
+    let common = paths[0] ?? [];
+    for (const p of paths.slice(1)) {
+      let n = 0;
+      while (n < common.length && n < p.length && common[n] === p[n]) n++;
+      common = common.slice(0, n);
+    }
+    return { hs6, path: common, lines: list.map((item, i) => ({ item, rest: (paths[i] ?? []).slice(common.length) })) };
+  });
+}

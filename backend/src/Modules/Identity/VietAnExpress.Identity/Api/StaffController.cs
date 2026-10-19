@@ -30,13 +30,13 @@ internal sealed class StaffController : ApiControllerBase
     [ProducesResponseType<ApiResponse<StaffAccountDto>>(StatusCodes.Status200OK)]
     public async Task<IActionResult> Create(CreateStaffRequest body, CancellationToken ct) =>
         FromResult(await Sender.Send(new CreateStaffCommand(
-            body.UserName, body.Password, body.FullName, body.Email, body.Phone, body.Permissions ?? []), ct), "Đã tạo tài khoản nhân viên");
+            body.UserName, body.Password, body.FullName, body.Email, body.Phone, body.Permissions ?? [], body.Phone2, body.Email2), ct), "Đã tạo tài khoản nhân viên");
 
     [HttpPut("{id:long}")]
     [ProducesResponseType<ApiResponse<StaffAccountDto>>(StatusCodes.Status200OK)]
     public async Task<IActionResult> Update(long id, UpdateStaffRequest body, CancellationToken ct) =>
         FromResult(await Sender.Send(new UpdateStaffCommand(
-            id, body.FullName, body.Email, body.Phone, body.Permissions ?? [], body.Active), ct), "Đã cập nhật tài khoản nhân viên");
+            id, body.FullName, body.Email, body.Phone, body.Permissions ?? [], body.Active, body.Phone2, body.Email2), ct), "Đã cập nhật tài khoản nhân viên");
 
     [HttpPost("{id:long}/reset-password")]
     [ProducesResponseType<ApiMessage>(StatusCodes.Status200OK)]
@@ -51,9 +51,11 @@ internal sealed class StaffController : ApiControllerBase
 }
 
 internal sealed record CreateStaffRequest(
-    string UserName, string Password, string FullName, string? Email, string? Phone, IReadOnlyList<string>? Permissions);
+    string UserName, string Password, string FullName, string? Email, string? Phone, IReadOnlyList<string>? Permissions,
+    string? Phone2 = null, string? Email2 = null);
 
 internal sealed record UpdateStaffRequest(
-    string FullName, string? Email, string? Phone, IReadOnlyList<string>? Permissions, bool Active = true);
+    string FullName, string? Email, string? Phone, IReadOnlyList<string>? Permissions, bool Active = true,
+    string? Phone2 = null, string? Email2 = null);
 
 internal sealed record ResetStaffPasswordRequest(string NewPassword);

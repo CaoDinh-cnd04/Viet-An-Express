@@ -1,16 +1,87 @@
-.permissions {
+/* Form thêm / sửa nhân viên: 3 nhóm, nhãn bên trái, ô nhập bên phải, kẻ mảnh (cùng kiểu form Hỗ trợ & sự cố) */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.section {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  margin: 0;
-  padding: var(--space-4);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
 }
 
-.permissions legend {
-  padding: 0 var(--space-2);
-  font-weight: 600;
+.section + .section {
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-border);
+}
+
+.section h3 {
+  margin: 0;
+  font-size: var(--text-sm);
+  font-weight: 700;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 130px minmax(0, 1fr);
+  gap: var(--space-3);
+  align-items: start;
+}
+
+.label {
+  padding-top: 6px;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.label i {
+  color: var(--color-danger);
+  font-style: normal;
+}
+
+.control {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.control input:not([type='checkbox']) {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 4px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--text-sm);
+}
+
+.control input:focus {
+  outline: 0;
+  border-color: var(--color-brand);
+}
+
+.control input:read-only {
+  background: var(--color-surface-muted);
+  color: var(--color-text-muted);
+}
+
+.control small {
+  color: var(--color-text-faint);
+  font-size: var(--text-xs);
+}
+
+.control small.error {
+  color: var(--color-danger);
+}
+
+/* 2 ô cạnh nhau: mật khẩu + nhập lại, di động 1 + 2, email 1 + 2 */
+.pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2);
 }
 
 .hint {
@@ -19,48 +90,52 @@
   color: var(--color-text-muted);
 }
 
-.permissionGroups {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: var(--space-4);
+/* Bảng quyền: mỗi dòng 1 nhóm, các ô tích chọn nằm ngang */
+.permTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
 }
 
-.permissionGroup {
+.permTable th,
+.permTable td {
+  padding: 8px 10px;
+  border: 1px solid var(--color-border);
+  vertical-align: top;
+}
+
+.permTable th {
+  width: 160px;
+  background: var(--color-surface-muted);
+  font-weight: 600;
+  text-align: left;
+}
+
+.checks {
   display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
+  flex-wrap: wrap;
+  gap: 6px 18px;
 }
 
 .check {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-2);
+  gap: 6px;
   cursor: pointer;
 }
 
-.user {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
+@media (max-width: 640px) {
+  .row,
+  .pair {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
 
-.user span,
-.muted {
-  font-size: var(--text-sm);
-  color: var(--color-text-muted);
-}
+  .label {
+    padding-top: 0;
+  }
 
-.tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-}
-
-.tag {
-  padding: 1px 8px;
-  border-radius: 999px;
-  background: var(--color-brand-soft);
-  color: var(--color-text);
-  font-size: var(--text-xs);
-  white-space: nowrap;
+  .permTable th {
+    width: 110px;
+  }
 }

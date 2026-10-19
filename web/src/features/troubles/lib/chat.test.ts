@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { TroubleTicket } from '../types';
-import { filterTickets, lastActivity } from './chat';
+import { filterTickets, kindOf, ticketSubline, ticketTitle } from './chat';
 
 const ticket = (over: Partial<TroubleTicket>): TroubleTicket => ({
   id: 'TRB-1', bill: 'VAHCM1', cnee: 'John Doe', ct: 'US', type: 'Giao chậm / trễ hẹn', lv: 'low', desc: 'Hàng chưa tới',
@@ -24,18 +24,22 @@ describe('filterTickets', () => {
   });
 });
 
-describe('lastActivity', () => {
-  it('chưa có trao đổi thì lấy mô tả ban đầu', () => {
-    expect(lastActivity(ticket({}))).toEqual({ from: 'customer', text: 'Hàng chưa tới', date: '10/10/2026 09:00' });
+describe('tiêu đề theo loại yêu cầu', () => {
+  it('sự cố: loại sự cố + mã vận đơn; API cũ không có kind vẫn là sự cố', () => {
+    const t = ticket({});
+    expect(kindOf(t)).toBe('su_co');
+    expect([ticketTitle(t), ticketSubline(t)]).toEqual(['Giao chậm / trễ hẹn', 'VAHCM1']);
   });
 
-  it('lấy tin cuối có nội dung (bỏ lượt chỉ đổi trạng thái)', () => {
-    const t = ticket({
-      messages: [
-        { from: 'vietan', author: 'CS', message: 'Đang kiểm tra', date: '11/10/2026 08:00' },
-        { from: 'vietan', author: 'CS', message: '', date: '11/10/2026 09:00', status: 'doing' }
-      ]
-    });
-    expect(lastActivity(t)).toEqual({ from: 'vietan', text: 'Đang kiểm tra', date: '11/10/2026 08:00' });
+  it('hỗ trợ: tiêu đề + chủ đề; góp ý: "Góp ý", không dòng phụ', () => {
+    const support = ticket({ kind: 'ho_tro', bill: '', type: 'Báo lỗi phần mềm', subject: 'Không in được nhãn' });
+    expect([ticketTitle(support), ticketSubline(support)]).toEqual(['Không in được nhãn', 'Báo lỗi phần mềm']);
+    const feedback = ticket({ kind: 'gop_y', bill: '', type: 'Góp ý' });
+    expect([ticketTitle(feedback), ticketSubline(feedback)]).toEqual(['Góp ý', '']);
+  });
+
+  it('tìm được theo tiêu đề yêu cầu hỗ trợ', () => {
+    const list = [ticket({ id: 'TRB-5', kind: 'ho_tro', bill: '', subject: 'Không in được nhãn' })];
+    expect(filterTickets(list, 'all', 'in được').map(t => t.id)).toEqual(['TRB-5']);
   });
 });

@@ -7,6 +7,7 @@ using VietAnExpress.Identity.Application.Dtos;
 using VietAnExpress.Identity.Domain;
 using VietAnExpress.Identity.Infrastructure;
 using VietAnExpress.SharedKernel.Application;
+using VietAnExpress.SharedKernel.Persistence;
 using VietAnExpress.SharedKernel.Results;
 
 namespace VietAnExpress.Identity.Application.Commands;
@@ -28,13 +29,13 @@ internal sealed class MyTrackingHandlers(IdentityDbContext db, ICustomersApi cus
     public async Task<Result<MyTrackingDto>> Handle(GetMyTrackingQuery q, CancellationToken ct)
     {
         if (user.MainAccountCustomerId() is not { } customerId) return IdentityErrors.AdminOnly;
-        var page = await db.MyTrackingPages.AsNoTracking().FirstOrDefaultAsync(p => p.CustomerId == customerId, ct);
-        if (page is not null) return ToDto(page);
+        var page = await db.MyTrackingPages.AsNoTracking().Include(p => p.Banners).FirstOrDefaultAsync(p => p.CustomerId == customerId, ct);
+        if (!string.IsNullOrEmpty(page?.Slug)) return ToDto(page);
 
         // Chưa cấu hình: gợi ý đường dẫn theo mã khách, frontend dùng cấu hình mặc định.
         var customer = await customers.GetByIdAsync(customerId, ct);
         var slug = MyTrackingPage.SuggestSlug(customer?.Code ?? customerId.ToString(System.Globalization.CultureInfo.InvariantCulture));
-        return new MyTrackingDto(slug, false, null, null);
+        return new MyTrackingDto(slug, false, page is null ? null : new RawJson(page.ConfigJson), page?.UpdatedAt);
     }
 
     public async Task<Result<MyTrackingDto>> Handle(SaveMyTrackingCommand cmd, CancellationToken ct)
@@ -46,7 +47,7 @@ internal sealed class MyTrackingHandlers(IdentityDbContext db, ICustomersApi cus
 
         var slug = cmd.Slug.Trim().ToLowerInvariant();
         // 1 truy vấn: trang của khách này + trang (nếu có) đang giữ đường dẫn muốn dùng — tối đa 2 dòng.
-        var rows = await db.MyTrackingPages.Where(p => p.CustomerId == customerId || p.Slug == slug).ToListAsync(ct);
+        var rows = await db.MyTrackingPages.Include(p => p.Banners).Where(p => p.CustomerId == customerId || p.Slug == slug).ToListAsync(ct);
         if (rows.Any(p => p.Slug == slug && p.CustomerId != customerId)) return IdentityErrors.SlugTaken;
 
         var now = VietnamTime.Now(clock);
@@ -54,8 +55,23 @@ internal sealed class MyTrackingHandlers(IdentityDbContext db, ICustomersApi cus
         if (page is null)
             db.MyTrackingPages.Add(page = new MyTrackingPage(customerId, slug, json, cmd.Published, now));
         else
+        {
+            // Khóa ngoại cũ cho NULL: xóa rõ các ảnh bị thay thế, tránh để lại dòng mồ côi.
+            db.MyTrackingBanners.RemoveRange(page.Banners);
             page.Update(slug, json, cmd.Published, now);
-        await db.SaveChangesAsync(ct);
+        }
+        try
+        {
+            await db.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException ex) when (DbConcurrency.IsUniqueViolation(ex))
+        {
+            // Khách khác vừa lấy cùng đường dẫn, hoặc chính khách này lưu lần đầu ở 2 tab cùng lúc.
+            db.ChangeTracker.Clear();
+            return await db.MyTrackingPages.AnyAsync(p => p.Slug == slug && p.CustomerId != customerId, ct)
+                ? IdentityErrors.SlugTaken
+                : IdentityErrors.MyTrackingChanged;
+        }
         return ToDto(page);
     }
 
@@ -63,9 +79,9 @@ internal sealed class MyTrackingHandlers(IdentityDbContext db, ICustomersApi cus
     {
         var slug = q.Slug.Trim().ToLowerInvariant();
         if (!MyTrackingPage.IsValidSlug(slug)) return IdentityErrors.MyTrackingNotFound;
-        var page = await db.MyTrackingPages.AsNoTracking().FirstOrDefaultAsync(p => p.Slug == slug && p.IsPublished, ct);
-        return page is null ? IdentityErrors.MyTrackingNotFound : new PublicMyTrackingDto(page.Slug, new RawJson(page.ConfigJson));
+        var page = await db.MyTrackingPages.AsNoTracking().Include(p => p.Banners).FirstOrDefaultAsync(p => p.Slug == slug && p.IsPublished, ct);
+        return page is null ? IdentityErrors.MyTrackingNotFound : new PublicMyTrackingDto(page.Slug!, new RawJson(page.ConfigJson));
     }
 
-    private static MyTrackingDto ToDto(MyTrackingPage p) => new(p.Slug, p.IsPublished, new RawJson(p.ConfigJson), p.UpdatedAt);
+    private static MyTrackingDto ToDto(MyTrackingPage p) => new(p.Slug!, p.IsPublished, new RawJson(p.ConfigJson), p.UpdatedAt);
 }

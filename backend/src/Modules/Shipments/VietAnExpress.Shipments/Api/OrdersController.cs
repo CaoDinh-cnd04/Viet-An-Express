@@ -154,25 +154,25 @@ internal sealed class DraftsController : ApiControllerBase
     [ProducesResponseType<ApiResponse<DraftDto>>(StatusCodes.Status200OK)]
     public async Task<IActionResult> Create(DraftInput body, CancellationToken ct) =>
         FromResult(await Sender.Send(new SaveDraftCommand(null, body), ct),
-            body.Stt == Domain.OrderDraft.StatusReady ? "Đã lưu đơn, chờ in" : "Đã lưu nháp");
+            body.Stt == DraftInput.StatusReady ? "Đã lưu đơn, chờ in" : "Đã lưu nháp");
 
-    [HttpPut("{id:guid}")]
+    [HttpPut("{id:long}")]
     [HasPermission(ShipmentsPermissions.Update)]
     [ProducesResponseType<ApiResponse<DraftDto>>(StatusCodes.Status200OK)]
-    public async Task<IActionResult> Update(Guid id, DraftInput body, CancellationToken ct) =>
+    public async Task<IActionResult> Update(long id, DraftInput body, CancellationToken ct) =>
         FromResult(await Sender.Send(new SaveDraftCommand(id, body), ct), "Đã cập nhật đơn nháp");
 
-    [HttpDelete("{id:guid}")]
+    [HttpDelete("{id:long}")]
     [HasPermission(ShipmentsPermissions.Update)]
     [ProducesResponseType<ApiMessage>(StatusCodes.Status200OK)]
-    public async Task<IActionResult> Delete(Guid id, CancellationToken ct) =>
+    public async Task<IActionResult> Delete(long id, CancellationToken ct) =>
         FromResult(await Sender.Send(new DeleteDraftCommand(id), ct), "Đã xoá đơn nháp");
 
-    /// <summary>In &amp; cấp bill: cấp số vận đơn (dải riêng của portal), ghi vào dbo.MaVanDon, xoá nháp.</summary>
-    [HttpPost("{id:guid}/print")]
+    /// <summary>In &amp; cấp bill: cấp số vận đơn cho dòng dbo.MaVanDon chưa in (Status 0 → 1).</summary>
+    [HttpPost("{id:long}/print")]
     [HasPermission(ShipmentsPermissions.IssueBill)]
     [ProducesResponseType<PrintDraftResponse>(StatusCodes.Status200OK)]
-    public async Task<IActionResult> Print(Guid id, CancellationToken ct)
+    public async Task<IActionResult> Print(long id, CancellationToken ct)
     {
         var result = await Sender.Send(new PrintDraftCommand(id), ct);
         return result.IsSuccess ? Ok(result.Value) : Problem(result.Error);

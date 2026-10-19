@@ -19,7 +19,7 @@ internal static class UsageRules
 {
     internal static readonly HashSet<string> Paths = ["/", "/login", "/tracking", "/t",
         "/orders/new", "/orders/new/quick", "/orders/import", "/orders", "/drafts", "/pricing", "/ecommerce", "/ecommerce/orders",
-        "/troubles", "/notifications", "/help", "/account/api-tracking", "/account/mytracking", "/account/staff", "/account/password", "/account/feedback", "/account/sender-info"];
+        "/troubles", "/notifications", "/account/api-tracking", "/account/mytracking", "/account/staff", "/account/password"];
     internal static readonly Error Invalid = Error.Validation("INVALID_USAGE", "Dữ liệu thống kê không hợp lệ");
     internal static readonly Error InvalidRange = Error.Validation("INVALID_RANGE", "Chọn khoảng ngày hợp lệ, tối đa 366 ngày và loại tài khoản hợp lệ");
 

@@ -44,7 +44,7 @@ internal sealed class IdentityFixture : IAsyncDisposable
     }
 
     public SessionService Sessions => new(Tokens, Customers.Object, [new FakePermissions()]);
-    public LoginHandler Login => new(Db, Sessions, Clock);
+    public LoginHandler Login => new(Db, Sessions);
     public RefreshSessionHandler Refresh => new(Db, Tokens, Sessions, Revocations, Microsoft.Extensions.Logging.Abstractions.NullLogger<RefreshSessionHandler>.Instance);
     public LogoutHandler Logout => new(Tokens, Revocations, Microsoft.Extensions.Options.Options.Create(Jwt), Clock,
         Microsoft.Extensions.Logging.Abstractions.NullLogger<LogoutHandler>.Instance);
@@ -83,7 +83,7 @@ internal sealed class IdentityFixture : IAsyncDisposable
             new("shipments.create", "Tạo", SystemRoles.Customer),
             new(IdentityPermissions.ManageStaff, "Quản lý nhân viên", SystemRoles.Customer),
             new(IdentityPermissions.MyTracking, "MyTracking", SystemRoles.Customer),
-            new(IdentityPermissions.Feedback, "Gửi góp ý", SystemRoles.Customer),
+            new(IdentityPermissions.Troubles, "Hỗ trợ & sự cố", SystemRoles.Customer),
             new("internal.only", "Không cấp cho khách")
         ];
     }
@@ -109,7 +109,7 @@ public class AuthHandlerTests
         Assert.True(result.IsSuccess);
         var s = result.Value;
         Assert.Equal(("SaigonbayHN", "SGB EXPRESS HN", "Đức Anh"), (s.User.CustomerCode, s.User.CompanyName, s.User.ContactName));
-        Assert.Equal(["account.feedback", "account.mytracking", "account.staff", "shipments.create", "shipments.view"], s.User.Permissions);
+        Assert.Equal(["account.mytracking", "account.staff", "account.troubles", "shipments.create", "shipments.view"], s.User.Permissions);
         Assert.True(s.User.IsAdmin);
         Assert.True(s.IsPersistent);
 

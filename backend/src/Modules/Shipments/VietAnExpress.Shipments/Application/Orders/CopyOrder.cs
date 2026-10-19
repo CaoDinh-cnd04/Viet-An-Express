@@ -23,16 +23,6 @@ internal sealed class CopyOrderHandler(ShipmentsDbContext db, OrderAccess access
         var order = await orders.OrderByDescending(o => o.Id).FirstOrDefaultAsync(ct);
         if (order is null) return OrderErrors.NotFound(q.Bill);
 
-        // Check access to the actual order before reading an archived draft (which is soft deleted).
-        if (order.OrderNumber is { } orderNumber)
-        {
-            var archived = await db.OrderDrafts.IgnoreQueryFilters().AsNoTracking()
-                .Where(d => d.CustomerId == scope.CustomerId && d.PrintedOrderNumber == orderNumber)
-                .OrderByDescending(d => d.CreatedAt).Select(d => d.PayloadJson).FirstOrDefaultAsync(ct);
-            var form = OrderCopy.TryReadForm(archived);
-            if (form is { } original) return original;
-        }
-
         var id = order.Id is > 0 and <= int.MaxValue ? (int)order.Id : 0;
         var packages = await db.LegacyPackageLines.AsNoTracking().Where(x => x.OrderId == id).OrderBy(x => x.Id).ToListAsync(ct);
         var items = await db.LegacyInvoiceLines.AsNoTracking().Where(x => x.OrderId == id).OrderBy(x => x.Id).ToListAsync(ct);
@@ -42,21 +32,6 @@ internal sealed class CopyOrderHandler(ShipmentsDbContext db, OrderAccess access
 
 internal static class OrderCopy
 {
-    public static JsonElement? TryReadForm(string? json)
-    {
-        if (string.IsNullOrWhiteSpace(json)) return null;
-        try
-        {
-            using var doc = JsonDocument.Parse(json);
-            var root = doc.RootElement;
-            if (root.ValueKind != JsonValueKind.Object) return null;
-            foreach (var name in new[] { "shipper", "receiver", "service", "shipment" })
-                if (!root.TryGetProperty(name, out var part) || part.ValueKind != JsonValueKind.Object) return null;
-            return root.Clone(); // Preserve all original form fields, including addons and goods.multi.
-        }
-        catch (JsonException) { return null; }
-    }
-
     private static string S(string? v) => v?.Trim() ?? "";
     private static string N(decimal? v) => v?.ToString("0.############################", CultureInfo.InvariantCulture) ?? "";
     public static OrderPayload FromLegacy(LegacyOrder o, IReadOnlyList<LegacyPackageLine> packages, IReadOnlyList<LegacyInvoiceLine> items)
@@ -70,7 +45,7 @@ internal static class OrderCopy
             {
                 Company = S(o.SenderName), OriginalShipper = S(o.ForwarderShipperName), Contact = S(o.SenderContactName),
                 Tel = S(o.SenderPhone), Address = S(o.SenderAddress), Email = S(o.SenderEmail), TaxId = S(o.SenderTax),
-                Country = "Vietnam", Branch = VaBillCode.BranchOf(o.VaBill) ?? "TP.HCM"
+                Country = "Vietnam", Branch = VaBillCode.BranchOf(o.VaBill) ?? VaBillCode.BranchOfPrefix(o.VaBill) ?? "TP.HCM"
             },
             Receiver = new()
             {

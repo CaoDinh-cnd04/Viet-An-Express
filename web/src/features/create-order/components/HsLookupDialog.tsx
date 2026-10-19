@@ -5,22 +5,23 @@ import { cx } from '@/shared/lib/cx';
 import { useCopyToClipboard } from '@/shared/lib/useCopyToClipboard';
 import { Button, Icon, Modal } from '@/shared/ui';
 import { useCategories, useHsLookup, useProductLibrary, useRecentInvoices, type HsLookupItem } from '../api';
-import { formatHs, HS_COUNTRIES, hs6Of, type HsCountry } from '../lib/hs-lookup';
+import { formatHs, groupByHs6, HS_COUNTRIES, hs6Of, type HsCountry } from '../lib/hs-lookup';
 import { searchHs } from '../lib/quick-lookup';
 import styles from './HsLookupDialog.module.css';
 
 type Mode = 'verified' | 'catalog';
 
 /**
- * Popup tra mã HS theo nước nhập khẩu (mở từ khung Hỗ trợ khách hàng):
- * - "Mặt hàng đã xác minh": mặt hàng Việt An đã gửi thực tế, kèm HS6 + mã đầy đủ của nước nhập khẩu và mô tả dòng mã.
- * - "Tra danh mục mã": tra biểu thuế của nước đó theo tên / số.
+ * Popup tra mã HS theo nước nhập khẩu (mở từ khung Hỗ trợ khách hàng), dữ liệu dbo.Catalog_HsCode:
+ * - "Tra danh mục mã" (mặc định): tra toàn bộ biểu thuế của nước đó theo tên / số.
+ * - "Mặt hàng đã xác minh": chỉ mã Việt An đã rà soát từ hàng gửi thực tế.
+ * Kết quả gom theo HS6; đường dẫn biểu thuế chung của nhóm ở tiêu đề, phần riêng ở từng dòng mã.
  * Máy chủ chưa có dữ liệu theo nước → tạm hiện HS6 từ nhóm hàng, thư viện mặt hàng, invoice gần đây (dữ liệu thật đang có).
  */
 export function HsLookupDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { t } = useI18n();
   const copy = useCopyToClipboard();
-  const [mode, setMode] = useState<Mode>('verified');
+  const [mode, setMode] = useState<Mode>('catalog');
   const [country, setCountry] = useState<HsCountry>('US');
   const [input, setInput] = useState('');
   const [query, setQuery] = useState('');
@@ -44,6 +45,7 @@ export function HsLookupDialog({ open, onClose }: { open: boolean; onClose: () =
   );
 
   const items = fallback ? fallbackItems : lookup.data ?? [];
+  const groups = useMemo(() => groupByHs6(items), [items]);
   const meta = HS_COUNTRIES.find(c => c.code === country)!;
   const search = () => setQuery(input.trim());
 
@@ -51,12 +53,12 @@ export function HsLookupDialog({ open, onClose }: { open: boolean; onClose: () =
     <Modal open={open} title="Tra cứu mã HS" size="full" onClose={onClose}>
       <div className={styles.wrap}>
         <div className={styles.intro}>
-          <h3>{t('Tra mã HS đã xác minh theo nước nhập khẩu')}</h3>
-          <p>{t('Mã 10 số cho Hoa Kỳ (HTSUS), Anh (UK Tariff) và 8/10 số cho Úc (ABF), kèm mô tả dòng mã. Dữ liệu do Việt An Express rà soát từ các mặt hàng đã gửi thực tế.')}</p>
+          <h3>{t('Tra mã HS theo nước nhập khẩu')}</h3>
+          <p>{t('Mã 10 số cho Hoa Kỳ (HTSUS), Anh (UK Tariff) và 8/10 số cho Úc (ABF), kèm vị trí dòng mã trong biểu thuế. Gõ tên hàng tiếng Anh (có thể không dấu) hoặc vài số đầu của mã.')}</p>
         </div>
 
         <div className={styles.modes} role="tablist">
-          {(['verified', 'catalog'] as const).map(m => (
+          {(['catalog', 'verified'] as const).map(m => (
             <button key={m} type="button" role="tab" aria-selected={mode === m} className={cx(styles.mode, mode === m && styles.modeOn)} onClick={() => setMode(m)}>
               {t(m === 'verified' ? 'Mặt hàng đã xác minh' : 'Tra danh mục mã')}
             </button>
@@ -72,7 +74,7 @@ export function HsLookupDialog({ open, onClose }: { open: boolean; onClose: () =
           </label>
           <label className={cx(styles.field, styles.grow)}>
             <span>{t(mode === 'verified' ? 'Tên hàng (tiếng Việt/Anh) hoặc mã số' : 'Mã số hoặc mô tả trong biểu thuế')}</span>
-            <input autoFocus value={input} onChange={e => setInput(e.target.value)} placeholder={t('VD: xoài sấy, dried mango, 0804')} />
+            <input autoFocus value={input} onChange={e => setInput(e.target.value)} placeholder={t('VD: dried mango, t-shirt, 0804, 6109.10')} />
           </label>
           <Button type="submit" variant="primary" disabled={input.trim().length < 2}>
             <Icon name="search" size={15} /> {t('Tra cứu')}
@@ -80,7 +82,7 @@ export function HsLookupDialog({ open, onClose }: { open: boolean; onClose: () =
         </form>
 
         <div className={styles.notice}>
-          <p><b>{t('Lưu ý:')}</b> {t('Mã HS dưới đây chỉ để tham khảo, lấy từ các lô Việt An Express đã gửi. Cùng một tên hàng nhưng khác chất liệu, công dụng hay cách đóng gói có thể ra mã khác. Bạn cần tự đối chiếu với hàng thực tế và chịu trách nhiệm về mã khai trên tờ khai. Chưa chắc chắn, hãy hỏi nhân viên trước khi khai.')}</p>
+          <p><b>{t('Lưu ý:')}</b> {t('Mã HS dưới đây lấy từ biểu thuế của nước nhập khẩu, chỉ để tham khảo. Cùng một tên hàng nhưng khác chất liệu, công dụng hay cách đóng gói có thể ra mã khác. Bạn cần tự đối chiếu với hàng thực tế và chịu trách nhiệm về mã khai trên tờ khai. Chưa chắc chắn, hãy hỏi nhân viên trước khi khai.')}</p>
           <p><b>{t('Thuế nhập khẩu')}</b> {t('không hiển thị ở đây vì còn phụ thuộc xuất xứ, giá trị lô và quy định từng thời điểm. Hãy hỏi nhân viên để được tư vấn trước khi gửi.')}</p>
         </div>
 
@@ -92,35 +94,50 @@ export function HsLookupDialog({ open, onClose }: { open: boolean; onClose: () =
           {lookup.isFetching && <p className={styles.muted}>{t('Đang tra cứu…')}</p>}
           {lookup.isError && !fallback && <p className={styles.muted}>{t('Không tra cứu được, vui lòng thử lại.')}</p>}
           {query && !lookup.isFetching && (fallback || lookup.isSuccess) && !items.length && (
-            <p className={styles.muted}>{t('Không tìm thấy mặt hàng phù hợp. Hãy thử tên khác hoặc hỏi nhân viên Việt An.')}</p>
+            mode === 'verified' && !fallback ? (
+              <p className={styles.muted}>
+                {t('Chưa có mặt hàng đã xác minh phù hợp.')}{' '}
+                <button type="button" className={styles.linkButton} onClick={() => setMode('catalog')}>{t('Tra trong toàn bộ biểu thuế')}</button>
+              </p>
+            ) : (
+              <p className={styles.muted}>{t('Không tìm thấy mặt hàng phù hợp. Hãy thử tên khác hoặc hỏi nhân viên Việt An.')}</p>
+            )
           )}
-          {items.map((it, i) => (
-            <article key={`${it.hs6}|${it.nameEn}|${i}`} className={styles.card}>
-              <header>
-                <h4>{it.nameVi || it.nameEn}</h4>
-                {it.nameVi && it.nameEn && <p>{it.nameEn}</p>}
+          {items.length > 0 && <p className={styles.count}>{t('{n} mã trong {g} nhóm HS6', { n: items.length, g: groups.length })}</p>}
+          {groups.map(g => (
+            <section key={g.hs6} className={styles.group}>
+              <header className={styles.groupHead}>
+                <span className={styles.label}>HS6</span>
+                <code className={styles.code}>{g.hs6}</code>
+                <button type="button" className={styles.copy} onClick={() => void copy(g.hs6, t('Đã sao chép HS {hs}', { hs: g.hs6 }))}><Icon name="copy" size={13} /> {t('Chép')}</button>
+                {g.path.length > 0 && <p className={styles.path}>{g.path.join(' › ')}</p>}
               </header>
-              <dl className={styles.codes}>
-                <dt>HS6</dt>
-                <dd>
-                  <code>{formatHs(it.hs6)}</code>
-                  <button type="button" onClick={() => void copy(formatHs(it.hs6), t('Đã sao chép HS {hs}', { hs: formatHs(it.hs6) }))}><Icon name="copy" size={13} /> {t('Chép')}</button>
-                </dd>
-                <dt>{meta.tariff}</dt>
-                <dd>
-                  {it.nationalCode ? (
-                    <>
-                      <code>{formatHs(it.nationalCode)}</code>
-                      <button type="button" onClick={() => void copy(formatHs(it.nationalCode), t('Đã sao chép HS {hs}', { hs: formatHs(it.nationalCode) }))}><Icon name="copy" size={13} /> {t('Chép')}</button>
-                      {it.nationalDescription && <small>{it.nationalDescription}</small>}
-                    </>
-                  ) : (
-                    <span className={styles.muted}>{t('Chưa có mã {digits} của {country}', { digits: t(meta.digits), country: t(meta.label) })}</span>
-                  )}
-                </dd>
-              </dl>
-              {it.note && <p className={styles.note}>{it.note}</p>}
-            </article>
+              <ul className={styles.lines}>
+                {g.lines.map(({ item: it, rest }, i) => (
+                  <li key={`${it.nationalCode ?? ''}|${it.nameEn}|${i}`} className={styles.line}>
+                    <div className={styles.lineText}>
+                      {rest.length > 0 && <small className={styles.path}>{rest.join(' › ')}</small>}
+                      <strong>{it.nameVi || it.nameEn}</strong>
+                      {it.nameVi && it.nameEn && <span className={styles.sub}>{it.nameEn}</span>}
+                      {it.isVerified && <span className={styles.verified}><Icon name="check" size={12} /> {t('Việt An đã xác minh')}</span>}
+                      {it.note && <p className={styles.note}>{it.note}</p>}
+                    </div>
+                    <div className={styles.lineCode}>
+                      <span className={styles.label}>{meta.tariff}</span>
+                      {it.nationalCode ? (
+                        <>
+                          <code className={styles.code}>{formatHs(it.nationalCode)}</code>
+                          <button type="button" className={styles.copy} onClick={() => void copy(formatHs(it.nationalCode), t('Đã sao chép HS {hs}', { hs: formatHs(it.nationalCode) }))}><Icon name="copy" size={13} /> {t('Chép')}</button>
+                        </>
+                      ) : (
+                        <span className={styles.muted}>{t('Chưa có mã {digits} của {country}', { digits: t(meta.digits), country: t(meta.label) })}</span>
+                      )}
+                      {it.unit && <small className={styles.unit}>{t('Đơn vị tính: {unit}', { unit: it.unit })}</small>}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </section>
           ))}
         </div>
       </div>

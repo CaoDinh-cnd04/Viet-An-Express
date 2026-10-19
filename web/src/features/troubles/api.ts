@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { getErrorMessage, http, type ListResponse } from '@/shared/api/http';
 import { useToast } from '@/shared/ui';
-import type { NewTrouble, TroubleStatus, TroubleTicket } from './types';
+import type { NewTrouble, TroubleTicket } from './types';
 
 export const troubleKeys = {
   all: ['troubles'] as const,
@@ -15,27 +15,19 @@ export function useTroubles() {
   });
 }
 
-/** Báo sự cố mới cho một đơn hàng. */
+/** Gửi yêu cầu mới (sự cố / hỗ trợ / góp ý) — multipart/form-data để kèm tệp. */
 export function useCreateTrouble() {
   const qc = useQueryClient();
   const toast = useToast();
   return useMutation({
-    mutationFn: (body: NewTrouble) => http.post<{ message: string; data: TroubleTicket }>('/troubles', body),
-    onSuccess: res => {
-      toast.show(res.message, 'success');
-      void qc.invalidateQueries({ queryKey: troubleKeys.all });
+    mutationFn: ({ file, ...fields }: NewTrouble) => {
+      const body = new FormData();
+      Object.entries(fields).forEach(([k, v]) => {
+        if (v !== undefined && v !== null && v !== '') body.append(k, String(v));
+      });
+      if (file) body.append('file', file);
+      return http.post<{ message: string; data: TroubleTicket }>('/troubles', body);
     },
-    onError: e => toast.show(getErrorMessage(e), 'error')
-  });
-}
-
-/** Khách gửi thêm thông tin / nhắc CS; có thể kèm đổi trạng thái (VD đóng ticket). */
-export function useReplyTrouble() {
-  const qc = useQueryClient();
-  const toast = useToast();
-  return useMutation({
-    mutationFn: ({ id, reply, status }: { id: string; reply: string; status?: TroubleStatus }) =>
-      http.post<{ message: string; data: TroubleTicket }>(`/troubles/${encodeURIComponent(id)}/reply`, { reply, status }),
     onSuccess: res => {
       toast.show(res.message, 'success');
       void qc.invalidateQueries({ queryKey: troubleKeys.all });

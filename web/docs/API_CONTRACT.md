@@ -11,7 +11,7 @@ Backend mới (SQL Server) chỉ cần làm đúng các hợp đồng này là f
 
 | Mục | Quy ước |
 |---|---|
-| Định dạng | JSON (`Content-Type: application/json`). Riêng `POST /support/feedback` là `multipart/form-data`. |
+| Định dạng | JSON (`Content-Type: application/json`). Riêng `POST /troubles` là `multipart/form-data`. |
 | Danh sách | `{ "success": true, "count": number, "data": T[] }` |
 | Một bản ghi | `{ "success": true, "data": T }` |
 | Thao tác ghi | `{ "success": true, "message": "Câu thông báo tiếng Việt" , "data"?: T }` — frontend hiện `message` lên toast. |
@@ -123,11 +123,11 @@ Phản hồi:
 
 | Method | Path | Trạng thái | Mô tả |
 |---|---|---|---|
-| GET | `/drafts` | Có sẵn | Danh sách đơn nháp & chưa in |
-| POST | `/drafts` | Có sẵn | Lưu đơn mới (nút "Tạo đơn hàng" / "Lưu nháp") |
-| PUT | `/drafts/:id` | **Mới** | Cập nhật đơn nháp đang sửa (mở từ nút "Sửa") |
-| POST | `/drafts/:id/print` | Có sẵn | In & cấp mã bill → đơn khóa, chuyển sang Đơn hàng |
-| DELETE | `/drafts/:id` | Có sẵn | Xóa đơn nháp |
+| GET | `/drafts` | Có sẵn | Danh sách đơn nháp & chưa in = dòng `dbo.MaVanDon` có `Status = 0` (tối đa 500, mới trước). `id` = `MaVanDon.ID`; `stt` backend tự tính: `ready` khi đủ người gửi, người nhận (tên, nước, địa chỉ 1), dịch vụ, cân > 0, còn lại `draft`; `payload` dựng lại từ MaVanDon + 2 bảng chi tiết (thông tin không có cột như dịch vụ cộng thêm, DDU/DDP không giữ); `date` dạng `dd/MM/yyyy` |
+| POST | `/drafts` | Có sẵn | Lưu đơn mới (nút "Tạo đơn hàng" / "Lưu nháp"): ghi `dbo.MaVanDon` `Status = 0`, `OrderNumber` NULL, `VA_Bill` = tiền tố chi nhánh (vd `VAHN`), kiện / dòng hàng vào 2 bảng chi tiết |
+| PUT | `/drafts/:id` | **Mới** | Cập nhật đơn nháp đang sửa (mở từ nút "Sửa") — ghi đè dòng MaVanDon và kiện / dòng hàng; giữ nguyên người tạo. Đơn vừa được in / xóa ở nơi khác → 409 `DRAFT_CHANGED` |
+| POST | `/drafts/:id/print` | Có sẵn | In & cấp mã bill cho chính dòng đó: cấp `OrderNumber`, `VA_Bill` đầy đủ, `Status = 1`, ghi VSVX → đơn khóa, chuyển sang Đơn hàng. Chưa đủ thông tin → 422 `DRAFT_NOT_READY`. Khóa dòng (UPDLOCK) trước khi cấp số: 2 người in cùng lúc → người sau nhận 409 `DRAFT_CHANGED`, không cấp số thứ 2 |
+| DELETE | `/drafts/:id` | Có sẵn | Xóa hẳn đơn chưa in khỏi `dbo.MaVanDon` cùng kiện, dòng hàng. Đơn vừa được in ở nơi khác → 409 `DRAFT_CHANGED` (không xóa vận đơn đã cấp bill) |
 
 Body POST / PUT (`NewDraft`):
 
@@ -170,7 +170,7 @@ Khi cấp bill, hai mã được lưu vào `dbo.MaVanDon.ConsigneeIossNo` / `Con
 | DELETE | `/catalog/products/:id` | **Mới** | Xóa mặt hàng khỏi thư viện — chỉ ẩn (`Da_Xoa = 1`), dòng hàng trong đơn cũ giữ nguyên. |
 | POST | `/catalog/products` | Không làm | Mặt hàng tự vào thư viện khi đơn được cấp bill (ghi `MaVanDon_ChiTietHang`) — bảng không có cột khách nên không lưu riêng được |
 | POST | `/invoices/import` | **Mới** | Đọc file Excel mẫu invoice (`/templates/Mau_Import_Invoice.xlsx`, multipart `file` ≤ 5 MB) → `{ data: { items: InvoiceItem[], skipped: string[] } }`; không lưu. Cột: STT, Product_en (bắt buộc, ≤ 170), Product_vn (≤ 170), Description = nhà sản xuất (≤ 300), Country (≤ 50, trống = VN), HS_Code, Quantyti (> 0, số nguyên với PCS/SET/BOX/BAG), Unit (trống = PCS), Unit_Price (≤ 2 số lẻ); dòng 2 chú thích bỏ qua; tối đa 49 dòng. Dòng lỗi vào `skipped` dạng "Dòng 5: lý do". Sai mẫu / không đọc được → 400 |
-| GET | `/catalog/hs-lookup?country=US&q=&mode=verified` | **Mới — chờ dữ liệu** | Tra mã HS theo nước nhập khẩu (popup "Tra mã HS" ở trang tạo đơn). `country`: `US` (HTSUS 10 số) \| `GB` (UK Tariff 10 số) \| `AU` (ABF 8/10 số); `mode`: `verified` (mặt hàng Việt An đã gửi thực tế, đã rà soát) \| `catalog` (tra danh mục mã của biểu thuế nước đó); `q` ≥ 2 ký tự (tên Việt/Anh hoặc số). → `{ data: HsLookupItem[] }` = `{ nameVi, nameEn, hs6, nationalCode?, nationalDescription?, note? }`. Bảng dữ liệu do người dùng cung cấp (cần duyệt nếu tạo bảng mới). Chưa có endpoint (404/501) → popup tạm hiện HS6 từ nhóm hàng / thư viện mặt hàng / invoice gần đây |
+| GET | `/catalog/hs-lookup?country=US&q=&mode=catalog` | Có sẵn | Tra mã HS theo nước nhập khẩu từ `dbo.Catalog_HsCode` (bảng người dùng tạo và nạp dữ liệu, portal chỉ đọc). `country`: `US` (HTSUS) \| `GB` (UK Tariff, khớp cả dữ liệu ghi `UK`) \| `AU` (ABF); `q` ≥ 2 ký tự: toàn số (cho phép dấu chấm / khoảng trắng) → so đầu `NationalCode`, còn lại → mọi từ phải có trong `NameVi` / `NameEn` / `NationalDescription` (không phân biệt hoa thường và dấu: `xoai say` khớp `Xoài sấy`); `mode`: `catalog` (toàn biểu thuế) \| `verified` (mặc định, chỉ `IsVerified = 1`). → `{ data: [{ nameVi, nameEn, hs6, nationalCode, nationalDescription, unit, note, isVerified, path: string[] }] }`, tối đa 50 dòng, đã xác minh trước rồi theo mã. `path` = các cấp cha tách từ mô tả US / AU dạng `A > B > tên dòng`; chữ đã bỏ thẻ HTML / `&#160;`. Dữ liệu AU lấy về có lỗi: mã lẫn `?` (`?0805.40.00.26`) và đuôi `.160` được làm sạch khi trả; dòng không có mã HS (chú thích lấy nhầm) bị ẩn; đơn vị `..` = không có. Không trả thuế suất (`DutyRate`). Sai nước / từ khóa quá ngắn → `data: []` |
 | GET | `/invoices/recent?limit=20` | Có sẵn | Invoice đơn gần đây (≤ 50, từ `MaVanDon_ChiTietHang`) để chép lại: `{ bill, cnee, date, currency, items: SavedProduct[] }[]` |
 | GET | `/geo/countries` | Có sẵn | Quốc gia + mã điện thoại: `[{ code: "US", name: "United States", dialCode: "+1" }]` (backend lấy từ world-countries, cache 1 ngày) |
 | GET | `/geo/postal/:countryCode/:postalCode` | Có sẵn | Mã bưu chính → `{ countryCode, postalCode, city, state, stateCode, places: [{ city, state, stateCode, area }] }` — `city/state/stateCode` = nơi đầu tiên; `places` = mọi nơi khác nhau dùng chung mã (tối đa 20): nhiều thành phố thì form không tự điền, khách chọn; `area` = khu phố / bưu cục nhỏ hơn thành phố (Mexico: colonia, thành phố = municipio adminName2; Ấn Độ: locality, thành phố adminName3), null ở nước khác (backend tra GeoNames postalCodeLookupJSON maxRows=30, ~100 nước, nhận cả mã đầy đủ như `SW1A 1AA`; tài khoản GeoNames chỉ ở cấu hình backend `GeoNames:Username`); không tìm thấy / chưa hỗ trợ / nguồn tạm lỗi → 404 |
@@ -250,13 +250,12 @@ Chủ shop thu hồi ủy quyền → kết nối chuyển `status: "revoked"` (
 
 ---
 
-## 6. Sự cố, Thông báo
+## 6. Hỗ trợ & sự cố, Thông báo
 
 | Method | Path | Trạng thái | Mô tả |
 |---|---|---|---|
-| GET | `/troubles` | **Mới** | `{ data: TroubleTicket[] }` — 200 sự cố cập nhật gần nhất; tài khoản con chỉ thấy sự cố mình báo. `TroubleTicket` = `{ id: "TRB-12", bill, cnee, ct, type, lv, desc, req, contact, date, status, reply (phản hồi gần nhất của CS), messages: [{ from: "customer" \| "vietan", author, message, date, status? }] }`. Lưu `dbo.SuCo` + `dbo.SuCo_TraoDoi`. Quyền `account.troubles` (tài khoản con luôn có) |
-| POST | `/troubles` | **Mới** | `{ bill, cnee?, ct?, type, lv: "low"\|"mid"\|"high", desc (10–4000), req, contact }` → `{ data: TroubleTicket, message }`. `bill` phải là vận đơn của khách (VA Bill, số VA hoặc mã hãng; không có → 400 `TROUBLE_BILL_NOT_FOUND`); `cnee` / `ct` trống thì lấy từ vận đơn. Gửi email báo về hộp thư nhận (ở nền) |
-| POST | `/troubles/:id/reply` | **Mới** | `{ reply, status? }` — khách bổ sung thông tin / nhắc CS / đóng ticket (`status` chỉ nhận `"done"`). Đang `waitc` thì chuyển lại `doing`; sự cố đã `done` → 422 `TROUBLE_CLOSED` |
+| GET | `/troubles` | **Mới** | `{ data: TroubleTicket[] }` — 200 yêu cầu cập nhật gần nhất; tài khoản con chỉ thấy yêu cầu mình gửi. `TroubleTicket` = `{ id: "TRB-12", kind: "su_co" \| "ho_tro" \| "gop_y", bill (trống nếu không phải sự cố), cnee, ct, type (loại sự cố / chủ đề), subject (tiêu đề yêu cầu hỗ trợ, null), lv, desc, req, contact, date, status, updatedAt }`. Lưu ở bảng cũ `dbo.TContact` (`FormType` "Portal - Sự cố" / "Portal - Hỗ trợ" / "Portal - Góp ý", `Status` 0 mới · 1 đang xử lý · 2 chờ khách · 3 đã xử lý) để phần mềm cũ hiện và xử lý. Không có trao đổi qua lại. Quyền `account.troubles` (tài khoản con luôn có) |
+| POST | `/troubles` | **Mới** | `multipart/form-data`: `kind` (`su_co` mặc định / `ho_tro` / `gop_y`), `bill`, `cnee?`, `ct?`, `type`, `subject`, `lv` (`low`\|`mid`\|`high`), `desc` (10–4000), `req`, `contact`, `file?` (≤ 10 MB: ảnh, PDF, Excel, CSV, Word; chỉ gửi kèm email về hộp thư Việt An, không lưu database — `Content` ghi thêm tên tệp) → `{ data: TroubleTicket, message }`. **Sự cố:** bắt buộc `bill` (vận đơn của khách — VA Bill, số VA hoặc mã hãng; không có → 400 `TROUBLE_BILL_NOT_FOUND`; `cnee` / `ct` trống thì lấy từ vận đơn), `type`, `lv`, `req`, `contact`. **Hỗ trợ:** bắt buộc `type` (chủ đề), `subject` (5–200), `contact`. **Góp ý:** chỉ cần `desc`. `req` trống → tên đăng nhập; `lv` trống → `low`. Gửi email báo về hộp thư nhận (ở nền, kèm tệp). Sửa thông tin người gửi = yêu cầu hỗ trợ chủ đề "Sửa thông tin người gửi" (CS sửa ở phần mềm cũ) |
 | GET | `/notifications` | **Mới** | 50 thông báo mới nhất → `{ data: [{ id, imp, unread, title, date: "dd/MM/yyyy HH:mm", body, link }], unreadCount }` (`link`: nút "Xem tại đây", null nếu không có) — `imp: true` hiện popup khi mở portal. Gồm thông báo chung (`CustomerID` trống) và thông báo riêng của khách (vd phản hồi sự cố). Quyền `account.notifications` (tài khoản con luôn có). Đã đọc lưu riêng từng tài khoản (chính / con) ở `dbo.ThongBao_DaDoc` |
 | POST | `/notifications/:id/read` | **Mới** | Đánh dấu đã đọc → `{ message }`; không có → 404 `NOTIFICATION_NOT_FOUND` |
 | POST | `/notifications/mark-all-read` | **Mới** | Đánh dấu đã đọc 50 thông báo mới nhất → `{ message }` |
@@ -271,14 +270,14 @@ Chủ shop thu hồi ủy quyền → kết nối chuyển `status: "revoked"` (
 
 - **Tài khoản chính** = login ở `dbo.TCustomer` (`accountType: "customer"`, `isAdmin: true`): nhận mọi quyền của khách,
   gồm 2 quyền chỉ admin có: `account.staff` (quản lý nhân viên) và `account.mytracking` (cấu hình MyTracking).
-- **Tài khoản con** (`accountType: "staff"`, `isAdmin: false`) lưu ở bảng tạm `dbo.TaiKhoanNhanVien` (mật khẩu băm PBKDF2):
+- **Tài khoản con** (`accountType: "staff"`, `isAdmin: false`) là người liên hệ có tên đăng nhập trong bảng cũ `dbo.TCustomer_NguoiLienLac` (`TinhCach` = tên đăng nhập, `Mo_Ta` = mật khẩu lưu như hệ thống cũ; tài khoản tạo trước khi chuyển bảng còn mã băm PBKDF2 vẫn đăng nhập được; quyền ở cột `Quyen` portal thêm; `DELETE` chỉ gỡ đăng nhập, giữ dòng người liên hệ):
   đăng nhập cùng `POST /auth/login` (thử `dbo.TCustomer` trước, không khớp thì thử tài khoản con), JWT có thêm claim `staff_id`,
   `customer_id` là khách cha, nhân viên chỉ có các quyền admin đã chọn.
   `SessionUser` của tài khoản con: `companyName`, `address`, `taxCode` của công ty; `contactName` = họ tên nhân viên,
   `phone` / `email` = của nhân viên (null nếu chưa khai, không lấy của công ty) — form Tạo đơn điền sẵn người gửi theo đó.
 - **Phạm vi đơn của nhân viên:** chỉ thấy vận đơn và đơn nháp **do mình tạo** (danh sách, chi tiết, hành trình, in, xuất Excel,
-  thư viện mặt hàng). Người tạo vận đơn lưu ở bảng phụ `dbo.VanDonNguoiTao` (`MaVanDon_ID → StaffID`, không đổi `dbo.MaVanDon`),
-  nháp lưu `shipments.OrderDrafts.CreatedByStaffId`; in từ nháp thì vận đơn thuộc người tạo nháp (admin in hộ vẫn là đơn của nhân viên).
+  thư viện mặt hàng). Người tạo vận đơn lưu ở cột có sẵn `dbo.MaVanDon.Customer_Staff_ID` (= `TCustomer_NguoiLienLac.ID`; 0 = tài khoản chính / hệ thống cũ),
+  nháp cũng là dòng `dbo.MaVanDon` nên dùng chung cột này, sửa nháp không đổi người tạo; in từ nháp thì vận đơn thuộc người tạo nháp (admin in hộ vẫn là đơn của nhân viên).
   Quyền `shipments.view-all` ("Xem toàn bộ đơn của công ty", admin tick cho từng người) → thấy mọi đơn của công ty.
   Tài khoản chính luôn thấy tất cả.
 - **Quyền E-commerce:** `ecommerce.view` (xem đơn & cửa hàng), `ecommerce.orders` (nhập tay, nhập CSV, sửa, xác nhận / trả về, xóa, đồng bộ),
@@ -293,21 +292,22 @@ Chủ shop thu hồi ủy quyền → kết nối chuyển `status: "revoked"` (
 
 | Method | Path | Trạng thái | Mô tả |
 |---|---|---|---|
-| GET | `/account/staff` | Có sẵn | Quyền `account.staff`. `{ data: StaffAccount[] }` của khách đang đăng nhập. `permissions` chỉ gồm quyền tài khoản chính đã chọn (không có quyền tài khoản con luôn có như `account.feedback`; gửi kèm khi tạo / sửa thì backend bỏ qua) |
+| GET | `/account/staff` | Có sẵn | Quyền `account.staff`. `{ data: StaffAccount[] }` của khách đang đăng nhập. `permissions` chỉ gồm quyền tài khoản chính đã chọn (không có quyền tài khoản con luôn có như `account.troubles`; gửi kèm khi tạo / sửa thì backend bỏ qua) |
 | GET | `/account/staff/permissions` | Có sẵn | `{ data: [{ code, description }] }` — quyền admin cấp được cho nhân viên (mọi quyền của khách trừ `account.*`) |
-| POST | `/account/staff` | Có sẵn | `{ userName, password, fullName, email?, phone?, permissions: string[] }` → `{ data: StaffAccount, message }`. `userName` 3–50 ký tự `[A-Za-z0-9._@-]`; mật khẩu ≥ 8 ký tự có chữ và số. Trùng tên → 409 `USERNAME_TAKEN`; quyền không cấp được → 400 `UNKNOWN_PERMISSION`; tối đa 100 tài khoản / khách |
-| PUT | `/account/staff/:id` | Có sẵn | `{ fullName, email?, phone?, permissions, active }` → `{ data: StaffAccount, message }` — `active: false` = khóa |
+| POST | `/account/staff` | Có sẵn | `{ userName, password, fullName, email?, phone?, phone2?, email2?, permissions: string[] }` → `{ data: StaffAccount, message }`. `userName` 3–50 ký tự `[A-Za-z0-9._@-]`; mật khẩu ≥ 8 ký tự có chữ và số. Trùng tên → 409 `USERNAME_TAKEN`; quyền không cấp được → 400 `UNKNOWN_PERMISSION`; tối đa 100 tài khoản / khách |
+| PUT | `/account/staff/:id` | Có sẵn | `{ fullName, email?, phone?, phone2?, email2?, permissions, active }` → `{ data: StaffAccount, message }` — `active: false` = khóa; gửi đủ hồ sơ (ô bỏ trống = xóa giá trị) |
 | POST | `/account/staff/:id/reset-password` | Có sẵn | `{ newPassword }` → `{ message }` |
 | DELETE | `/account/staff/:id` | Có sẵn | `{ message }` — đơn nhân viên đã tạo vẫn thuộc khách cha |
 
-`StaffAccount`: `{ id, userName, fullName, email?, phone?, permissions: string[], active, createdAt, lastLoginAt? }` (giờ Việt Nam, không offset).
+`StaffAccount`: `{ id, userName, fullName, email?, phone?, phone2?, email2?, permissions: string[], active, createdAt }` (giờ Việt Nam, không offset). Cột bảng cũ: `fullName` = `Ten`, `phone` / `phone2` = `Di_Dong` / `Di_Dong2`, `email` / `email2` = `Email` / `Email2`; `Chuc_Vu`, `Phong_Ban` ghi 0, `Gioi_Tinh` để NULL (portal không dùng).
 Tài khoản con gọi các endpoint trên → 403. Tài khoản con **không tự đổi mật khẩu**: `POST /auth/change-password` cần quyền `account.password` (chỉ tài khoản chính có, không cấp được cho nhân viên) → tài khoản con nhận 403; admin đặt lại qua `POST /account/staff/:id/reset-password`. Frontend ẩn mục Đổi mật khẩu theo quyền này.
 
 ### 7.2 MyTracking cá nhân
 
 Trang `/account/mytracking` (chỉ admin) cấu hình trang tra cứu mang thương hiệu của khách: tiêu đề, mô tả,
 tối đa 5 ảnh quảng cáo có link đích, tiêu đề ảnh (120 ký tự) và chữ nút (40 ký tự) tùy chọn,
-cùng 1 hình nền. Cấu hình lưu trên server (`dbo.MyTrackingCauHinh`, 1 dòng / khách, JSON ≤ 2 MB) cùng **đường dẫn**
+cùng 1 hình nền. Cấu hình lưu trên server trong `dbo.TCustomer_MyTracking` (1 dòng / khách) và
+`dbo.TCustomer_MyTracking_Banner` (1 dòng / ảnh, liên kết bằng `MyTrackingID`), dữ liệu API JSON ≤ 2 MB, cùng **đường dẫn**
 `slug` và trạng thái **xuất bản**. Đã xuất bản thì ai có link `/t/{slug}` cũng xem được và tra cứu vận đơn
 (`POST /public/tracking`); `?bills=MA1,MA2` mở sẵn kết quả. Nếu `GET /account/mytracking` trả 404/501 (backend cũ),
 frontend quay về lưu localStorage theo `customerCode` (key `mytracking-draft:{customerCode}`) như bản thử nghiệm.
@@ -315,10 +315,11 @@ frontend quay về lưu localStorage theo `customerCode` (key `mytracking-draft:
 | Method | Path | Trạng thái | Mô tả |
 |---|---|---|---|
 | GET | `/account/mytracking` | Có sẵn | Quyền `account.mytracking`. `{ data: { slug, published, config, updatedAt? } }` — chưa cấu hình: `config: null`, `slug` gợi ý theo mã khách |
-| PUT | `/account/mytracking` | Có sẵn | `{ slug, published, config }` → như GET + `message`. `slug` 3–60 ký tự `^[a-z0-9]+(-[a-z0-9]+)*$`; đã có khách khác dùng → 409 `SLUG_TAKEN`; `config` phải là object, ≤ 2 MB |
+| PUT | `/account/mytracking` | Có sẵn | `{ slug, published, config }` → như GET + `message`. `slug` 3–60 ký tự `^[a-z0-9]+(-[a-z0-9]+)*$`; đã có khách khác dùng → 409 `SLUG_TAKEN`; lần lưu đầu ở 2 tab cùng lúc → 409 `MYTRACKING_CHANGED`; `config` phải là object, ≤ 2 MB |
 | GET | `/public/mytracking/:slug` | Có sẵn | Không cần đăng nhập. `{ data: { slug, config } }` khi đã xuất bản; chưa xuất bản / không có → 404 |
 
-`config` theo `myTrackingSchema` (`features/mytracking/schema.ts`); backend lưu nguyên JSON, frontend kiểm tra lại bằng `parseConfig` khi đọc
+`config` theo `myTrackingSchema` (`features/mytracking/schema.ts`); backend tách các trường vào cột hiện có và ảnh vào bảng banner,
+giữ thuộc tính bổ sung trong `Cau_Hinh_Bo_Sung`, rồi tái dựng JSON cùng cấu trúc khi đọc. Frontend kiểm tra lại bằng `parseConfig` khi đọc
 (link chỉ nhận http/https, ảnh http/https hoặc data URL PNG/JPEG/WebP).
 Preview trong trang cấu hình hiển thị vùng chờ kết quả tra cứu, không gọi API tracking. Có logo, thông tin thương hiệu và các
 link mạng xã hội, chuyển Desktop / Mobile và cập nhật trực tiếp từ form. Ảnh JPG/JPEG/PNG/WebP
@@ -340,20 +341,12 @@ Liên hệ để trống thì không hiện nút trong preview. Cấu hình ản
 | Method | Path | Trạng thái | Mô tả |
 |---|---|---|---|
 | POST | `/auth/change-password` | **Mới** | `{ currentPassword, newPassword }` — sai mật khẩu hiện tại trả 400 + `message`. Quy tắc: ≥ 8 ký tự, có chữ và số. Ghi vào `dbo.TCustomer.Login_Password` (dạng như hệ thống cũ); các thiết bị khác phải đăng nhập lại |
-| GET | `/account/feedback` | **Mới** | Góp ý đã gửi (Tài khoản → Góp ý; tài khoản con chỉ thấy góp ý của mình, tối đa 50) → `[{ id, message, contact, rating, createdAt: "dd/MM/yyyy HH:mm", seen, images: [{ id, fileName, size }], survey: [{ id, question, answers: string[], note }] }]` (`rating` 1–5 hoặc null; `survey` rỗng nếu không trả lời khảo sát). Quyền `account.feedback` (tài khoản con luôn có) |
-| POST | `/account/feedback` | **Mới** | Lưu xong gửi email báo về hộp thư nhận (`Email:InboxAddress`, ở nền — lỗi email không làm hỏng việc gửi góp ý). `multipart/form-data`: `message` (≤ 4000; bắt buộc nếu không trả lời khảo sát), `contact?` (≤ 200), `rating?` (1–5 sao), `survey?` (chuỗi JSON `[{ id, question, answers, note? }]` — tối đa 30 câu, mỗi câu ≤ 10 phương án ≤ 200 ký tự, ghi chú ≤ 500; câu không chọn và không ghi chú bị bỏ; sai → 400 `FEEDBACK_SURVEY`; lưu `dbo.GopY.Khao_Sat`), `images` (0–5 ảnh JPG / PNG / WEBP / GIF, mỗi ảnh ≤ 5 MB; backend kiểm đầu file) → `{ data: FeedbackItem, message }`. Lưu dbo.GopY + dbo.GopY_HinhAnh |
-| DELETE | `/account/feedback/:id` | **Mới** | Ẩn góp ý khỏi danh sách khách (`dbo.GopY.Khach_Da_An = 1`), giữ nội dung và ảnh cho admin; tài khoản con chỉ ẩn góp ý mình gửi → `{ message }` |
-| GET | `/account/feedback/images/:id` | **Mới** | Ảnh góp ý (khách: ảnh của góp ý mình gửi; quản trị: mọi ảnh) |
 | POST | `/admin/login` | **Mới** | Trang quản trị /admin: `{ userName, password }` (tài khoản cố định trong code, chỉ lưu mã băm) → `{ data: { token, expiresAt, userName } }` — gửi lại bằng header `Authorization: Bearer`, không dùng cookie của khách |
-| GET | `/admin/feedback` | **Mới** | Góp ý mọi khách, mới nhất trước (tối đa 500) → `[{ ...FeedbackItem, customerCode, companyName, userName, isStaff }]`. Quyền `admin.feedback` (chỉ vai trò va_admin) |
-| POST | `/admin/feedback/:id/seen` | **Mới** | Đánh dấu đã xem (khách thấy "Việt An đã xem") |
 | GET | `/admin/notifications` | **Mới** | 200 thông báo chung mới nhất (không gồm thông báo riêng từ sự cố) → `[{ id, title, body, link, important, createdAt, createdBy, emailStatus, emailRecipients, emailSent, emailError, readCount }]`; `emailStatus` ∈ `none \| sending \| sent \| partial \| failed \| no_recipients`. Quyền `admin.notifications` (chỉ va_admin) |
 | POST | `/admin/notifications` | **Mới** | `{ title (≤ 200), body (≤ 4000), link? (http/https, ≤ 500 — sai → 400 `NOTIFICATION_LINK`), important, sendEmail }` → `{ data: AdminNotification, message }`. Lưu `dbo.ThongBao` (link ở cột `Duong_Dan`), hiện cho mọi khách; email kèm dòng "Xem tại đây: link". `sendEmail` → gửi email ở nền (BCC lô 50) tới email hồ sơ của khách có tài khoản portal + email tài khoản con đang hoạt động, tối đa 450 địa chỉ / lần (giới hạn Gmail); chưa cấu hình email → 400 `EMAIL_NOT_CONFIGURED` |
-| GET | `/admin/troubles` | **Mới** | 300 sự cố cập nhật gần nhất của mọi khách → `[{ ticket: TroubleTicket, customerCode, companyName, userName, isStaff, updatedAt }]`. Quyền `admin.troubles` (chỉ va_admin) |
-| POST | `/admin/troubles/:id/reply` | **Mới** | `{ reply?, status? }` (ít nhất 1; `status` ∈ `new \| doing \| waitc \| done`) → `{ data, message }`. Tạo thông báo **riêng khách đó** (`dbo.ThongBao.CustomerID`), nút "Xem tại đây" mở trang Sự cố |
+| GET | `/admin/troubles` | **Mới** | 300 yêu cầu (sự cố / hỗ trợ / góp ý) cập nhật gần nhất của mọi khách → `[{ ticket: TroubleTicket, customerCode, companyName, isStaff }]`. Quyền `admin.troubles` (chỉ va_admin) |
+| POST | `/admin/troubles/:id/reply` | **Mới** | `{ reply?, status? }` (ít nhất 1; `status` ∈ `new \| doing \| waitc \| done`) → `{ data, message }`. Đổi `TContact.Status`; `reply` là ghi chú chỉ gửi trong thông báo **riêng khách đó** (`dbo.ThongBao.CustomerID`), nút "Xem tại đây" mở đúng yêu cầu (`/troubles?id=TRB-…`) |
 | DELETE | `/admin/notifications/:id` | **Mới** | Xóa thông báo và lượt đã đọc → `{ message }` (email đã gửi không thu hồi) |
-| DELETE | `/admin/feedback/:id` | **Mới** | Xóa hẳn góp ý: xóa dòng `dbo.GopY` và ảnh `dbo.GopY_HinhAnh` (khách cũng không còn thấy, không khôi phục được) → `{ message }`; không có → 404 `FEEDBACK_NOT_FOUND` |
-| POST | `/support/feedback` | **Mới** | Trang Trợ giúp, `multipart/form-data`: `category` (≤ 100), `subject` (5–200), `message` (20–4000), `contact` (6–200), `attachment?` (≤ 10 MB: ảnh, PDF, Excel, CSV, Word) → `{ message }`. Lưu vào `dbo.GopY` (hiện ở danh sách góp ý trang quản trị `/admin`; nội dung = `[Hỗ trợ · category] subject` + `message`; tệp là ảnh JPG/PNG/WEBP/GIF ≤ 5 MB lưu `dbo.GopY_HinhAnh`, tệp khác chỉ ghi tên) và gửi email về hộp thư nhận (`Email:InboxAddress`), Reply-To = `contact` nếu là email, không thì email hồ sơ khách. Máy chủ chưa cấu hình email → vẫn lưu, bỏ qua email. Quyền `account.feedback` |
 | POST | `/auth/login` | **Mới** | `{ username, password, remember }` — `username` là tên đăng nhập của khách (`dbo.TCustomer.Login_UserName`), mật khẩu so với `Login_Password`; không khớp thì thử tài khoản con của nhân viên (§7.1). Đúng: đặt cookie phiên (httpOnly; `remember: false` → cookie hết khi đóng trình duyệt) và trả `{ data: SessionUser }`. Sai: 401 + `message` |
 | GET | `/auth/session` | **Mới** | Phiên hiện tại cho web portal, **luôn 200**: đã đăng nhập → `{ data: SessionUser }`; access token hết hạn mà còn refresh cookie → làm mới (đặt lại cookie) rồi trả người dùng; chưa đăng nhập → `{ data: null }`. Frontend dùng thay `/me` để mở trang khi chưa đăng nhập không sinh lỗi 401 |
 | POST | `/auth/refresh` | Có sẵn | Đổi refresh token (cookie) lấy phiên mới — frontend tự gọi 1 lần khi gặp 401 |

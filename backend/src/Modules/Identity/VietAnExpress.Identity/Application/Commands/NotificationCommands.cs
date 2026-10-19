@@ -115,7 +115,7 @@ internal sealed class CustomerNotificationHandlers(IdentityDbContext db, ICurren
 
     public async Task<Result<NotificationListDto>> Handle(GetNotificationsQuery q, CancellationToken ct)
     {
-        if (user.CustomerId is not { } customerId || customerId <= 0) return FeedbackErrors.NotLoggedIn;
+        if (user.CustomerId is not { } customerId || customerId <= 0) return IdentityErrors.NotLoggedIn;
         var staff = StaffKey;
         var rows = await db.Notifications.AsNoTracking()
             .Where(n => n.CustomerId == null || n.CustomerId == customerId)
@@ -134,7 +134,7 @@ internal sealed class CustomerNotificationHandlers(IdentityDbContext db, ICurren
 
     public async Task<Result<bool>> Handle(MarkNotificationReadCommand c, CancellationToken ct)
     {
-        if (user.CustomerId is not { } customerId || customerId <= 0) return FeedbackErrors.NotLoggedIn;
+        if (user.CustomerId is not { } customerId || customerId <= 0) return IdentityErrors.NotLoggedIn;
         if (!await db.Notifications.AnyAsync(n => n.Id == c.Id && (n.CustomerId == null || n.CustomerId == customerId), ct)) return NotificationErrors.NotFound;
         var staff = StaffKey;
         if (await db.NotificationReads.AnyAsync(r => r.NotificationId == c.Id && r.CustomerId == customerId && r.StaffId == staff, ct)) return true;
@@ -145,7 +145,7 @@ internal sealed class CustomerNotificationHandlers(IdentityDbContext db, ICurren
 
     public async Task<Result<int>> Handle(MarkAllNotificationsReadCommand c, CancellationToken ct)
     {
-        if (user.CustomerId is not { } customerId || customerId <= 0) return FeedbackErrors.NotLoggedIn;
+        if (user.CustomerId is not { } customerId || customerId <= 0) return IdentityErrors.NotLoggedIn;
         var staff = StaffKey;
         var unread = await db.Notifications
             .Where(n => n.CustomerId == null || n.CustomerId == customerId)

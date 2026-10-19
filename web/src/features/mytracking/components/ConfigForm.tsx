@@ -1,6 +1,7 @@
 import { useRef, useState, type FormEventHandler } from 'react';
 import { useFieldArray, type UseFormReturn } from 'react-hook-form';
 import { useI18n } from '@/shared/i18n';
+import { uuid } from '@/shared/lib/uuid';
 import { Button, Icon, TextAreaField, TextField } from '@/shared/ui';
 import type { StorageMode } from '../hooks/useMyTrackingConfig';
 import { MAX_AD_IMAGES, type MyTrackingConfig } from '../schema';
@@ -58,7 +59,7 @@ export function ConfigForm({ form, onSave, onRestore, disabled, mode, published,
         <div className={styles.groupHeading}><h2>{t('Hình ảnh quảng cáo')}</h2><span>{t('Số lượng: {n}/5', { n: fields.length })}</span></div>
         <p className={styles.hint}>{t('Nhập link website cho từng ảnh. Khách bấm vào ảnh hoặc nút sẽ mở website trong tab mới. Tối đa 5 ảnh.')}</p>
         <ImagePicker onAdd={src => {
-          if (getValues('images').length < MAX_AD_IMAGES) append({ id: crypto.randomUUID(), src, linkUrl: '', title: '', buttonText: 'Xem thêm' });
+          if (getValues('images').length < MAX_AD_IMAGES) append({ id: uuid(), src, linkUrl: '', title: '', buttonText: 'Xem thêm' });
         }} disabled={fields.length >= MAX_AD_IMAGES} onBusy={onBusy} />
         <p className={styles.hint}>{t('Kéo tay cầm để đổi thứ tự ảnh hoặc dùng nút lên / xuống.')}</p>
         {fields.length === 0 && <div className={styles.emptyImages}><Icon name="image" size={24} /><span>{t('Chưa có ảnh quảng cáo. Thêm ảnh để xem trước.')}</span></div>}

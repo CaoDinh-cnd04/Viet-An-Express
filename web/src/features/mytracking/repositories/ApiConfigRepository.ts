@@ -4,7 +4,7 @@ import type { ConfigLoadResult, ConfigRepository, ConfigSaveResult } from './Con
 /** Transport HTTP (myTrackingApi) — tách ra để test không gọi mạng. */
 export interface ConfigApi { load(): Promise<MyTrackingResponse>; save(body: SaveMyTrackingRequest): Promise<MyTrackingResponse> }
 const toPublication = ({ slug, published, updatedAt }: MyTrackingResponse): Publication => ({ slug, published, updatedAt });
-/** Lưu cấu hình trên server (dbo.MyTrackingCauHinh) theo tài khoản đang đăng nhập — userId chỉ để khớp interface. */
+/** Lưu cấu hình trên server (TCustomer_MyTracking + TCustomer_MyTracking_Banner) theo tài khoản đang đăng nhập — userId chỉ để khớp interface. */
 export class ApiConfigRepository implements ConfigRepository {
   constructor(private readonly api: ConfigApi) {}
   async load(): Promise<ConfigLoadResult> {

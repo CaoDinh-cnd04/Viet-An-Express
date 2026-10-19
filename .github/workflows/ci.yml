@@ -1,8 +1,7 @@
 name: CI
 
-# CD không nằm ở đây:
-#  - Frontend: Vercel tự build + deploy khi push (thư mục gốc dự án Vercel: web/).
-#  - Backend: Render build Docker từ backend/ (render.yaml), xem DEPLOYMENT.md.
+# CD không nằm ở đây: build bằng backend/scripts/publish-ftp.ps1 rồi đẩy lên hosting IIS qua FTP
+# (xem backend/scripts/iis/HUONG_DAN_IIS.md).
 
 on:
   push:
@@ -105,10 +104,3 @@ jobs:
           api = json.loads(Path('src/Modules/Shipments/VietAnExpress.Shipments/Domain/eu-countries.json').read_text(encoding='utf-8'))
           assert web == api, 'EU country data differs between web and backend'
           PY
-
-      - name: Check deployment entrypoint
-        run: sh tests/deployment/start-api.test.sh
-
-      # Dùng đúng context chỉ có backend như Render để phát hiện phụ thuộc ngoài thư mục.
-      - name: Build deployment Docker image
-        run: docker build --file Dockerfile --tag vietan-api:ci .

@@ -1,470 +1,57 @@
-/* Hộp chat sự cố: danh sách bên trái, hội thoại bên phải; cao vừa màn hình để chỉ cuộn bên trong */
-.chat {
-  display: grid;
-  grid-template-columns: 320px minmax(0, 1fr);
-  height: calc(100vh - 190px);
-  min-height: 480px;
-  overflow: hidden;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  background: var(--color-surface);
-  box-shadow: var(--shadow-sm);
-}
-
-/* ---------- Danh sách sự cố ---------- */
-.side {
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  border-right: 1px solid var(--color-border);
-}
-
-.search {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: var(--space-3) var(--space-3) var(--space-2);
-  padding: 0 10px;
-  height: 34px;
-  border: 1px solid var(--color-border);
-  border-radius: 999px;
-  background: var(--color-surface-muted);
-  color: var(--color-text-faint);
-}
-
-.search:focus-within {
-  border-color: var(--color-brand);
-}
-
-.search input {
-  flex: 1;
-  min-width: 0;
-  border: 0;
-  outline: 0;
-  background: none;
-  color: var(--color-text);
-  font: inherit;
-  font-size: var(--text-sm);
-}
-
-.filters {
-  display: flex;
-  gap: 4px;
-  padding: 0 var(--space-3) var(--space-2);
-  border-bottom: 1px solid var(--color-border);
-}
-
-.filter {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  height: 28px;
-  padding: 0 10px;
-  border: 0;
-  border-radius: 999px;
-  background: none;
-  color: var(--color-text-muted);
-  font: inherit;
-  font-size: var(--text-xs);
+/* Riêng trang Hỗ trợ & sự cố: màu trạng thái, chi tiết yêu cầu (bố cục chung ở shared/ui/Workspace.module.css) */
+.status {
   font-weight: 600;
-  cursor: pointer;
 }
 
-.filter:hover {
-  background: var(--color-brand-softer);
+.st_new {
+  color: var(--color-brand-strong);
 }
 
-.filterOn,
-.filterOn:hover {
-  background: var(--color-brand);
-  color: var(--color-on-hero);
-}
-
-.filterCount {
-  min-width: 18px;
-  padding: 0 5px;
-  border-radius: 999px;
-  background: color-mix(in srgb, currentColor 15%, transparent);
-  line-height: 16px;
-  text-align: center;
-}
-
-.list {
-  flex: 1;
-  min-height: 0;
-  margin: 0;
-  padding: 4px 0;
-  overflow-y: auto;
-  list-style: none;
-}
-
-.note {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--space-2);
-  padding: var(--space-4);
-  color: var(--color-text-muted);
-  font-size: var(--text-sm);
-}
-
-.item {
-  display: flex;
-  gap: 10px;
-  width: 100%;
-  padding: 10px var(--space-3);
-  border: 0;
-  border-left: 3px solid transparent;
-  background: none;
-  color: var(--color-text);
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-
-.item:hover {
-  background: var(--color-surface-muted);
-}
-
-.itemOn,
-.itemOn:hover {
-  border-left-color: var(--color-brand);
-  background: var(--color-brand-soft);
-}
-
-.avatar {
-  flex: none;
-  width: 36px;
-  height: 36px;
-  display: grid;
-  place-items: center;
-  border-radius: 50%;
-}
-
-.itemBody {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-  flex: 1;
-}
-
-.itemTop {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-}
-
-.itemTitle {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  font-size: var(--text-sm);
-  font-weight: 600;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.itemDate {
-  flex: none;
-  color: var(--color-text-faint);
-  font-size: 11px;
-}
-
-.itemBill {
-  color: var(--color-text-muted);
-  font-size: 11.5px;
-}
-
-.itemPreview {
-  overflow: hidden;
-  color: var(--color-text-muted);
-  font-size: var(--text-xs);
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.itemStatus {
-  align-self: flex-start;
-  margin-top: 2px;
-  padding: 0 7px;
-  border-radius: 999px;
-  font-size: 10.5px;
-  font-weight: 600;
-  line-height: 17px;
-}
-
-/* Màu theo trạng thái (dùng cho biểu tượng tròn và nhãn trạng thái) */
-.info {
-  background: var(--color-info-soft);
+.st_doing {
   color: var(--color-info);
 }
 
-.success,
-.brand {
-  background: var(--color-success-soft);
-  color: var(--color-success-strong);
-}
-
-.warning {
-  background: var(--color-warning-soft);
+.st_waitc {
   color: var(--color-warning);
 }
 
-.danger {
-  background: var(--color-danger-soft);
-  color: var(--color-danger);
+.st_done {
+  color: var(--color-success);
 }
 
-.neutral {
-  background: var(--color-surface-muted);
-  color: var(--color-text-muted);
-}
-
-/* ---------- Hội thoại ---------- */
-.main {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  min-height: 0;
-}
-
-.placeholder {
-  flex: 1;
-  display: grid;
-  place-content: center;
-  justify-items: center;
-  gap: var(--space-2);
-  padding: var(--space-6);
-  color: var(--color-text-faint);
-  text-align: center;
-}
-
-.head {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  padding: 10px var(--space-4);
-  border-bottom: 1px solid var(--color-border);
-}
-
-.back {
-  display: none;
-  flex: none;
-  width: 32px;
-  height: 32px;
-  place-items: center;
-  border: 0;
-  border-radius: 50%;
-  background: none;
-  color: var(--color-text-muted);
-}
-
-.back svg {
-  transform: rotate(90deg);
-}
-
-.headInfo {
-  flex: 1;
-  min-width: 0;
-}
-
-.headTitle {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-  font-size: var(--text-md);
-  font-weight: 700;
-}
-
-.headSub {
-  margin-top: 2px;
-  color: var(--color-text-muted);
-  font-size: var(--text-xs);
-}
-
-.headActions {
-  display: flex;
-  flex: none;
-  gap: var(--space-2);
-}
-
-.body {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+/* ---------- Chi tiết ---------- */
+.detail {
   padding: var(--space-4);
-  overflow-y: auto;
-  background: var(--color-bg);
 }
 
-.turn {
+.detail dl {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-}
-
-.dayNote,
-.system {
-  align-self: center;
-  max-width: 90%;
-  padding: 2px 10px;
-  border-radius: 999px;
-  background: var(--color-surface);
-  color: var(--color-text-muted);
-  font-size: 11px;
-  text-align: center;
-}
-
-.msg {
-  display: flex;
-  align-items: flex-end;
-  gap: 8px;
-  max-width: 78%;
-}
-
-.mine {
-  align-self: flex-end;
-  flex-direction: row-reverse;
-}
-
-.csAvatar {
-  flex: none;
-  width: 28px;
-  height: 28px;
-  display: grid;
-  place-items: center;
-  border-radius: 50%;
-  background: var(--color-success);
-  color: var(--color-on-hero);
-  font-size: 10px;
-  font-weight: 800;
-}
-
-.msgCol {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  min-width: 0;
-}
-
-.mine .msgCol {
-  align-items: flex-end;
-}
-
-.msgMeta {
-  padding: 0 4px;
-  color: var(--color-text-faint);
-  font-size: 11px;
-}
-
-.bubble {
-  padding: 8px 12px;
-  border: 1px solid var(--color-border);
-  border-radius: 14px 14px 14px 4px;
-  background: var(--color-surface);
-  color: var(--color-text);
+  gap: 6px;
+  margin: 0 0 var(--space-3);
   font-size: var(--text-sm);
-  line-height: 1.5;
-  overflow-wrap: anywhere;
-  white-space: pre-wrap;
 }
 
-.mine .bubble {
-  border-color: var(--color-brand);
-  border-radius: 14px 14px 4px 14px;
-  background: var(--color-brand);
-  color: var(--color-on-hero);
+.detail dl div {
+  display: grid;
+  grid-template-columns: 140px minmax(0, 1fr);
+  gap: var(--space-3);
 }
 
-.composer {
-  display: flex;
-  align-items: flex-end;
-  gap: var(--space-2);
-  padding: 10px var(--space-4);
-  border-top: 1px solid var(--color-border);
+.detail dt {
+  color: var(--color-text-muted);
 }
 
-.composer textarea {
-  flex: 1;
-  min-height: 38px;
-  max-height: 120px;
-  padding: 9px 14px;
+.detail dd {
+  margin: 0;
+}
+
+.content {
+  margin: 0;
+  padding: 10px 12px;
   border: 1px solid var(--color-border);
-  border-radius: 19px;
+  border-radius: 4px;
   background: var(--color-surface-muted);
-  color: var(--color-text);
-  font: inherit;
   font-size: var(--text-sm);
-  line-height: 1.4;
-  resize: none;
-  field-sizing: content;
-}
-
-.composer textarea:focus {
-  outline: 0;
-  border-color: var(--color-brand);
-  background: var(--color-surface);
-}
-
-.send {
-  flex: none;
-  width: 38px;
-  height: 38px;
-  display: grid;
-  place-items: center;
-  border: 0;
-  border-radius: 50%;
-  background: var(--color-brand);
-  color: var(--color-on-hero);
-  cursor: pointer;
-}
-
-.send:hover:not(:disabled) {
-  background: var(--color-brand-strong);
-}
-
-.send:disabled {
-  opacity: 0.45;
-  cursor: default;
-}
-
-.closed {
-  padding: 12px var(--space-4);
-  border-top: 1px solid var(--color-border);
-  color: var(--color-text-muted);
-  font-size: var(--text-sm);
-  text-align: center;
-}
-
-/* Màn hình hẹp: 1 khung — danh sách, bấm sự cố thì sang hội thoại (có nút quay lại) */
-@media (max-width: 900px) {
-  .chat {
-    grid-template-columns: minmax(0, 1fr);
-    height: calc(100vh - 170px);
-  }
-
-  .main,
-  .chatOpen .side {
-    display: none;
-  }
-
-  .chatOpen .main {
-    display: flex;
-  }
-
-  .back {
-    display: grid;
-  }
-
-  .head {
-    flex-wrap: wrap;
-  }
-
-  .msg {
-    max-width: 92%;
-  }
+  white-space: pre-wrap;
 }

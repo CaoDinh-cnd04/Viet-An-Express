@@ -1,0 +1,234 @@
+/*
+ * Bố cục trang nghiệp vụ dùng chung (Hỗ trợ & sự cố, Tài khoản nhân viên…), tách bạch 3 phần:
+ *  - hàng công cụ phía trên: tab lọc (chức năng) bên trái, ô tìm + nút thao tác bên phải;
+ *  - khung hiển thị bảng / chi tiết / form rộng hết trang;
+ *  - footer cuối trang: liên hệ / lưu ý.
+ * Kẻ mảnh, ít trang trí. Class riêng của từng trang để ở CSS của trang.
+ */
+
+/* ---------- Hàng công cụ ---------- */
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: -1px;
+  padding: 8px 14px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: none;
+  color: var(--color-text-muted);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.tab:hover {
+  color: var(--color-text);
+}
+
+.tabOn,
+.tabOn:hover {
+  border-bottom-color: var(--color-brand);
+  color: var(--color-brand-strong);
+}
+
+.count {
+  min-width: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--color-surface-muted);
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+  text-align: center;
+}
+
+.tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  padding-bottom: 8px;
+}
+
+.search {
+  width: 240px;
+  height: 30px;
+  padding: 0 8px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 4px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--text-sm);
+}
+
+.search:focus {
+  outline: 0;
+  border-color: var(--color-brand);
+}
+
+/* Nút thao tác: nút chính xanh, nút phụ viền */
+.btn,
+.btnSecondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 30px;
+  padding: 0 14px;
+  border: 1px solid var(--color-brand);
+  border-radius: 4px;
+  background: var(--color-brand);
+  color: var(--color-on-hero);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.btn:hover {
+  background: var(--color-brand-strong);
+}
+
+.btnSecondary {
+  border-color: var(--color-border-strong);
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.btnSecondary:hover {
+  border-color: var(--color-brand);
+  color: var(--color-brand-strong);
+}
+
+.btn:disabled,
+.btnSecondary:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+/* ---------- Khung hiển thị ---------- */
+.box {
+  min-width: 0;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  background: var(--color-surface);
+}
+
+.boxHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface-muted);
+  font-size: var(--text-sm);
+}
+
+.tableWrap {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  min-width: 680px;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+}
+
+.table th {
+  padding: 7px 12px;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface-muted);
+  color: var(--color-text-muted);
+  font-weight: 600;
+  text-align: left;
+}
+
+.table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+/* Dòng bấm được để mở chi tiết */
+.rowLink {
+  cursor: pointer;
+}
+
+.rowLink:hover td,
+.rowLink:focus td {
+  background: var(--color-brand-softer);
+  outline: 0;
+}
+
+.note {
+  margin: 0;
+  padding: var(--space-5) 12px;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+/* Nút chữ trong bảng (Sửa, Xóa…) */
+.linkBtn {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-brand-strong);
+  font: inherit;
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+
+.linkBtn:hover {
+  text-decoration: underline;
+}
+
+.linkDanger {
+  color: var(--color-danger);
+}
+
+/* ---------- Footer ---------- */
+.footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px var(--space-6);
+  margin-top: var(--space-5);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+  line-height: 1.6;
+}
+
+.footer b {
+  color: var(--color-text);
+}
+
+@media (max-width: 760px) {
+  .tools,
+  .search {
+    width: 100%;
+  }
+}

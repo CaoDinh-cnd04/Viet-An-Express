@@ -1,5 +1,3 @@
-using System.Data.Common;
-
 namespace VietAnExpress.Customers.Contracts;
 
 /// <summary>
@@ -15,28 +13,17 @@ public interface ICustomersApi
     Task<IReadOnlyList<CustomerSummary>> GetByIdsAsync(IReadOnlyCollection<long> customerIds, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Ghi thông tin người gửi vào dbo.TCustomer — chỉ gọi khi quản trị Việt An đã duyệt yêu cầu sửa của khách.
-    /// Trả về hồ sơ sau khi ghi; null = không có khách này.
+    /// Nhân viên Việt An phụ trách khách (TCustomer.Staff_ID → USERS) — null khi chưa phân công hoặc nhân viên đã xóa.
+    /// Chuẩn bị cho CMS / luồng "nhân viên phụ trách" (backend/docs/CMS_NHAN_VIEN_PHU_TRACH.md); portal chưa hiển thị.
     /// </summary>
-    Task<CustomerSummary?> UpdateSenderInfoAsync(long customerId, SenderInfoUpdate update, CancellationToken cancellationToken = default);
-    /// <summary>Join the review transaction; lock the profile and compare only fields being changed before writing.</summary>
-    Task<SenderInfoWriteResult> UpdateSenderInfoInTransactionAsync(long customerId, SenderInfoUpdate update, SenderInfoUpdate expected,
-        DbTransaction transaction, CancellationToken cancellationToken = default);
+    Task<AccountManager?> GetAccountManagerAsync(long customerId, CancellationToken cancellationToken = default);
+
+    /// <summary>Nhân viên phụ trách của nhiều khách một lần (bỏ khách chưa phân công) — vd danh sách yêu cầu ở trang quản trị.</summary>
+    Task<IReadOnlyDictionary<long, AccountManager>> GetAccountManagersAsync(IReadOnlyCollection<long> customerIds, CancellationToken cancellationToken = default);
 }
 
-public sealed record SenderInfoWriteResult(CustomerSummary? Current, bool Outdated);
-
-/// <summary>
-/// Trường cần ghi: null = giữ nguyên, chuỗi rỗng = xóa trắng. Ghi vào CustomerName, ContactName, ContactPhone, ContactEmail, Address1, TaxCode
-/// (đúng các cột <see cref="CustomerSummary"/> ưu tiên đọc).
-/// </summary>
-public sealed record SenderInfoUpdate(
-    string? CompanyName = null,
-    string? ContactName = null,
-    string? Phone = null,
-    string? Email = null,
-    string? Address = null,
-    string? TaxCode = null);
+/// <summary>Nhân viên Việt An (dbo.USERS) phụ trách khách. <see cref="Id"/> = USERS.ID = TCustomer.Staff_ID.</summary>
+public sealed record AccountManager(int Id, string UserName, string FullName, string? Email, string? Phone, int? BranchId, bool Active);
 
 /// <summary>Thông tin khách đủ dùng cho module khác. <see cref="Id"/> = CustomerID, cũng là CustomerID trong dbo.MaVanDon.</summary>
 public sealed record CustomerSummary(

@@ -16,7 +16,6 @@ using VietAnExpress.SharedKernel.Web;
 using VietAnExpress.Shipments;
 using VietAnExpress.Ecommerce;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.Extensions.Hosting.WindowsServices;
 
 Log.Logger = new LoggerConfiguration().WriteTo.Console().CreateBootstrapLogger();
@@ -34,26 +33,14 @@ try
     });
     builder.Host.UseWindowsService(o => o.ServiceName = "VietAnExpressApi"); // không phải service thì không làm gì
 
-    // Render / Docker: nền tảng cấp cổng qua biến PORT và tự lo HTTPS ở proxy phía trước.
-    var platformPort = Environment.GetEnvironmentVariable("PORT");
-    if (!string.IsNullOrEmpty(platformPort)) builder.WebHost.UseUrls($"http://0.0.0.0:{platformPort}");
-
-    // Sau proxy (Vercel → Render/ngrok): lấy IP thật của khách và scheme HTTPS (cookie Secure).
-    builder.Services.Configure<ForwardedHeadersOptions>(o =>
-    {
-        o.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
-        o.KnownIPNetworks.Clear(); // proxy của nền tảng không có IP cố định
-        o.KnownProxies.Clear();
-        o.ForwardLimit = 2;        // Vercel + proxy nền tảng
-    });
-
     builder.Host.UseSerilog((context, services, logger) =>
     {
         logger.ReadFrom.Configuration(context.Configuration)
             .ReadFrom.Services(services)
             .Enrich.FromLogContext();
-        // Máy dev và Windows Service: ghi thêm file logs/ (service không có console). Docker chỉ ghi console.
-        if (context.HostingEnvironment.IsDevelopment() || WindowsServiceHelpers.IsWindowsService())
+        // Máy dev, Windows Service và IIS: ghi thêm file logs/ (không có console). Docker chỉ ghi console.
+        var underIis = !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("ASPNETCORE_IIS_PHYSICAL_PATH"));
+        if (context.HostingEnvironment.IsDevelopment() || WindowsServiceHelpers.IsWindowsService() || underIis)
             logger.WriteTo.File(Path.Combine(context.HostingEnvironment.ContentRootPath, "logs", "vietan-.log"),
                 rollingInterval: RollingInterval.Day, retainedFileCountLimit: 30);
     });
@@ -171,7 +158,19 @@ try
     var app = builder.Build();
 
     // ---------- Pipeline HTTP ----------
-    app.UseForwardedHeaders();
+    // IIS: backend là IIS Application gắn ở /api (frontend ở gốc site) → IIS cắt "/api" vào PathBase.
+    // Gộp lại để route "api/v1/..." và cookie Path=/api/v1/auth giữ nguyên như khi chạy độc lập.
+    // /api/health giữ PathBase để khớp endpoint /health.
+    app.Use((context, next) =>
+    {
+        if (context.Request.PathBase.Equals("/api", StringComparison.OrdinalIgnoreCase)
+            && !context.Request.Path.StartsWithSegments("/health"))
+        {
+            context.Request.Path = context.Request.PathBase.Add(context.Request.Path);
+            context.Request.PathBase = PathString.Empty;
+        }
+        return next(context);
+    });
     app.UseExceptionHandler();
     app.UseSerilogRequestLogging();
 
@@ -189,10 +188,30 @@ try
     if (!app.Environment.IsDevelopment())
     {
         app.UseHsts();
-        // Chạy sau proxy của nền tảng (có PORT) thì proxy đã ép HTTPS; tự chuyển hướng sẽ làm hỏng health check nội bộ.
-        if (string.IsNullOrEmpty(platformPort)) app.UseHttpsRedirection();
+        app.UseHttpsRedirection();
     }
 
+    // Hosting IIS (đẩy qua FTP): giao diện web/dist chép vào wwwroot, backend phục vụ luôn — chung tên miền với /api
+    // nên cookie đăng nhập SameSite=Strict vẫn dùng được. Không có wwwroot/index.html (dev, frontend tách thư mục) thì bỏ qua.
+    var webUi = new StaticFileOptions
+    {
+        OnPrepareResponse = ctx =>
+        {
+            // File trong assets/ có mã băm trong tên → lưu đệm lâu; index.html luôn hỏi lại để nhận bản build mới.
+            ctx.Context.Response.Headers.CacheControl = ctx.Context.Request.Path.StartsWithSegments("/assets")
+                ? "public, max-age=31536000, immutable"
+                : "no-cache";
+        }
+    };
+    var hasWebUi = app.Environment.WebRootPath is { } webRoot && File.Exists(Path.Combine(webRoot, "index.html"));
+    if (hasWebUi)
+    {
+        app.UseDefaultFiles();
+        app.UseStaticFiles(webUi);
+    }
+
+    // Gọi tường minh: để chọn route sau khi đã gộp PathBase "/api" ở trên (mặc định UseRouting chạy đầu pipeline).
+    app.UseRouting();
     app.UseCors();
     // Dữ liệu API là dữ liệu riêng của khách: không cho trình duyệt / proxy lưu đệm (bấm Back sau đăng xuất không còn dữ liệu cũ),
     // không cho đoán loại nội dung. Endpoint tự đặt Cache-Control (nếu có) được giữ nguyên.
@@ -213,18 +232,10 @@ try
     app.UseAuthorization();
 
     app.MapControllers();
-    // Identify the deployed revision when checking Render after a push.
-    var deployedRevision = app.Configuration["RENDER_GIT_COMMIT"];
-    app.MapHealthChecks("/health").AllowAnonymous().Add(endpoint =>
-    {
-        var next = endpoint.RequestDelegate!;
-        endpoint.RequestDelegate = async context =>
-        {
-            if (!string.IsNullOrEmpty(deployedRevision))
-                context.Response.Headers["X-Vietan-Revision"] = deployedRevision;
-            await next(context);
-        };
-    });
+    // Đường dẫn của React Router (vd /orders/new, refresh trang) → index.html; /api/... sai vẫn trả 404 của API.
+    if (hasWebUi)
+        app.MapFallbackToFile("{*path:nonfile:regex(^(?!api/).*$)}", "index.html", webUi);
+    app.MapHealthChecks("/health").AllowAnonymous();
 
     // Migrate + seed khi khởi động. Tắt bằng Database:RunStartupTasks=false (vd kiểm tra container không có DB trong CI).
     if (app.Configuration.GetValue("Database:RunStartupTasks", true))

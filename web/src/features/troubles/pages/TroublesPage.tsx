@@ -1,245 +1,208 @@
-import { isNotImplemented } from '@/shared/api/http';
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { isNotImplemented } from '@/shared/api/http';
 import { useI18n } from '@/shared/i18n';
 import { cx } from '@/shared/lib/cx';
-import { Button, Icon, PageHeader, StatusPill } from '@/shared/ui';
-import { useReplyTrouble, useTroubles } from '../api';
-import { ReportTroubleDialog } from '../components/ReportTroubleDialog';
-import { TROUBLE_PRIORITY, TROUBLE_STATUS } from '../constants';
-import { filterTickets, lastActivity, type TroubleFilter } from '../lib/chat';
-import type { TroubleTicket } from '../types';
+import { PageHeader } from '@/shared/ui';
+import { useTroubles } from '../api';
+import { TroubleForm } from '../components/TroubleForm';
+import { CONTACTS, SENDER_INFO_TOPIC, TROUBLE_KIND_ORDER, TROUBLE_KINDS, TROUBLE_PRIORITY, TROUBLE_STATUS } from '../constants';
+import { filterTickets, kindOf, ticketSubline, ticketTitle, type TroubleFilter } from '../lib/chat';
+import type { TroubleKind, TroubleTicket } from '../types';
+import ws from '@/shared/ui/Workspace.module.css';
 import styles from './TroublesPage.module.css';
 
 const FILTERS: ReadonlyArray<{ key: TroubleFilter; label: string }> = [
-  { key: 'open', label: 'Chưa xong' },
   { key: 'all', label: 'Tất cả' },
+  { key: 'open', label: 'Đang xử lý' },
   { key: 'done', label: 'Đã xử lý' }
 ];
 
+/** Nhãn menu gửi yêu cầu — lời khách hay dùng. */
+const SEND_LABELS: Record<TroubleKind, string> = {
+  su_co: 'Báo sự cố đơn hàng',
+  ho_tro: 'Yêu cầu hỗ trợ',
+  gop_y: 'Góp ý'
+};
+
+type View =
+  | { kind: 'list' }
+  | { kind: 'detail'; id: string }
+  | { kind: 'form'; type: TroubleKind; bill?: string; topic?: string };
+
 /**
- * Quản lý sự cố dạng hộp chat: trái là danh sách sự cố (mới cập nhật trước), phải là trao đổi với CS Việt An.
- * Mở từ đơn hàng bằng /troubles?bill=… sẽ bật sẵn hộp báo sự cố cho đơn đó.
+ * Hỗ trợ & sự cố kiểu phần mềm nghiệp vụ: hàng trên có tab lọc (Tất cả / Đang xử lý / Đã xử lý) và nút gửi 3 loại yêu cầu,
+ * khung dưới hiển thị bảng, chi tiết hoặc form gửi; liên hệ ở footer. CS xử lý ở phần mềm cũ, báo kết quả qua Thông báo.
+ * /troubles?bill=… mở form báo sự cố cho đơn đó; ?new=sender-info mở form hỗ trợ "Sửa thông tin người gửi"; ?id=TRB-… mở chi tiết.
  */
 export default function TroublesPage() {
   const { t } = useI18n();
-  const { data = [], isLoading, isError, error, refetch } = useTroubles();
+  const { data = [], isLoading, isError, error } = useTroubles();
   const [params, setParams] = useSearchParams();
-  const [filter, setFilter] = useState<TroubleFilter>('open');
+  const [filter, setFilter] = useState<TroubleFilter>('all');
   const [query, setQuery] = useState('');
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  // Màn hình hẹp: chỉ hiện 1 khung — danh sách hoặc hội thoại
-  const [showChat, setShowChat] = useState(false);
-  const [reporting, setReporting] = useState(false);
-  const billParam = params.get('bill');
-  // Mở từ thông báo: /troubles?id=TRB-… → chọn sẵn sự cố đó (lọc Tất cả để thấy cả sự cố đã xử lý)
-  const idParam = params.get('id');
+  const [view, setView] = useState<View>({ kind: 'list' });
+
+  // Link từ đơn hàng / form tạo đơn / thông báo
   useEffect(() => {
-    if (!idParam) return;
-    setFilter('all');
-    setSelectedId(idParam.toUpperCase());
-    setShowChat(true);
+    const bill = params.get('bill');
+    const id = params.get('id');
+    const isNew = params.get('new') === 'sender-info';
+    if (!bill && !id && !isNew) return;
+    if (bill) setView({ kind: 'form', type: 'su_co', bill });
+    else if (isNew) setView({ kind: 'form', type: 'ho_tro', topic: SENDER_INFO_TOPIC });
+    else if (id) setView({ kind: 'detail', id: id.toUpperCase() });
     setParams({}, { replace: true });
-  }, [idParam, setParams]);
+  }, [params, setParams]);
 
-  const list = useMemo(() => filterTickets(data, filter, query), [data, filter, query]);
+  const rows = useMemo(() => filterTickets(data, filter, query), [data, filter, query]);
   const counts = useMemo(() => Object.fromEntries(FILTERS.map(f => [f.key, filterTickets(data, f.key, '').length])), [data]);
-  const current = data.find(x => x.id === selectedId) ?? list[0] ?? null;
+  const current = view.kind === 'detail' ? data.find(x => x.id === view.id) ?? null : null;
+  const showList = (f: TroubleFilter = filter) => {
+    setFilter(f);
+    setView({ kind: 'list' });
+  };
 
-  const closeReport = () => {
-    setReporting(false);
-    if (billParam) setParams({}, { replace: true });
-  };
-  const open = (id: string) => {
-    setSelectedId(id);
-    setShowChat(true);
-  };
+  const isList = view.kind === 'list';
 
   return (
     <>
-      <PageHeader
-        title="Quản lý sự cố"
-        description="Trao đổi trực tiếp với CS Việt An về sự cố của từng đơn."
-        actions={<Button variant="primary" size="sm" onClick={() => setReporting(true)}><Icon name="plus" size={15} /> {t('Báo sự cố mới')}</Button>}
-      />
+      <PageHeader title="Hỗ trợ & sự cố" description="Gửi yêu cầu cho CS Việt An và theo dõi kết quả." />
 
-      <div className={cx(styles.chat, showChat && styles.chatOpen)}>
-        <aside className={styles.side} aria-label={t('Danh sách sự cố')}>
-          <div className={styles.search}>
-            <Icon name="search" size={15} />
-            <input value={query} onChange={e => setQuery(e.target.value)} placeholder={t('Tìm mã sự cố, vận đơn, người nhận…')} aria-label={t('Tìm sự cố')} />
-          </div>
-          <div className={styles.filters} role="group" aria-label={t('Lọc theo trạng thái')}>
-            {FILTERS.map(f => (
-              <button key={f.key} type="button" aria-pressed={filter === f.key} className={cx(styles.filter, filter === f.key && styles.filterOn)} onClick={() => setFilter(f.key)}>
-                {t(f.label)} <span className={styles.filterCount}>{counts[f.key] ?? 0}</span>
-              </button>
-            ))}
-          </div>
-          <ul className={styles.list}>
-            {isLoading && <li className={styles.note}>{t('Đang tải…')}</li>}
-            {isError && (
-              <li className={styles.note}>
-                {isNotImplemented(error) ? (
-                  t('Chức năng quản lý sự cố đang được kết nối máy chủ. Cần báo gấp, vui lòng gọi hotline Việt An.')
-                ) : (
-                  <>
-                    {t('Không tải được danh sách sự cố')}
-                    <Button size="sm" onClick={() => void refetch()}>{t('Thử lại')}</Button>
-                  </>
-                )}
-              </li>
-            )}
-            {!isLoading && !isError && !list.length && <li className={styles.note}>{t(query ? 'Không có sự cố nào khớp tìm kiếm.' : 'Không có sự cố nào.')}</li>}
-            {list.map(x => (
-              <li key={x.id}>
-                <ConversationItem ticket={x} active={current?.id === x.id} onOpen={() => open(x.id)} />
-              </li>
-            ))}
-          </ul>
-        </aside>
-
-        <section className={styles.main} aria-label={t('Trao đổi với CS Việt An')}>
-          {current ? (
-            <Conversation ticket={current} onBack={() => setShowChat(false)} />
-          ) : (
-            <div className={styles.placeholder}>
-              <Icon name="message" size={34} />
-              <p>{t(data.length ? 'Chọn 1 sự cố để xem trao đổi với CS Việt An.' : 'Chưa có sự cố nào. Bấm "Báo sự cố mới" khi đơn hàng cần hỗ trợ.')}</p>
-            </div>
+      {/* Chức năng (tab lọc) bên trái · nút thao tác bên phải */}
+      <div className={ws.toolbar}>
+        <div className={ws.tabs} role="tablist" aria-label={t('Yêu cầu đã gửi')}>
+          {FILTERS.map(f => (
+            <button
+              key={f.key}
+              type="button"
+              role="tab"
+              aria-selected={isList && filter === f.key}
+              className={cx(ws.tab, isList && filter === f.key && ws.tabOn)}
+              onClick={() => showList(f.key)}
+            >
+              {t(f.label)} <span className={ws.count}>{counts[f.key] ?? 0}</span>
+            </button>
+          ))}
+        </div>
+        <div className={ws.tools}>
+          {isList && (
+            <input className={ws.search} value={query} onChange={e => setQuery(e.target.value)} placeholder={t('Tìm mã yêu cầu, vận đơn, tiêu đề…')} aria-label={t('Tìm yêu cầu')} />
           )}
-        </section>
+          {/* Nút đang mở form được tô màu để khách thấy rõ mình đang gửi loại nào */}
+          {TROUBLE_KIND_ORDER.map(k => {
+            const on = view.kind === 'form' && view.type === k;
+            return (
+              <button key={k} type="button" aria-pressed={on} className={on ? ws.btn : ws.btnSecondary} onClick={() => setView({ kind: 'form', type: k })}>
+                {t(SEND_LABELS[k])}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
-      <ReportTroubleDialog open={reporting || !!billParam} context={billParam ? { bill: billParam } : null} onClose={closeReport} />
-    </>
-  );
-}
-
-/** 1 dòng trong danh sách: mã + loại sự cố, vận đơn, tin cuối, ngày, trạng thái. */
-function ConversationItem({ ticket: x, active, onOpen }: { ticket: TroubleTicket; active: boolean; onOpen: () => void }) {
-  const { t } = useI18n();
-  const last = lastActivity(x);
-  const status = TROUBLE_STATUS[x.status];
-  return (
-    <button type="button" className={cx(styles.item, active && styles.itemOn)} onClick={onOpen} aria-current={active || undefined}>
-      <span className={cx(styles.avatar, styles[status.tone])} aria-hidden="true"><Icon name="alert" size={16} /></span>
-      <span className={styles.itemBody}>
-        <span className={styles.itemTop}>
-          <strong className={styles.itemTitle}>{t(x.type)}</strong>
-          <span className={styles.itemDate}>{last.date.split(' ')[0]}</span>
-        </span>
-        <span className={styles.itemBill}><span className="mono">{x.bill}</span> · {x.id}</span>
-        <span className={styles.itemPreview}>
-          {last.from === 'vietan' ? `${t('CS Việt An')}: ` : `${t('Bạn')}: `}{last.text}
-        </span>
-        <span className={cx(styles.itemStatus, styles[status.tone])}>{t(status.label)}</span>
-      </span>
-    </button>
-  );
-}
-
-/** Khung hội thoại: đầu khung thông tin sự cố, giữa là tin nhắn, cuối là ô soạn tin. */
-function Conversation({ ticket, onBack }: { ticket: TroubleTicket; onBack: () => void }) {
-  const { t } = useI18n();
-  const reply = useReplyTrouble();
-  const [text, setText] = useState('');
-  const bodyRef = useRef<HTMLDivElement>(null);
-  const done = ticket.status === 'done';
-  const messages = ticket.messages ?? [];
-
-  useEffect(() => setText(''), [ticket.id]);
-  // Luôn cuộn xuống tin mới nhất khi mở sự cố hoặc có tin mới
-  useEffect(() => {
-    const el = bodyRef.current;
-    if (el) el.scrollTop = el.scrollHeight;
-  }, [ticket.id, messages.length]);
-
-  const send = (message: string, status?: TroubleTicket['status']) => {
-    if (!message.trim() || reply.isPending) return;
-    reply.mutate({ id: ticket.id, reply: message.trim(), status }, { onSuccess: () => setText('') });
-  };
-  // Enter gửi, Shift+Enter xuống dòng
-  const onKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
-      e.preventDefault();
-      send(text);
-    }
-  };
-
-  return (
-    <>
-      <header className={styles.head}>
-        <button type="button" className={styles.back} onClick={onBack} aria-label={t('Quay lại danh sách')}>
-          <Icon name="chevronDown" size={18} />
-        </button>
-        <div className={styles.headInfo}>
-          <div className={styles.headTitle}>
-            {t(ticket.type)}
-            <StatusPill tone={TROUBLE_STATUS[ticket.status].tone}>{TROUBLE_STATUS[ticket.status].label}</StatusPill>
-            <StatusPill tone={TROUBLE_PRIORITY[ticket.lv].tone}>{TROUBLE_PRIORITY[ticket.lv].label}</StatusPill>
-          </div>
-          <div className={styles.headSub}>
-            <span className="mono">{ticket.bill}</span> · {ticket.cnee}{ticket.ct ? ` · ${ticket.ct}` : ''} · {ticket.id}
-          </div>
-        </div>
-        {!done && (
-          <div className={styles.headActions}>
-            <Button size="sm" onClick={() => send('Khách hàng nhắc CS xử lý yêu cầu.')} disabled={reply.isPending}>{t('Nhắc CS')}</Button>
-            <Button size="sm" variant="ghost" onClick={() => send('Khách hàng xác nhận đã xử lý xong.', 'done')} disabled={reply.isPending}>
-              <Icon name="check" size={14} /> {t('Đã xử lý xong')}
-            </Button>
+      {/* Hiển thị: bảng / chi tiết / form */}
+      <section className={ws.box}>
+        {view.kind === 'form' ? (
+          <>
+            <div className={ws.boxHead}><b>{t(SEND_LABELS[view.type])}</b></div>
+            <TroubleForm
+              key={`${view.type}-${view.bill ?? ''}-${view.topic ?? ''}`}
+              kind={view.type}
+              bill={view.bill}
+              topic={view.topic}
+              onSent={ticket => setView({ kind: 'detail', id: ticket.id })}
+              onCancel={() => showList()}
+            />
+          </>
+        ) : view.kind === 'detail' ? (
+          <>
+            <div className={ws.boxHead}>
+              <b>{current ? `${current.id} · ${t(ticketTitle(current))}` : view.id}</b>
+              <button type="button" className={ws.btnSecondary} onClick={() => showList()}>← {t('Quay lại danh sách')}</button>
+            </div>
+            {current ? <Detail ticket={current} /> : <p className={ws.note}>{t(isLoading ? 'Đang tải…' : 'Không tìm thấy yêu cầu')}</p>}
+          </>
+        ) : isLoading ? (
+          <p className={ws.note}>{t('Đang tải…')}</p>
+        ) : isError ? (
+          <p className={ws.note}>
+            {t(isNotImplemented(error)
+              ? 'Chức năng hỗ trợ & sự cố đang được kết nối máy chủ. Cần báo gấp, vui lòng gọi hotline Việt An.'
+              : 'Không tải được danh sách yêu cầu')}
+          </p>
+        ) : !rows.length ? (
+          <p className={ws.note}>
+            {t(data.length ? 'Không có yêu cầu nào khớp.' : 'Chưa có yêu cầu nào. Bấm "Báo sự cố đơn hàng", "Yêu cầu hỗ trợ" hoặc "Góp ý" phía trên khi cần.')}
+          </p>
+        ) : (
+          <div className={ws.tableWrap}>
+            <table className={ws.table}>
+              <thead>
+                <tr>
+                  <th style={{ width: 80 }}>{t('Mã')}</th>
+                  <th style={{ width: 120 }}>{t('Loại')}</th>
+                  <th>{t('Nội dung')}</th>
+                  <th style={{ width: 160 }}>{t('Vận đơn / chủ đề')}</th>
+                  <th style={{ width: 140 }}>{t('Trạng thái')}</th>
+                  <th style={{ width: 100 }}>{t('Cập nhật')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map(x => (
+                  <tr key={x.id} className={ws.rowLink} tabIndex={0} onClick={() => setView({ kind: 'detail', id: x.id })} onKeyDown={e => e.key === 'Enter' && setView({ kind: 'detail', id: x.id })}>
+                    <td className="mono">{x.id}</td>
+                    <td>{t(TROUBLE_KINDS[kindOf(x)].label)}</td>
+                    <td>{t(ticketTitle(x))}</td>
+                    <td className={kindOf(x) === 'su_co' ? 'mono' : undefined}>{kindOf(x) === 'su_co' ? ticketSubline(x) : t(ticketSubline(x))}</td>
+                    <td className={cx(styles.status, styles[`st_${x.status}`])}>{t(TROUBLE_STATUS[x.status].label)}</td>
+                    <td>{(x.updatedAt ?? x.date).split(' ')[0]}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
-      </header>
+      </section>
 
-      <div className={styles.body} ref={bodyRef}>
-        <div className={styles.dayNote}>{t('Bạn báo sự cố lúc {date}', { date: ticket.date })}</div>
-        <Bubble mine author={ticket.req || t('Bạn')} date={ticket.date} text={ticket.desc} />
-        {messages.map((m, i) => (
-          <div key={i} className={styles.turn}>
-            {m.message.trim() && (
-              <Bubble mine={m.from === 'customer'} author={m.from === 'vietan' ? t('CS Việt An') : m.author} date={m.date} text={m.message} />
-            )}
-            {m.status && (
-              <div className={styles.system}>
-                {t('Chuyển trạng thái: {status}', { status: t(TROUBLE_STATUS[m.status]?.label ?? m.status) })}
-              </div>
-            )}
-          </div>
+      {/* Liên hệ */}
+      <footer className={ws.footer}>
+        {CONTACTS.map(c => (
+          <span key={c.label}>{t(c.label)}: <b>{c.value}</b></span>
         ))}
-        {!messages.some(m => m.from === 'vietan') && <div className={styles.system}>{t('CS Việt An sẽ phản hồi trong giờ làm việc.')}</div>}
-      </div>
-
-      {done ? (
-        <div className={styles.closed}>{t('Sự cố đã xử lý xong. Cần hỗ trợ thêm, vui lòng báo sự cố mới.')}</div>
-      ) : (
-        <div className={styles.composer}>
-          <textarea
-            rows={1}
-            value={text}
-            onChange={e => setText(e.target.value)}
-            onKeyDown={onKeyDown}
-            placeholder={t('Nhập tin nhắn cho CS Việt An… (Enter để gửi, Shift+Enter xuống dòng)')}
-            aria-label={t('Tin nhắn')}
-          />
-          <button type="button" className={styles.send} onClick={() => send(text)} disabled={reply.isPending || !text.trim()} aria-label={t('Gửi tin nhắn')}>
-            <Icon name="send" size={17} />
-          </button>
-        </div>
-      )}
+        <span>{t('CS báo kết quả qua mục Thông báo, điện thoại hoặc email.')}</span>
+      </footer>
     </>
   );
 }
 
-function Bubble({ mine, author, date, text }: { mine: boolean; author: string; date: string; text: string }) {
+/** Chi tiết 1 yêu cầu: bảng thông tin + nội dung khách gửi. */
+function Detail({ ticket: x }: { ticket: TroubleTicket }) {
+  const { t } = useI18n();
+  const kind = kindOf(x);
+  const rows: Array<[string, string]> = [
+    ['Trạng thái', `${t(TROUBLE_STATUS[x.status].label)}${x.updatedAt ? ` (${x.updatedAt})` : ''}`],
+    ['Loại', t(TROUBLE_KINDS[kind].label) + (kind === 'su_co' ? ` · ${t('Mức độ')}: ${t(TROUBLE_PRIORITY[x.lv].label)}` : '')]
+  ];
+  if (kind === 'su_co') {
+    rows.push(['Vận đơn', x.bill], ['Vấn đề', t(x.type)]);
+    if (x.cnee || x.ct) rows.push(['Người nhận', [x.cnee, x.ct].filter(Boolean).join(' · ')]);
+  } else if (kind === 'ho_tro') {
+    rows.push(['Chủ đề', t(x.type)], ['Tiêu đề', x.subject ?? '']);
+  }
+  rows.push(['Người yêu cầu', [x.req, x.contact].filter(Boolean).join(' · ')], ['Ngày gửi', x.date]);
+
   return (
-    <div className={cx(styles.msg, mine && styles.mine)}>
-      {!mine && <span className={styles.csAvatar} aria-hidden="true">VA</span>}
-      <div className={styles.msgCol}>
-        <div className={styles.msgMeta}>{author} · {date}</div>
-        <div className={styles.bubble}>{text}</div>
-      </div>
+    <div className={styles.detail}>
+      <dl>
+        {rows.map(([label, value]) => (
+          <div key={label}>
+            <dt>{t(label)}</dt>
+            <dd className={cx(label === 'Trạng thái' && styles.status, label === 'Trạng thái' && styles[`st_${x.status}`], label === 'Vận đơn' && 'mono')}>{value}</dd>
+          </div>
+        ))}
+      </dl>
+      <p className={styles.content}>{x.desc}</p>
     </div>
   );
 }

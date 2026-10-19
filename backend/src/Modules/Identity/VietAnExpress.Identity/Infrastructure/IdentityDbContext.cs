@@ -41,8 +41,8 @@ internal sealed class CustomerLoginConfiguration : IEntityTypeConfiguration<Cust
 }
 
 /// <summary>
-/// dbo.TCustomer (bảng cũ, không migration) + bảng mới người dùng đã đồng ý: dbo.TaiKhoanNhanVien (tạm), dbo.MyTrackingCauHinh, dbo.GopY + dbo.GopY_HinhAnh,
-/// dbo.ThongBao + dbo.ThongBao_DaDoc, dbo.SuCo + dbo.SuCo_TraoDoi, dbo.PhienThuHoi, dbo.YeuCauSuaNguoiGui.
+/// Bảng khách hàng, người liên hệ, liên hệ / form (dbo.TContact — Hỗ trợ &amp; sự cố) và hai bảng TCustomer_MyTracking / TCustomer_MyTracking_Banner
+/// của hệ thống cũ; bảng portal: dbo.ThongBao + dbo.ThongBao_DaDoc, dbo.PhienThuHoi, dbo.ThongKeSuDung.
 /// Schema "identity" chỉ chứa lịch sử migration.
 /// </summary>
 internal sealed class IdentityDbContext(DbContextOptions<IdentityDbContext> options) : DbContext(options)
@@ -52,29 +52,23 @@ internal sealed class IdentityDbContext(DbContextOptions<IdentityDbContext> opti
     public DbSet<CustomerLogin> Logins => Set<CustomerLogin>();
     public DbSet<UsageEvent> UsageEvents => Set<UsageEvent>();
 
-    /// <summary>Tài khoản con của nhân viên (dbo.TaiKhoanNhanVien).</summary>
+    /// <summary>Tài khoản con của nhân viên — người liên hệ có tên đăng nhập trong dbo.TCustomer_NguoiLienLac.</summary>
     public DbSet<StaffAccount> StaffAccounts => Set<StaffAccount>();
 
-    /// <summary>Trang MyTracking của khách (dbo.MyTrackingCauHinh).</summary>
+    /// <summary>Trang MyTracking và ảnh quảng cáo trong hai bảng cũ.</summary>
     public DbSet<MyTrackingPage> MyTrackingPages => Set<MyTrackingPage>();
-
-    /// <summary>Góp ý khách gửi (dbo.GopY) và ảnh đính kèm (dbo.GopY_HinhAnh).</summary>
-    public DbSet<Feedback> Feedbacks => Set<Feedback>();
-    public DbSet<FeedbackImage> FeedbackImages => Set<FeedbackImage>();
+    public DbSet<MyTrackingBanner> MyTrackingBanners => Set<MyTrackingBanner>();
 
     /// <summary>Thông báo quản trị Việt An gửi khách (dbo.ThongBao) và lượt đã đọc của từng tài khoản (dbo.ThongBao_DaDoc).</summary>
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<NotificationRead> NotificationReads => Set<NotificationRead>();
 
-    /// <summary>Sự cố khách báo (dbo.SuCo) và lịch sử trao đổi (dbo.SuCo_TraoDoi).</summary>
+    /// <summary>Hỗ trợ &amp; sự cố — dòng FormType "Portal - …" của bảng cũ dbo.TContact.</summary>
     public DbSet<Trouble> Troubles => Set<Trouble>();
-    public DbSet<TroubleMessage> TroubleMessages => Set<TroubleMessage>();
 
     /// <summary>Phiên đăng nhập đã đăng xuất (dbo.PhienThuHoi).</summary>
     public DbSet<RevokedSession> RevokedSessions => Set<RevokedSession>();
 
-    /// <summary>Yêu cầu sửa thông tin người gửi chờ quản trị Việt An duyệt (dbo.YeuCauSuaNguoiGui).</summary>
-    public DbSet<SenderInfoRequest> SenderInfoRequests => Set<SenderInfoRequest>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

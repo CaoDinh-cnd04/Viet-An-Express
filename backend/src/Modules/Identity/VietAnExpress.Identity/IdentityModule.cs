@@ -34,7 +34,7 @@ public static class IdentityModule
             .ValidateOnStart();
 
         // Tài khoản chính: dbo.TCustomer (Login_UserName / Login_Password, không migration);
-        // tài khoản con + MyTracking: bảng mới dbo.TaiKhoanNhanVien, dbo.MyTrackingCauHinh (migration).
+        // tài khoản con: dbo.TCustomer_NguoiLienLac; MyTracking: dbo.TCustomer_MyTracking + dbo.TCustomer_MyTracking_Banner.
         services.AddModuleDbContext<IdentityDbContext>(configuration, IdentityDbContext.Schema);
         services.AddSingleton<ITokenService, JwtTokenService>();
         services.AddSingleton<SessionRevocations>();
@@ -104,16 +104,13 @@ internal sealed class IdentityPermissionProvider : IPermissionProvider
     public IEnumerable<PermissionDefinition> GetPermissions() =>
     [
         new(IdentityPermissions.ManageStaff, "Quản lý tài khoản nhân viên", SystemRoles.Customer),
+        // Mọi tài khoản chính của khách; tài khoản con không có (AdminOnly).
         new(IdentityPermissions.MyTracking, "Cấu hình trang MyTracking", SystemRoles.Customer),
         new(IdentityPermissions.ChangePassword, "Đổi mật khẩu", SystemRoles.Customer),
-        new(IdentityPermissions.Feedback, "Gửi góp ý", SystemRoles.Customer),
         new(IdentityPermissions.Notifications, "Xem thông báo của Việt An", SystemRoles.Customer),
-        new(IdentityPermissions.Troubles, "Báo và theo dõi sự cố vận đơn", SystemRoles.Customer),
-        new(IdentityPermissions.SenderInfo, "Yêu cầu sửa thông tin người gửi", SystemRoles.Customer),
-        new(IdentityPermissions.AdminFeedback, "Xem góp ý của khách (quản trị Việt An)", SystemRoles.VietAnAdmin),
+        new(IdentityPermissions.Troubles, "Gửi và theo dõi yêu cầu hỗ trợ & sự cố", SystemRoles.Customer),
         new(IdentityPermissions.AdminNotifications, "Soạn và gửi thông báo cho khách (quản trị Việt An)", SystemRoles.VietAnAdmin),
-        new(IdentityPermissions.AdminTroubles, "Xử lý sự cố của khách (quản trị Việt An)", SystemRoles.VietAnAdmin),
-        new(IdentityPermissions.AdminAnalytics, "Thống kê sử dụng (quản trị Việt An)", SystemRoles.VietAnAdmin),
-        new(IdentityPermissions.AdminSenderInfo, "Duyệt sửa thông tin người gửi (quản trị Việt An)", SystemRoles.VietAnAdmin)
+        new(IdentityPermissions.AdminTroubles, "Xử lý yêu cầu hỗ trợ & sự cố của khách (quản trị Việt An)", SystemRoles.VietAnAdmin),
+        new(IdentityPermissions.AdminAnalytics, "Thống kê sử dụng (quản trị Việt An)", SystemRoles.VietAnAdmin)
     ];
 }

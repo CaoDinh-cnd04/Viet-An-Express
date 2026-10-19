@@ -50,7 +50,8 @@ internal sealed record StaffAccountDto(
     IReadOnlyList<string> Permissions,
     bool Active,
     DateTime CreatedAt,
-    DateTime? LastLoginAt);
+    string? Phone2,
+    string? Email2);
 
 /// <summary>1 quyền admin có thể cấp cho tài khoản con.</summary>
 internal sealed record AssignablePermissionDto(string Code, string Description);

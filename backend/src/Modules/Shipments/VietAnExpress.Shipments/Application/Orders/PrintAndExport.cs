@@ -40,61 +40,20 @@ internal sealed class PrintOrdersHandler(
             .ToListAsync(ct);
         if (orders.Count == 0) return OrderErrors.NotFound(string.Join(", ", bills));
 
-        // Ưu tiên 2 bảng chi tiết (dùng chung với hệ thống cũ); đơn cấp bill trước khi có 2 bảng → lấy form nháp đã in.
+        // Kiện / dòng hàng từ 2 bảng chi tiết dùng chung với hệ thống cũ.
         var lines = await LegacyOrderLinesReader.LoadAsync(db, orders, ct);
-        var details = await LoadDraftDetailsAsync(orders.Where(o => !lines.ContainsKey(o.Id)).ToList(), ct);
         // Giữ đúng thứ tự khách chọn.
         var models = bills
             .Select(b => orders.FirstOrDefault(o => LegacyOrderView.BillOf(o) == b || (o.OrderNumber is { } n && VaBillCode.Number(b) == n) || o.BillConnect == b))
             .OfType<LegacyOrder>()
             .DistinctBy(o => o.Id)
-            .Select(o => lines.TryGetValue(o.Id, out var l) ? new OrderPrintModel(o, l.Items, l.Packages)
-                : details.TryGetValue(o.OrderNumber ?? 0, out var d) ? new OrderPrintModel(o, d.Items, d.Packages)
-                : new OrderPrintModel(o, []))
+            .Select(o => lines.TryGetValue(o.Id, out var l) ? new OrderPrintModel(o, l.Items, l.Packages) : new OrderPrintModel(o, []))
             .ToList();
 
         var now = VietnamTime.Now(clock);
         return OrderDocumentRenderer.RenderMany(PrintDocs.Parse(q.Doc), models, company.Value, now);
     }
 
-    /// <summary>Đơn tạo trên portal còn giữ form (nháp đã in) → lấy dòng hàng cho invoice, dòng kiện cho bill.</summary>
-    private async Task<Dictionary<long, (IReadOnlyList<PrintItem> Items, IReadOnlyList<PrintPackage> Packages)>> LoadDraftDetailsAsync(List<LegacyOrder> orders, CancellationToken ct)
-    {
-        var numbers = orders.Select(o => o.OrderNumber).OfType<long>().ToList();
-        if (numbers.Count == 0) return [];
-        var drafts = await db.OrderDrafts.IgnoreQueryFilters().AsNoTracking()
-            .Where(d => d.PrintedOrderNumber != null && numbers.Contains(d.PrintedOrderNumber.Value))
-            .Select(d => new { Number = d.PrintedOrderNumber!.Value, d.PayloadJson })
-            .ToListAsync(ct);
-
-        var result = new Dictionary<long, (IReadOnlyList<PrintItem>, IReadOnlyList<PrintPackage>)>();
-        foreach (var d in drafts)
-        {
-            OrderPayload? payload;
-            try { payload = JsonSerializer.Deserialize<OrderPayload>(d.PayloadJson, Json); }
-            catch (JsonException) { continue; }
-            if (payload is null) continue;
-
-            IReadOnlyList<PrintItem> items = payload.Invoice.Items
-                .Where(i => !string.IsNullOrWhiteSpace(i.DescEn))
-                .Select(i => new PrintItem(
-                    i.DescEn, Num(i.Qty), string.IsNullOrWhiteSpace(i.Unit) ? "PCS" : i.Unit, Num(i.Price),
-                    i.Hs, string.IsNullOrWhiteSpace(i.Origin) ? null : i.Origin,
-                    string.IsNullOrWhiteSpace(i.DescVi) ? null : i.DescVi, string.IsNullOrWhiteSpace(i.Manufacturer) ? null : i.Manufacturer))
-                .ToList();
-            var rule = ShippingRules.Rule(payload.Service.Carrier, payload.Service.Hub);
-            IReadOnlyList<PrintPackage> packages = payload.Packages
-                .Select(k => new PrintPackage((int)Num(k.Qty), Num(k.Length), Num(k.Width), Num(k.Height), Num(k.Weight),
-                    ShippingRules.Round((int)Num(k.Qty) * ShippingRules.Volume(Num(k.Length), Num(k.Width), Num(k.Height), rule))))
-                .Where(k => k.Qty > 0 && (k.WeightKg > 0 || k.Length * k.Width * k.Height > 0))
-                .ToList();
-            result[d.Number] = (items, packages);
-        }
-        return result;
-    }
-
-    private static decimal Num(string? v) =>
-        decimal.TryParse(v?.Trim(), NumberStyles.Number, CultureInfo.InvariantCulture, out var n) && n > 0 ? n : 0;
 }
 
 // ---------- Xuất bảng kê gửi hàng (Excel) ----------

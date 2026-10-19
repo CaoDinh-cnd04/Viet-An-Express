@@ -70,9 +70,8 @@ export const NAV: ReadonlyArray<NavEntry> = [
     short: 'Hỗ trợ',
     icon: 'help',
     children: [
-      { to: '/troubles', label: 'Quản lý sự cố', badge: 'troubles' },
-      { to: '/notifications', label: 'Thông báo', badge: 'notifications' },
-      { to: '/help', label: 'Trợ giúp & Góp ý' }
+      { to: '/troubles', label: 'Hỗ trợ & sự cố', badge: 'troubles' },
+      { to: '/notifications', label: 'Thông báo', badge: 'notifications' }
     ]
   },
   {
@@ -82,7 +81,6 @@ export const NAV: ReadonlyArray<NavEntry> = [
     short: 'Tài khoản',
     icon: 'user',
     children: [
-      { to: '/account/sender-info', label: 'Thông tin người gửi', permission: PERMISSIONS.senderInfo },
       { to: '/account/mytracking', label: 'MyTracking cá nhân', permission: PERMISSIONS.myTracking },
       { to: '/account/staff', label: 'Tài khoản nhân viên', permission: PERMISSIONS.manageStaff }
     ]

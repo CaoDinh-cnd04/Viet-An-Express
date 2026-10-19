@@ -43,6 +43,19 @@ internal static partial class VaBillCode
         return BranchPrefixes.FirstOrDefault(p => p.Value == prefix).Key;
     }
 
+    /// <summary>
+    /// Đơn chưa in chưa có số: cột VA_Bill tạm giữ tiền tố chi nhánh (vd "VAHN") để khi in cấp đúng mã; chi nhánh chưa có tiền tố → null.
+    /// </summary>
+    public static string? DraftPrefix(string? branch) =>
+        branch is not null && BranchPrefixes.TryGetValue(branch.Trim(), out var prefix) ? prefix : null;
+
+    /// <summary>Chi nhánh từ tiền tố đã lưu ở đơn chưa in: "VAHN" → "Hà Nội"; khác → null.</summary>
+    public static string? BranchOfPrefix(string? prefix)
+    {
+        var p = prefix?.Trim().ToUpperInvariant() ?? "";
+        return BranchPrefixes.FirstOrDefault(x => x.Value == p).Key;
+    }
+
     /// <summary>Mã nước người nhận từ mã đã lưu: "VAHCM6003585US" → "US"; null khi không phải mã VA.</summary>
     public static string? CountryOf(string? code)
     {

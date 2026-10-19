@@ -10,6 +10,7 @@ namespace VietAnExpress.Identity.Application;
 
 internal static class IdentityErrors
 {
+    public static readonly Error NotLoggedIn = Error.Unauthorized("NOT_LOGGED_IN", "Vui lòng đăng nhập");
     public static readonly Error InvalidCredentials =
         Error.Unauthorized("INVALID_CREDENTIALS", "Sai tên đăng nhập hoặc mật khẩu");
     public static readonly Error SessionExpired =
@@ -32,6 +33,8 @@ internal static class IdentityErrors
         Error.Validation("UNKNOWN_PERMISSION", "Có quyền không hợp lệ hoặc không được cấp cho nhân viên");
     public static readonly Error SlugTaken =
         Error.Conflict("SLUG_TAKEN", "Đường dẫn MyTracking đã có người dùng, vui lòng chọn đường dẫn khác");
+    public static readonly Error MyTrackingChanged =
+        Error.Conflict("MYTRACKING_CHANGED", "Trang MyTracking vừa được lưu ở nơi khác — vui lòng tải lại trang rồi lưu lại");
     public static readonly Error InvalidTrackingConfig =
         Error.Validation("INVALID_MYTRACKING_CONFIG", "Cấu hình MyTracking không hợp lệ hoặc quá lớn (tối đa 2 MB)");
     public static readonly Error MyTrackingNotFound =
@@ -107,7 +110,7 @@ internal sealed class SessionService(ITokenService tokens, ICustomersApi custome
         var sid = sessionId ?? JwtTokenService.NewSessionId();
         var access = tokens.CreateAccessToken(staff.CustomerId, staff.Id, user.UserName, StaffRoles, user.Permissions, sid);
         var refresh = tokens.CreateRefreshToken(staff.CustomerId, staff.Id,
-            tokens.PasswordStamp(staff.CustomerId, staff.PasswordHash, staff.Id), persistent, sid);
+            tokens.PasswordStamp(staff.CustomerId, staff.Password, staff.Id), persistent, sid);
         return new AuthSession(user, access.Token, access.ExpiresAt, refresh.Token, refresh.ExpiresAt, persistent);
     }
 

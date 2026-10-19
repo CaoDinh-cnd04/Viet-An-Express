@@ -47,7 +47,7 @@ const base = process.env.TEST_BASE_URL || 'http://127.0.0.1:4178';
     customer = true;
     await page.setViewportSize({ width: 1440, height: 1000 });
     await page.goto(`${base}/orders/new`);
-    await page.locator('form').waitFor();
+    await page.locator('input[name="shipper.contact"]').waitFor();
     const skip = page.getByRole('button', { name: 'Bỏ qua', exact: true });
     if (await skip.isVisible()) await skip.click();
     const field = page.locator('input[name="shipper.contact"]');

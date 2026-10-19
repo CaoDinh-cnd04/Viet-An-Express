@@ -10,6 +10,11 @@ namespace VietAnExpress.Shipments.Infrastructure.Legacy;
 /// </summary>
 internal sealed class LegacyOrder
 {
+    /// <summary>Status = 0: đơn chưa in (nháp / chờ in) — chưa có số bill, sửa / xóa được; hệ thống cũ cũng hiện ở danh sách đơn.</summary>
+    public const int DraftStatus = 0;
+    /// <summary>Status = 1: đã cấp bill (đơn của hệ thống cũ và đơn portal đã in).</summary>
+    public const int IssuedStatus = 1;
+
     public long Id { get; set; }
     /// <summary>CustomerID của dbo.TCustomer (mã khách hệ thống cũ).</summary>
     public long? CustomerId { get; set; }
@@ -78,6 +83,10 @@ internal sealed class LegacyOrder
     /// <summary>Kết quả giao dạng chữ, vd "08/01/2026 16:28, DELIVERED LYNN TAN".</summary>
     public string? Pod { get; set; }
     public DateTime? PodEstimate { get; set; }
+    /// <summary>
+    /// Customer_Staff_ID — người liên hệ / nhân viên của khách đã tạo đơn (dbo.TCustomer_NguoiLienLac.ID); 0 = tài khoản chính
+    /// hoặc đơn hệ thống cũ. Tài khoản con không có quyền xem toàn bộ đơn chỉ thấy đơn có giá trị này = ID của mình.
+    /// </summary>
     public long? CustomerStaffId { get; set; }
     /// <summary>Loại tiền của giá trị hàng (Loai_Tien).</summary>
     public string? Currency { get; set; }
@@ -94,6 +103,8 @@ internal sealed class LegacyOrderConfiguration : IEntityTypeConfiguration<Legacy
     {
         b.ToTable("MaVanDon", "dbo", t => t.ExcludeFromMigrations());
         b.HasKey(x => x.Id);
+        // Đơn chưa in (Status = 0) chỉ hiện ở "Đơn nháp & chưa in" — mọi truy vấn đơn khác bỏ qua; xử lý nháp dùng IgnoreQueryFilters.
+        b.HasQueryFilter(x => x.Status == null || x.Status != LegacyOrder.DraftStatus);
         b.Property(x => x.Id).HasColumnName("ID").ValueGeneratedOnAdd();
         b.Property(x => x.CustomerId).HasColumnName("CustomerID");
         b.Property(x => x.Awb).HasColumnName("AWB").HasMaxLength(20);

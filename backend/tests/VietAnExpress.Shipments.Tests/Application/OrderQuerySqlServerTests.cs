@@ -25,7 +25,7 @@ public class OrderQuerySqlServerTests(SqlServerQueryFixture fixture) : IClassFix
     {
         var user = new Mock<ICurrentUser>();
         user.SetupGet(u => u.CustomerId).Returns(customerId);
-        return new OrderAccess(user.Object, Mock.Of<ICustomersApi>(), db);
+        return new OrderAccess(user.Object, Mock.Of<ICustomersApi>());
     }
 
     private static GetOrdersQuery Query(string? status = null, int page = 1, int size = 3) =>

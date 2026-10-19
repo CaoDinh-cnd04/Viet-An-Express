@@ -33,7 +33,7 @@ public class OrderScopeTests
     private static async Task<(OrderScope Scope, string Sql)> ScopeSqlAsync(ICurrentUser user)
     {
         using var db = CreateDb();
-        var access = new OrderAccess(user, Mock.Of<ICustomersApi>(), db);
+        var access = new OrderAccess(user, Mock.Of<ICustomersApi>());
         var scope = await access.ScopeAsync(Ct);
         return (scope, access.Apply(db.LegacyOrders, scope).ToQueryString());
     }
@@ -44,7 +44,7 @@ public class OrderScopeTests
         var (scope, sql) = await ScopeSqlAsync(User(null));
         Assert.Equal(new OrderScope(CustomerId, null), scope);
         Assert.Contains("[CustomerID]", sql);
-        Assert.DoesNotContain("[VanDonNguoiTao]", sql);
+        Assert.DoesNotContain("[Customer_Staff_ID] =", sql);
     }
 
     [Fact]
@@ -53,9 +53,7 @@ public class OrderScopeTests
         var (scope, sql) = await ScopeSqlAsync(User(StaffId, ShipmentsPermissions.View));
         Assert.Equal(new OrderScope(CustomerId, StaffId), scope);
         Assert.Contains("[CustomerID]", sql);
-        Assert.Contains("[VanDonNguoiTao]", sql);
-        Assert.Contains("[StaffID]", sql);
-        Assert.Contains("EXISTS", sql);
+        Assert.Contains("[Customer_Staff_ID] = @staffId", sql);
     }
 
     [Fact]
@@ -63,17 +61,20 @@ public class OrderScopeTests
     {
         var (scope, sql) = await ScopeSqlAsync(User(StaffId, ShipmentsPermissions.View, ShipmentsPermissions.ViewAll));
         Assert.Equal(new OrderScope(CustomerId, null), scope);
-        Assert.DoesNotContain("[VanDonNguoiTao]", sql);
+        Assert.DoesNotContain("[Customer_Staff_ID] =", sql);
     }
 
     [Fact]
-    public void Nhan_vien_chi_thay_nhap_minh_tao()
+    public async Task Nhan_vien_chi_thay_nhap_minh_tao_nhap_nam_trong_MaVanDon_Status_0()
     {
         using var db = CreateDb();
-        // Chỉ xét mệnh đề WHERE — SELECT luôn liệt kê cột CreatedByStaffId.
-        string Where(ICurrentUser user) => db.OrderDrafts.VisibleTo(user).ToQueryString().Split("WHERE")[^1];
-        Assert.Contains("[CreatedByStaffId]", Where(User(StaffId)));
-        Assert.DoesNotContain("[CreatedByStaffId]", Where(User(StaffId, ShipmentsPermissions.ViewAll)));
-        Assert.DoesNotContain("[CreatedByStaffId]", Where(User(null)));
+        async Task<string> Where(ICurrentUser user)
+        {
+            var access = new OrderAccess(user, Mock.Of<ICustomersApi>());
+            return access.Apply(db.Drafts(), await access.ScopeAsync(Ct)).ToQueryString();
+        }
+        Assert.Contains("[Customer_Staff_ID] =", await Where(User(StaffId)));
+        Assert.DoesNotContain("[Customer_Staff_ID] =", await Where(User(StaffId, ShipmentsPermissions.ViewAll)));
+        Assert.Contains("[Status] = 0", await Where(User(null)));
     }
 }

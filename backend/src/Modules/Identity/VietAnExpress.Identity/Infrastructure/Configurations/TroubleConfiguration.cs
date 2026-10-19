@@ -1,52 +1,52 @@
+using System.Globalization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using VietAnExpress.Identity.Domain;
 
 namespace VietAnExpress.Identity.Infrastructure.Configurations;
 
-/// <summary>dbo.SuCo — bảng mới (người dùng đã đồng ý): sự cố khách báo cho vận đơn.</summary>
+/// <summary>
+/// dbo.TContact — bảng liên hệ / form của hệ thống cũ (không thuộc migration). Portal ghi yêu cầu Hỗ trợ &amp; sự cố với FormType "Portal - …"
+/// để phần mềm cũ hiện và xử lý; dòng khác của bảng (form khác của hệ thống cũ) bị lọc bỏ.
+/// Cột phụ: Des01 = mã vận đơn, Des02 = mức độ, Des03 = người nhận, Des04 = nước, Des05 = ID tài khoản con, KeyWord = loại sự cố / chủ đề.
+/// </summary>
 internal sealed class TroubleConfiguration : IEntityTypeConfiguration<Trouble>
 {
     public void Configure(EntityTypeBuilder<Trouble> b)
     {
-        b.ToTable("SuCo", "dbo");
+        b.ToTable("TContact", "dbo", t => t.ExcludeFromMigrations());
         b.HasKey(x => x.Id);
-        b.Property(x => x.Id).HasColumnName("ID");
-        b.Property(x => x.CustomerId).HasColumnName("CustomerID");
-        b.Property(x => x.CustomerCode).HasColumnName("Ma_Khach").HasMaxLength(50);
-        b.Property(x => x.CompanyName).HasColumnName("Ten_Cong_Ty").HasMaxLength(250);
-        b.Property(x => x.StaffId).HasColumnName("StaffID");
-        b.Property(x => x.SenderUserName).HasColumnName("Nguoi_Gui").HasMaxLength(100);
-        b.Property(x => x.Bill).HasColumnName("Ma_Van_Don").HasMaxLength(Trouble.BillMaxLength).IsUnicode(false).IsRequired();
-        b.Property(x => x.ConsigneeName).HasColumnName("Nguoi_Nhan").HasMaxLength(Trouble.NameMaxLength);
-        b.Property(x => x.Country).HasColumnName("Quoc_Gia").HasMaxLength(Trouble.CountryMaxLength);
-        b.Property(x => x.Type).HasColumnName("Loai_Su_Co").HasMaxLength(Trouble.TypeMaxLength).IsRequired();
-        b.Property(x => x.Priority).HasColumnName("Muc_Do").HasMaxLength(TroublePriority.MaxLength).IsUnicode(false);
-        b.Property(x => x.Description).HasColumnName("Mo_Ta").HasMaxLength(Trouble.DescriptionMaxLength).IsRequired();
-        b.Property(x => x.Requester).HasColumnName("Nguoi_Yeu_Cau").HasMaxLength(Trouble.RequesterMaxLength);
-        b.Property(x => x.Contact).HasColumnName("Lien_He").HasMaxLength(Trouble.ContactMaxLength);
-        b.Property(x => x.Status).HasColumnName("Trang_Thai").HasMaxLength(TroubleStatus.MaxLength).IsUnicode(false);
-        b.Property(x => x.CreatedAt).HasColumnName("Ngay_Tao").HasColumnType("datetime");
-        b.Property(x => x.UpdatedAt).HasColumnName("Ngay_Cap_Nhat").HasColumnType("datetime");
+        b.Property(x => x.Id).HasColumnName("ID").UseIdentityColumn();
+        b.Property(x => x.Kind).HasColumnName("FormType").HasMaxLength(250)
+            .HasConversion(k => TroubleKind.FormTypeOf(k), f => TroubleKind.FromFormType(f));
+        b.Property(x => x.CustomerId).HasColumnName("CustID");
+        b.Property(x => x.CompanyName).HasColumnName("CompanyName").HasMaxLength(350);
+        b.Property(x => x.StaffId).HasColumnName("Des05").HasMaxLength(300)
+            .HasConversion(
+                v => v.HasValue ? v.Value.ToString(CultureInfo.InvariantCulture) : null,
+                v => string.IsNullOrEmpty(v) ? null : long.Parse(v, CultureInfo.InvariantCulture));
+        b.Property(x => x.Bill).HasColumnName("Des01").HasMaxLength(300);
+        b.Property(x => x.Priority).HasColumnName("Des02").HasMaxLength(300);
+        b.Property(x => x.ConsigneeName).HasColumnName("Des03").HasMaxLength(300);
+        b.Property(x => x.Country).HasColumnName("Des04").HasMaxLength(300);
+        b.Property(x => x.Type).HasColumnName("KeyWord").HasMaxLength(250);
+        b.Property(x => x.Title).HasColumnName("Title").HasMaxLength(300);
+        b.Property(x => x.Description).HasColumnName("Content").HasColumnType("ntext");
+        b.Property(x => x.Requester).HasColumnName("Name").HasMaxLength(250);
+        b.Property(x => x.Contact).HasColumnName("Phone").HasMaxLength(250);
+        b.Property(x => x.Email).HasColumnName("Email").HasMaxLength(250);
+        b.Property(x => x.Status).HasColumnName("Status")
+            .HasConversion(s => (int?)TroubleStatus.ToNumber(s), n => TroubleStatus.FromNumber(n));
+        b.Property(x => x.CreatedAt).HasColumnName("RegDate").HasColumnType("datetime");
+        b.Property(x => x.UpdatedAt).HasColumnName("ModifyDate").HasColumnType("datetime");
+        // Cột bắt buộc của bảng cũ (tệp lưu ở hệ thống cũ) — portal không lưu tệp, ghi 0.
+        b.Property<long>("FileID");
+        b.Property<long>("FileID1");
+        b.Property<long>("FileID2");
+        b.Property<long>("FileID3");
         b.Ignore(x => x.Code);
-        b.HasMany(x => x.Messages).WithOne().HasForeignKey(x => x.TroubleId).OnDelete(DeleteBehavior.Cascade);
-        b.HasIndex(x => new { x.CustomerId, x.UpdatedAt }).HasDatabaseName("IX_SuCo_CustomerID_Ngay_Cap_Nhat");
-    }
-}
+        b.Ignore(x => x.Subject);
 
-/// <summary>dbo.SuCo_TraoDoi — lịch sử trao đổi khách ↔ Việt An của 1 sự cố.</summary>
-internal sealed class TroubleMessageConfiguration : IEntityTypeConfiguration<TroubleMessage>
-{
-    public void Configure(EntityTypeBuilder<TroubleMessage> b)
-    {
-        b.ToTable("SuCo_TraoDoi", "dbo");
-        b.HasKey(x => x.Id);
-        b.Property(x => x.Id).HasColumnName("ID");
-        b.Property(x => x.TroubleId).HasColumnName("SuCo_ID");
-        b.Property(x => x.FromVietAn).HasColumnName("Tu_Viet_An");
-        b.Property(x => x.Author).HasColumnName("Nguoi_Viet").HasMaxLength(150);
-        b.Property(x => x.Message).HasColumnName("Noi_Dung").HasMaxLength(TroubleMessage.MessageMaxLength);
-        b.Property(x => x.NewStatus).HasColumnName("Trang_Thai_Moi").HasMaxLength(TroubleStatus.MaxLength).IsUnicode(false);
-        b.Property(x => x.CreatedAt).HasColumnName("Ngay_Tao").HasColumnType("datetime");
+        b.HasQueryFilter(x => x.Kind == TroubleKind.Incident || x.Kind == TroubleKind.Support || x.Kind == TroubleKind.Feedback);
     }
 }

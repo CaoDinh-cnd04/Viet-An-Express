@@ -22,48 +22,28 @@ public class CopyOrderTests
         user.SetupGet(x => x.CustomerId).Returns(customerId);
         user.SetupGet(x => x.StaffId).Returns(staffId);
         user.Setup(x => x.HasPermission(ShipmentsPermissions.ViewAll)).Returns(viewAll);
-        return new(user.Object, Mock.Of<ICustomersApi>(), db);
+        return new(user.Object, Mock.Of<ICustomersApi>());
     }
 
-    private const string Form = """
-        {"shipper":{"company":"Original sender","originalShipper":"FWD customer"},
-         "receiver":{"company":"Original receiver","addr3":"Third address","phoneCode":"+1"},
-         "service":{"carrier":"DHL","hub":"DHL - VN","reference":"KEEP-REF"},
-         "shipment":{"type":"PACK","pieces":"3","grossWeight":"8"},
-         "goods":{"description":"Content","multi":[{"name":"Clothes"}]},
-         "packages":[{"qty":"3","weight":"2.666","length":"20.25","category":"Clothes"}],
-         "invoice":{"currency":"CAD","dutyTerms":"DDP","shippingFee":"12.50","items":[{"descEn":"Item","manufacturer":"Maker","price":"1.25"}]},
-         "addons":["Đóng thuế hộ (DDP)"]}
-        """;
-
     [Fact]
-    public async Task Copy_doc_ban_form_goc_da_xoa_mem_giu_tat_ca_truong_va_khong_ghi_DB()
+    public async Task Don_chua_in_khong_hien_o_don_hang_va_khong_nhan_ban_duoc()
     {
         await using var db = Db();
-        db.LegacyOrders.Add(new LegacyOrder { Id = 100, CustomerId = 42, OrderNumber = 90000001, GoodsName = "Old rounded value" });
-        var archive = new OrderDraft(42, new("ready", "Receiver", "US", "DHL", "TP.HCM", "REF", "3", "Content"), Form);
-        archive.MarkPrinted(90000001);
-        db.OrderDrafts.Add(archive);
-        db.Entry(archive).Property(x => x.IsDeleted).CurrentValue = true;
+        db.LegacyOrders.Add(new LegacyOrder { Id = 100, CustomerId = 42, OrderNumber = 90000001, Status = LegacyOrder.IssuedStatus });
+        db.LegacyOrders.Add(new LegacyOrder { Id = 101, CustomerId = 42, Status = LegacyOrder.DraftStatus, VaBill = "VAHN" });
+        db.LegacyOrders.Add(new LegacyOrder { Id = 102, CustomerId = 42, OrderNumber = 6000001 }); // đơn cũ Status NULL
         await db.SaveChangesAsync(Ct);
-        db.ChangeTracker.Clear();
-        Assert.Empty(await db.OrderDrafts.ToListAsync(Ct));
-        var result = await new CopyOrderHandler(db, Access(db)).Handle(new("90000001"), Ct);
-        Assert.True(result.IsSuccess);
-        Assert.Equal("20.25", result.Value.GetProperty("packages")[0].GetProperty("length").GetString());
-        Assert.Equal("Maker", result.Value.GetProperty("invoice").GetProperty("items")[0].GetProperty("manufacturer").GetString());
-        Assert.Equal("Đóng thuế hộ (DDP)", result.Value.GetProperty("addons")[0].GetString());
-        Assert.Equal("KEEP-REF", result.Value.GetProperty("service").GetProperty("reference").GetString());
-        Assert.Empty(db.ChangeTracker.Entries());
-        Assert.Single(await db.LegacyOrders.ToListAsync(Ct));
+
+        Assert.Equal([100L, 102L], await db.LegacyOrders.Select(o => o.Id).OrderBy(x => x).ToListAsync(Ct));
+        Assert.Equal([101L], await db.Drafts().Select(o => o.Id).ToListAsync(Ct));
+        Assert.True((await new CopyOrderHandler(db, Access(db)).Handle(new("90000001"), Ct)).IsSuccess);
     }
 
     [Fact]
     public async Task Copy_khong_doc_don_cua_khach_khac_hoac_nhan_vien_khac()
     {
         await using var db = Db();
-        db.LegacyOrders.Add(new LegacyOrder { Id = 100, CustomerId = 42, OrderNumber = 90000001 });
-        db.OrderCreators.Add(new OrderCreator(100, 42, 7, DateTime.UtcNow));
+        db.LegacyOrders.Add(new LegacyOrder { Id = 100, CustomerId = 42, OrderNumber = 90000001, CustomerStaffId = 7 });
         await db.SaveChangesAsync(Ct);
         Assert.True((await new CopyOrderHandler(db, Access(db, 99)).Handle(new("90000001"), Ct)).IsFailure);
         Assert.True((await new CopyOrderHandler(db, Access(db, 42, 8)).Handle(new("90000001"), Ct)).IsFailure);
@@ -99,10 +79,4 @@ public class CopyOrderTests
         Assert.Equal("CAD", p.Invoice.Currency);
         Assert.Equal("12.5", p.Invoice.ShippingFee);
     }
-
-    [Theory]
-    [InlineData("{broken")]
-    [InlineData("null")]
-    [InlineData("{\"shipper\":null}")]
-    public void Form_luu_hong_thi_dung_du_lieu_don_cu(string json) => Assert.Null(OrderCopy.TryReadForm(json));
 }

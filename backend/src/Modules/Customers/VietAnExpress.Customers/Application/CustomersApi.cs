@@ -1,5 +1,4 @@
 using Microsoft.EntityFrameworkCore;
-using System.Data.Common;
 using VietAnExpress.Customers.Contracts;
 using VietAnExpress.Customers.Infrastructure;
 
@@ -25,37 +24,41 @@ internal sealed class CustomersApi(CustomersDbContext db) : ICustomersApi
         return result;
     }
 
-    public async Task<CustomerSummary?> UpdateSenderInfoAsync(long customerId, SenderInfoUpdate update, CancellationToken cancellationToken = default)
+    public async Task<AccountManager?> GetAccountManagerAsync(long customerId, CancellationToken cancellationToken = default) =>
+        (await GetAccountManagersAsync([customerId], cancellationToken)).GetValueOrDefault(customerId);
+
+    public async Task<IReadOnlyDictionary<long, AccountManager>> GetAccountManagersAsync(IReadOnlyCollection<long> customerIds,
+        CancellationToken cancellationToken = default)
     {
-        var c = await db.Customers.FirstOrDefaultAsync(x => x.Id == customerId, cancellationToken);
-        if (c is null) return null;
-        if (c.UpdateSenderInfo(update)) await db.SaveChangesAsync(cancellationToken);
-        return ToSummary(c);
+        var result = new Dictionary<long, AccountManager>();
+        foreach (var chunk in customerIds.Distinct().Chunk(1000))
+        {
+            var rows = await db.Customers.AsNoTracking()
+                .Where(c => chunk.Contains(c.Id) && c.AccountManagerId > 0)
+                .Join(db.VietAnUsers.AsNoTracking(), c => c.AccountManagerId, u => u.Id, (c, u) => new { c.Id, User = u })
+                .ToListAsync(cancellationToken);
+            foreach (var row in rows)
+                if (ToAccountManager(row.User) is { } manager) result[row.Id] = manager;
+        }
+        return result;
     }
 
-    public async Task<SenderInfoWriteResult> UpdateSenderInfoInTransactionAsync(long customerId, SenderInfoUpdate update, SenderInfoUpdate expected,
-        DbTransaction transaction, CancellationToken cancellationToken = default)
+    /// <summary>
+    /// Nhân viên CMS → thông tin hiển thị: họ tên = FIRST_NAME + LAST_NAME (thiếu thì tên đăng nhập), SĐT di động → SĐT cơ quan (bỏ giá trị không phải số điện thoại),
+    /// đang hoạt động khi STATUS = ACTIVE. Nhân viên đã xóa (DELETED) coi như chưa phân công → null. Hàm thuần — có test.
+    /// </summary>
+    internal static AccountManager? ToAccountManager(VietAnUser u)
     {
-        db.ChangeTracker.Clear(); // A rolled-back retry must not reuse the previous attempt's tracked profile.
-        db.Database.SetDbConnection(transaction.Connection!, contextOwnsConnection: false);
-        await db.Database.UseTransactionAsync(transaction, cancellationToken);
-        try
-        {
-            var c = await db.Customers.FromSqlInterpolated($"SELECT * FROM dbo.TCustomer WITH (UPDLOCK, HOLDLOCK) WHERE CustomerID = {customerId}")
-                .SingleOrDefaultAsync(cancellationToken);
-            if (c is null) return new(null, false);
-            var live = ToSummary(c);
-            static bool Different(string? change, string? old, string? now) => change is not null && (old ?? "") != (now ?? "");
-            var outdated = Different(update.CompanyName, expected.CompanyName, live.CompanyName)
-                || Different(update.ContactName, expected.ContactName, live.ContactName) || Different(update.Phone, expected.Phone, live.Phone)
-                || Different(update.Email, expected.Email, live.Email) || Different(update.Address, expected.Address, live.Address)
-                || Different(update.TaxCode, expected.TaxCode, live.TaxCode);
-            if (outdated) return new(live, true);
-            if (c.UpdateSenderInfo(update)) await db.SaveChangesAsync(cancellationToken);
-            return new(ToSummary(c), false);
-        }
-        finally { await db.Database.UseTransactionAsync((DbTransaction?)null, CancellationToken.None); }
+        if (u.Deleted == true) return null;
+        var name = string.Join(' ', new[] { u.FirstName, u.LastName }.Select(Clean).OfType<string>());
+        var userName = Clean(u.UserName) ?? u.Id.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        return new AccountManager(u.Id, userName, name.Length > 0 ? name : userName, Clean(u.Email), Phone(u.MobilePhone) ?? Phone(u.WorkPhone),
+            u.BranchId, string.Equals(Clean(u.Status), "ACTIVE", StringComparison.OrdinalIgnoreCase));
     }
+
+    /// <summary>Ô SĐT của CMS có khi ghi ngày sinh (vd "01/01/1987") — chỉ nhận chuỗi giống số điện thoại: ≥ 8 chữ số, không có "/".</summary>
+    internal static string? Phone(string? value) =>
+        Clean(value) is { } v && !v.Contains('/') && v.Count(char.IsAsciiDigit) >= 8 ? v : null;
 
     /// <summary>
     /// Tên / email / SĐT: ưu tiên thông tin người liên hệ, không có thì lấy của công ty.

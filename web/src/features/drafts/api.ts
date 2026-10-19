@@ -42,7 +42,8 @@ export function useUpdateDraft() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ id, draft }: { id: string; draft: NewDraft }) => http.put<{ data: Draft }>(`/drafts/${encodeURIComponent(id)}`, draft).then(r => r.data),
-    onSuccess: () => void qc.invalidateQueries({ queryKey: draftKeys.all })
+    // Lỗi cũng tải lại: nháp có thể vừa được in / xóa ở nơi khác (DRAFT_CHANGED).
+    onSettled: () => void qc.invalidateQueries({ queryKey: draftKeys.all })
   });
 }
 
@@ -51,11 +52,10 @@ export function useDeleteDraft() {
   const toast = useToast();
   return useMutation({
     mutationFn: (id: string) => http.delete(`/drafts/${encodeURIComponent(id)}`),
-    onSuccess: () => {
-      toast.show('Đã xóa đơn nháp', 'success');
-      void qc.invalidateQueries({ queryKey: draftKeys.all });
-    },
-    onError: e => toast.show(getErrorMessage(e), 'error')
+    onSuccess: () => toast.show('Đã xóa đơn nháp', 'success'),
+    onError: e => toast.show(getErrorMessage(e), 'error'),
+    // Lỗi cũng tải lại: nháp có thể vừa được in ở nơi khác (DRAFT_CHANGED).
+    onSettled: () => void qc.invalidateQueries({ queryKey: draftKeys.all })
   });
 }
 
@@ -65,11 +65,12 @@ export function usePrintDraft() {
   const toast = useToast();
   return useMutation({
     mutationFn: (id: string) => http.post<{ message: string; billCode: string }>(`/drafts/${encodeURIComponent(id)}/print`),
-    onSuccess: res => {
-      toast.show(res.message, 'success');
+    onSuccess: res => toast.show(res.message, 'success'),
+    onError: e => toast.show(getErrorMessage(e), 'error'),
+    // Lỗi cũng tải lại: người khác vừa in / xóa đơn này thì danh sách cập nhật theo.
+    onSettled: () => {
       void qc.invalidateQueries({ queryKey: draftKeys.all });
       void qc.invalidateQueries({ queryKey: orderKeys.all });
-    },
-    onError: e => toast.show(getErrorMessage(e), 'error')
+    }
   });
 }

@@ -42,7 +42,8 @@ internal static class LegacyOrderFactory
         return names.Count > 0 ? string.Join(", ", names) : GoodsName(p.Goods.Category, p.Goods.Description);
     }
 
-    public static LegacyOrder FromPayload(OrderPayload p, LegacyCustomerRef customer, long orderNumber, DateTime todayVn)
+    public static LegacyOrder FromPayload(OrderPayload p, LegacyCustomerRef customer, long orderNumber, DateTime todayVn,
+        int? consigneeCountryId = null)
     {
         var isDoc = string.Equals(p.Shipment.Type, "DOC", StringComparison.OrdinalIgnoreCase);
         // Hàng hóa: số kiện = tổng SL các dòng kiện (form không còn ô số kiện riêng); chứng từ: khách khai
@@ -82,6 +83,7 @@ internal static class LegacyOrderFactory
             ConsigneeCity = Clip(p.Receiver.City, 50),
             ConsigneeState = Clip(p.Receiver.State, 50),
             ConsigneePostalCode = Clip(p.Receiver.Postal, 50),
+            ConsigneeCountryId = consigneeCountryId,
             ConsigneeCountry = Clip(p.Receiver.Country, 50),
             ConsigneeVatTax = Clip(p.Receiver.TaxId, 100),
             ConsigneeIossNo = isEuReceiver ? Clip(p.Receiver.IossNo, 12) : null,

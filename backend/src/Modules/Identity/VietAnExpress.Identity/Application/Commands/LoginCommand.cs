@@ -14,11 +14,11 @@ namespace VietAnExpress.Identity.Application.Commands;
 
 /// <summary>
 /// Đăng nhập bằng Login_UserName / Login_Password của dbo.TCustomer (đúng tài khoản khách đang dùng ở hệ thống cũ — admin),
-/// không khớp thì thử tài khoản con của nhân viên (dbo.TaiKhoanNhanVien).
+/// không khớp thì thử tài khoản con của nhân viên (dbo.TCustomer_NguoiLienLac: TinhCach / Mo_Ta).
 /// </summary>
 internal sealed record LoginCommand(string UserName, string Password, bool Remember) : IRequest<Result<AuthSession>>;
 
-internal sealed class LoginHandler(IdentityDbContext db, SessionService sessions, TimeProvider clock) : IRequestHandler<LoginCommand, Result<AuthSession>>
+internal sealed class LoginHandler(IdentityDbContext db, SessionService sessions) : IRequestHandler<LoginCommand, Result<AuthSession>>
 {
     public async Task<Result<AuthSession>> Handle(LoginCommand cmd, CancellationToken ct)
     {
@@ -34,15 +34,16 @@ internal sealed class LoginHandler(IdentityDbContext db, SessionService sessions
             return session is null ? IdentityErrors.InvalidCredentials : session;
         }
 
-        var staff = await db.StaffAccounts.FirstOrDefaultAsync(s => s.UserName == userName, ct);
-        if (staff is null || !StaffPasswordHasher.Verify(staff.PasswordHash, cmd.Password)) return IdentityErrors.InvalidCredentials;
+        // Bảng người liên hệ của hệ thống cũ không khóa trùng tên đăng nhập → thử mọi dòng cùng tên.
+        var staffCandidates = await db.StaffAccounts.AsNoTracking()
+            .Where(s => s.UserName == userName && s.Password != null && s.Password != "")
+            .ToListAsync(ct);
+        var staff = staffCandidates.FirstOrDefault(s => StaffPasswordHasher.Matches(s.Password, cmd.Password));
+        if (staff is null) return IdentityErrors.InvalidCredentials;
         if (!staff.IsActive) return IdentityErrors.StaffDisabled;
 
         var staffSession = await sessions.StartAsync(staff, cmd.Remember, ct);
-        if (staffSession is null) return IdentityErrors.InvalidCredentials;
-        staff.RecordLogin(VietnamTime.Now(clock));
-        await db.SaveChangesAsync(ct);
-        return staffSession;
+        return staffSession is null ? IdentityErrors.InvalidCredentials : staffSession;
     }
 }
 
@@ -50,7 +51,7 @@ internal sealed class LoginHandler(IdentityDbContext db, SessionService sessions
 
 /// <summary>
 /// Đổi refresh token lấy cặp token mới. Refresh token không lưu DB: hợp lệ khi đúng chữ ký, còn hạn
-/// và mật khẩu (dbo.TCustomer, hoặc dbo.TaiKhoanNhanVien với tài khoản con) chưa đổi kể từ lúc cấp; tài khoản con còn hoạt động.
+/// và mật khẩu (dbo.TCustomer, hoặc dbo.TCustomer_NguoiLienLac với tài khoản con) chưa đổi kể từ lúc cấp; tài khoản con còn hoạt động.
 /// </summary>
 internal sealed record RefreshSessionCommand(string RefreshToken) : IRequest<Result<AuthSession>>;
 
@@ -69,7 +70,7 @@ internal sealed class RefreshSessionHandler(
             var staff = await db.StaffAccounts.AsNoTracking().FirstOrDefaultAsync(s => s.Id == staffId && s.CustomerId == claims.CustomerId, ct);
             if (staff is null) return Rejected("tài khoản con không còn", claims.CustomerId, staffId);
             if (!staff.IsActive) return Rejected("tài khoản con đã bị khóa", claims.CustomerId, staffId);
-            if (!JwtTokenService.FixedTimeEquals(tokens.PasswordStamp(staff.CustomerId, staff.PasswordHash, staff.Id), claims.PasswordStamp))
+            if (!JwtTokenService.FixedTimeEquals(tokens.PasswordStamp(staff.CustomerId, staff.Password, staff.Id), claims.PasswordStamp))
                 return Rejected("mật khẩu tài khoản con đã đổi", claims.CustomerId, staffId);
             var staffSession = await sessions.StartAsync(staff, claims.IsPersistent, ct, claims.SessionId);
             return staffSession is null ? Rejected("hồ sơ khách cha không còn", claims.CustomerId, staffId) : staffSession;

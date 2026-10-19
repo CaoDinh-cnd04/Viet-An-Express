@@ -30,3 +30,9 @@ TestResults/
 Thumbs.db
 .claude/settings.local.json
 
+
+# ---------- Sao lưu dữ liệu trên máy (không commit) ----------
+/backup/
+
+# web.config backend có mật khẩu SQL / Jwt secret thật của máy chủ
+backend/scripts/iis/backend.web.config

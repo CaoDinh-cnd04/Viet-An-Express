@@ -12,7 +12,7 @@ interface Report { views: number; visitors: number; pages: Page[]; modes: Mode[]
 const labels: Record<string, string> = {
   '/': 'Trang chủ', '/login': 'Đăng nhập', '/tracking': 'Tra cứu vận đơn', '/t': 'MyTracking công khai',
   '/orders/new': 'Tạo đơn từng bước', '/orders/new/quick': 'Tạo đơn 1 trang', '/orders/import': 'Tạo đơn từ Excel', '/orders': 'Đơn hàng của tôi', '/drafts': 'Đơn nháp & chưa in',
-  '/pricing': 'Giá & gợi ý dịch vụ', '/ecommerce': 'E-commerce', '/ecommerce/orders': 'Đơn hàng E-com', '/troubles': 'Quản lý sự cố', '/notifications': 'Thông báo', '/help': 'Trợ giúp & Góp ý',
+  '/pricing': 'Giá & gợi ý dịch vụ', '/ecommerce': 'E-commerce', '/ecommerce/orders': 'Đơn hàng E-com', '/troubles': 'Hỗ trợ & sự cố', '/notifications': 'Thông báo', '/help': 'Trợ giúp & Góp ý',
   '/account/api-tracking': 'API Tracking', '/account/mytracking': 'MyTracking cá nhân', '/account/staff': 'Tài khoản nhân viên', '/account/password': 'Đổi mật khẩu', '/account/feedback': 'Góp ý'
 };
 function today() { return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ho_Chi_Minh', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date()); }

@@ -1,15 +1,17 @@
-/** Tài khoản con của nhân viên — GET /account/staff (bảng tạm dbo.TaiKhoanNhanVien). */
+/** Tài khoản con của nhân viên — GET /account/staff (người liên hệ có tên đăng nhập trong dbo.TCustomer_NguoiLienLac). */
 export interface StaffAccount {
   id: number;
   userName: string;
   fullName: string;
   email?: string | null;
   phone?: string | null;
+  /** Di động 2 / email 2 — cột Di_Dong2, Email2. */
+  phone2?: string | null;
+  email2?: string | null;
   /** Mã quyền admin đã cấp, vd "shipments.view". */
   permissions: string[];
   active: boolean;
   createdAt: string;
-  lastLoginAt?: string | null;
 }
 
 /** Quyền admin có thể cấp — GET /account/staff/permissions. */
@@ -22,6 +24,8 @@ export interface StaffProfile {
   fullName: string;
   email: string | null;
   phone: string | null;
+  phone2: string | null;
+  email2: string | null;
   permissions: string[];
 }
 

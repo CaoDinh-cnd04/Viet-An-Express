@@ -17,9 +17,7 @@ export const PERMISSIONS = {
   manageStaff: 'account.staff',
   myTracking: 'account.mytracking',
   /** Tự đổi mật khẩu — tài khoản con không có (admin đặt lại). */
-  changePassword: 'account.password',
-  senderInfo: 'account.sender-info',
-  feedback: 'account.feedback'
+  changePassword: 'account.password'
 } as const;
 
 export type Permission = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];

@@ -210,6 +210,99 @@
   color: var(--color-text-muted);
 }
 
+/* Chọn loại yêu cầu: thẻ có icon + mô tả ngắn */
+.kinds {
+  display: grid;
+  gap: 6px;
+  margin-left: 36px;
+}
+
+.kind {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 10px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.12s, background-color 0.12s;
+}
+
+.kind:hover {
+  border-color: var(--color-brand);
+  background: var(--color-brand-soft);
+}
+
+.kindIcon {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+}
+
+.kind_su_co {
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+}
+
+.kind_ho_tro {
+  background: var(--color-info-soft);
+  color: var(--color-info);
+}
+
+.kind_gop_y {
+  background: var(--color-brand-soft);
+  color: var(--color-brand-strong);
+}
+
+.kindText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: var(--text-sm);
+}
+
+.kindText span {
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+}
+
+/* Đính kèm 1 tệp: cả dòng là nút chọn tệp */
+.file {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 8px 12px;
+  border: 1px dashed var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+
+.file:hover {
+  border-color: var(--color-brand);
+  color: var(--color-brand-strong);
+}
+
+.file input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.fileName {
+  overflow-wrap: anywhere;
+}
+
 .error {
   align-self: flex-end;
   margin: 0;
@@ -224,6 +317,7 @@
 
   .answer,
   .chips,
+  .kinds,
   .inputRow {
     margin-left: 0;
   }

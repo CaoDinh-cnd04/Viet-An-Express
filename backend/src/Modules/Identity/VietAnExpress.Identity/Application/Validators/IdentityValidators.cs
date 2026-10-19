@@ -49,12 +49,17 @@ internal sealed class CreateStaffCommandValidator : AbstractValidator<CreateStaf
             .WithMessage("Tên đăng nhập chỉ gồm chữ không dấu, số và . _ - @");
         RuleFor(x => x.Password).StrongPassword();
         this.StaffProfileRules(x => x.FullName, x => x.Email, x => x.Phone, x => x.Permissions);
+        this.SecondContactRules(x => x.Email2, x => x.Phone2);
     }
 }
 
 internal sealed class UpdateStaffCommandValidator : AbstractValidator<UpdateStaffCommand>
 {
-    public UpdateStaffCommandValidator() => this.StaffProfileRules(x => x.FullName, x => x.Email, x => x.Phone, x => x.Permissions);
+    public UpdateStaffCommandValidator()
+    {
+        this.StaffProfileRules(x => x.FullName, x => x.Email, x => x.Phone, x => x.Permissions);
+        this.SecondContactRules(x => x.Email2, x => x.Phone2);
+    }
 }
 
 internal sealed class ResetStaffPasswordCommandValidator : AbstractValidator<ResetStaffPasswordCommand>
@@ -76,6 +81,17 @@ internal static class StaffRules
             .WithMessage("Email không hợp lệ");
         v.RuleFor(phone).MaximumLength(StaffAccount.PhoneMaxLength);
         v.RuleFor(permissions).NotNull();
+    }
+
+    /// <summary>Email 2 / di động 2 (Email2, Di_Dong2) — không bắt buộc, cùng luật với email / SĐT chính.</summary>
+    public static void SecondContactRules<T>(this AbstractValidator<T> v,
+        System.Linq.Expressions.Expression<Func<T, string?>> email2,
+        System.Linq.Expressions.Expression<Func<T, string?>> phone2)
+    {
+        v.RuleFor(email2).MaximumLength(StaffAccount.EmailMaxLength)
+            .Must(e => string.IsNullOrWhiteSpace(e) || System.Text.RegularExpressions.Regex.IsMatch(e.Trim(), @"^[^@\s]+@[^@\s]+\.[^@\s]+$"))
+            .WithMessage("Email 2 không hợp lệ");
+        v.RuleFor(phone2).MaximumLength(StaffAccount.PhoneMaxLength);
     }
 }
 

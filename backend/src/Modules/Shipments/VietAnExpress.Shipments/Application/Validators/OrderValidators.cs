@@ -16,7 +16,7 @@ internal sealed class SaveDraftCommandValidator : AbstractValidator<SaveDraftCom
     {
         RuleFor(x => x.Draft).NotNull();
         RuleFor(x => x.Draft.Stt)
-            .Must(s => s is OrderDraft.StatusDraft or OrderDraft.StatusReady)
+            .Must(s => s is DraftInput.StatusDraft or DraftInput.StatusReady)
             .WithMessage("Trạng thái nháp phải là draft hoặc ready")
             .OverridePropertyName("stt");
         RuleFor(x => x.Draft.PayloadJson.Length)

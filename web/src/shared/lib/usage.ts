@@ -1,10 +1,10 @@
 import { apiUrl } from '@/shared/api/http';
+import { uuid } from '@/shared/lib/uuid';
 
 export type OrderMode = 'wizard' | 'quick';
-const paths = new Set(['/', '/login', '/orders/new', '/orders/new/quick', '/orders/import', '/orders', '/drafts', '/pricing', '/ecommerce', '/ecommerce/orders', '/troubles', '/notifications', '/help', '/account/api-tracking', '/account/mytracking', '/account/staff', '/account/password', '/account/feedback']);
+const paths = new Set(['/', '/login', '/orders/new', '/orders/new/quick', '/orders/import', '/orders', '/drafts', '/pricing', '/ecommerce', '/ecommerce/orders', '/troubles', '/notifications', '/account/api-tracking', '/account/mytracking', '/account/staff', '/account/password']);
 
 export function usagePath(path: string): string | null {
-  if (path === '/account/sender-info') return path;
   if (path === '/tracking' || path.startsWith('/tracking/')) return '/tracking';
   if (path.startsWith('/t/')) return '/t';
   return paths.has(path) ? path : null;
@@ -15,9 +15,9 @@ function visitorId(): string {
   if (visitor) return visitor;
   try {
     const saved = localStorage.getItem('va.usage.visitor');
-    visitor = saved && /^[0-9a-f-]{36}$/i.test(saved) ? saved : crypto.randomUUID();
+    visitor = saved && /^[0-9a-f-]{36}$/i.test(saved) ? saved : uuid();
     localStorage.setItem('va.usage.visitor', visitor);
-  } catch { visitor = crypto.randomUUID(); }
+  } catch { visitor = uuid(); }
   return visitor;
 }
 
@@ -25,7 +25,7 @@ function visitorId(): string {
 export function trackUsage(path: string, kind = 'page_view', mode?: OrderMode, flowId?: string): void {
   const normalized = usagePath(path);
   if (!normalized) return;
-  const body = JSON.stringify({ id: crypto.randomUUID(), visitorId: visitorId(), path: normalized, kind, mode: mode ?? null, flowId: flowId ?? null });
+  const body = JSON.stringify({ id: uuid(), visitorId: visitorId(), path: normalized, kind, mode: mode ?? null, flowId: flowId ?? null });
   const send = async (attempt: number): Promise<void> => {
     try {
       const res = await fetch(apiUrl('/usage/events'), { method: 'POST', credentials: 'include', keepalive: true, headers: { 'Content-Type': 'application/json' }, body });
@@ -46,7 +46,7 @@ export function orderUsage(scope: string, mode: OrderMode, kind: 'order_start' |
       const raw = JSON.parse(sessionStorage.getItem(key) ?? 'null') as Flow | null;
       if (raw && /^[0-9a-f-]{36}$/i.test(raw.id) && Array.isArray(raw.started)) flow = raw;
     } catch { /* storage unavailable */ }
-    flow ??= { id: crypto.randomUUID(), started: [] };
+    flow ??= { id: uuid(), started: [] };
     flows.set(key, flow);
   }
   const path = mode === 'wizard' ? '/orders/new' : '/orders/new/quick';

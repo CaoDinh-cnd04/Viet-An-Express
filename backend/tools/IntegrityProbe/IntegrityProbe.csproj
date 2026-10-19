@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><OutputType>Exe</OutputType></PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../src/Modules/Shipments/VietAnExpress.Shipments/VietAnExpress.Shipments.csproj" />
+    <ProjectReference Include="../../src/Modules/Identity/VietAnExpress.Identity/VietAnExpress.Identity.csproj" />
+    <ProjectReference Include="../../src/Modules/Customers/VietAnExpress.Customers/VietAnExpress.Customers.csproj" />
+    <ProjectReference Include="../../src/Modules/Ecommerce/VietAnExpress.Ecommerce/VietAnExpress.Ecommerce.csproj" />
+  </ItemGroup>
+</Project>

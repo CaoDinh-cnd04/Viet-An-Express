@@ -5,6 +5,7 @@ using VietAnExpress.Identity.Contracts;
 using VietAnExpress.Identity.Domain;
 using VietAnExpress.Identity.Infrastructure;
 using VietAnExpress.SharedKernel.Application;
+using VietAnExpress.SharedKernel.Persistence;
 using VietAnExpress.SharedKernel.Results;
 
 namespace VietAnExpress.Identity.Application.Commands;
@@ -17,11 +18,13 @@ internal sealed record ListStaffQuery : IRequest<Result<IReadOnlyList<StaffAccou
 internal sealed record ListAssignablePermissionsQuery : IRequest<Result<IReadOnlyList<AssignablePermissionDto>>>;
 
 internal sealed record CreateStaffCommand(
-    string UserName, string Password, string FullName, string? Email, string? Phone, IReadOnlyList<string> Permissions)
+    string UserName, string Password, string FullName, string? Email, string? Phone, IReadOnlyList<string> Permissions,
+    string? Phone2 = null, string? Email2 = null)
     : IRequest<Result<StaffAccountDto>>;
 
 internal sealed record UpdateStaffCommand(
-    long Id, string FullName, string? Email, string? Phone, IReadOnlyList<string> Permissions, bool Active)
+    long Id, string FullName, string? Email, string? Phone, IReadOnlyList<string> Permissions, bool Active,
+    string? Phone2 = null, string? Email2 = null)
     : IRequest<Result<StaffAccountDto>>;
 
 internal sealed record ResetStaffPasswordCommand(long Id, string NewPassword) : IRequest<Result>;
@@ -66,15 +69,21 @@ internal sealed class StaffHandlers(IdentityDbContext db, SessionService session
         if (!PermissionsAllowed(permissions)) return IdentityErrors.UnknownPermission;
 
         var userName = cmd.UserName.Trim();
-        if (await UserNameTakenAsync(userName, ct)) return IdentityErrors.UserNameTaken;
-        if (await db.StaffAccounts.CountAsync(s => s.CustomerId == customerId, ct) >= MaxPerCustomer)
-            return IdentityErrors.TooManyStaff;
+        // Bảng cũ không có index duy nhất cho tên đăng nhập: kiểm tra + thêm trong cùng 1 khóa để 2 người tạo cùng lúc
+        // (cùng tên, hoặc cùng lúc vượt giới hạn 100 tài khoản) phải chờ nhau thay vì cùng lọt qua.
+        return await db.WithAppLockAsync<Result<StaffAccountDto>>("portal:staff-account", async () =>
+        {
+            if (await UserNameTakenAsync(userName, ct)) return IdentityErrors.UserNameTaken;
+            if (await db.StaffAccounts.CountAsync(s => s.CustomerId == customerId, ct) >= MaxPerCustomer)
+                return IdentityErrors.TooManyStaff;
 
-        var staff = new StaffAccount(customerId, userName, StaffPasswordHasher.Hash(cmd.Password), cmd.FullName, cmd.Email, cmd.Phone,
-            permissions, Now);
-        db.StaffAccounts.Add(staff);
-        await db.SaveChangesAsync(ct);
-        return ToDto(staff);
+            // Mật khẩu lưu như hệ thống cũ (cột Mo_Ta dùng chung) — giống dbo.TCustomer.Login_Password.
+            var staff = new StaffAccount(customerId, userName, cmd.Password, cmd.FullName, cmd.Email, cmd.Phone, permissions, Now);
+            staff.SetSecondContact(cmd.Phone2, cmd.Email2);
+            db.StaffAccounts.Add(staff);
+            await db.SaveChangesAsync(ct);
+            return ToDto(staff);
+        }, ct);
     }
 
     public async Task<Result<StaffAccountDto>> Handle(UpdateStaffCommand cmd, CancellationToken ct)
@@ -86,7 +95,8 @@ internal sealed class StaffHandlers(IdentityDbContext db, SessionService session
         var staff = found.Value;
 
         // Khóa tài khoản: phiên đang mở hết hiệu lực khi access token hết hạn (refresh bị từ chối).
-        staff.Update(cmd.FullName, cmd.Email, cmd.Phone, permissions, cmd.Active, Now);
+        staff.Update(cmd.FullName, cmd.Email, cmd.Phone, permissions, cmd.Active);
+        staff.SetSecondContact(cmd.Phone2, cmd.Email2);
         await db.SaveChangesAsync(ct);
         return ToDto(staff);
     }
@@ -97,7 +107,7 @@ internal sealed class StaffHandlers(IdentityDbContext db, SessionService session
         if (found.IsFailure) return found.Error;
         var staff = found.Value;
         // Đổi mật khẩu → dấu mật khẩu trong refresh token đổi → nhân viên phải đăng nhập lại.
-        staff.SetPassword(StaffPasswordHasher.Hash(cmd.NewPassword), Now);
+        staff.SetPassword(cmd.NewPassword);
         await db.SaveChangesAsync(ct);
         return Result.Success();
     }
@@ -106,7 +116,8 @@ internal sealed class StaffHandlers(IdentityDbContext db, SessionService session
     {
         var found = await FindAsync(cmd.Id, ct);
         if (found.IsFailure) return found.Error;
-        db.StaffAccounts.Remove(found.Value);
+        // Giữ dòng người liên hệ (hệ thống cũ còn dùng), chỉ gỡ đăng nhập — phiên đang mở hết hạn khi làm mới.
+        found.Value.RemoveLogin();
         await db.SaveChangesAsync(ct);
         return Result.Success();
     }
@@ -126,10 +137,10 @@ internal sealed class StaffHandlers(IdentityDbContext db, SessionService session
 
     private bool PermissionsAllowed(IEnumerable<string> permissions) => permissions.All(sessions.IsAssignable);
 
-    /// <summary>Quyền luôn có (vd gửi góp ý) không cần lưu — bỏ qua nếu client gửi kèm thay vì báo quyền không hợp lệ.</summary>
+    /// <summary>Quyền luôn có (vd hỗ trợ & sự cố) không cần lưu — bỏ qua nếu client gửi kèm thay vì báo quyền không hợp lệ.</summary>
     private static List<string> WithoutStaffAlways(IEnumerable<string> permissions) =>
         permissions.Where(p => !IdentityPermissions.StaffAlways.Contains(p.Trim())).ToList();
 
     private StaffAccountDto ToDto(StaffAccount s) => new(
-        s.Id, s.UserName, s.FullName, s.Email, s.Phone, sessions.GrantedPermissions(s), s.IsActive, s.CreateDate, s.LastLoginAt);
+        s.Id, s.UserName, s.FullName, s.Email, s.Phone, sessions.GrantedPermissions(s), s.IsActive, s.CreateDate, s.Phone2, s.Email2);
 }

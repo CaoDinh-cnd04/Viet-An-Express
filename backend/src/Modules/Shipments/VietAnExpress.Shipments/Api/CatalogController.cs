@@ -53,6 +53,16 @@ internal sealed class CatalogController : ApiControllerBase
     public async Task<IActionResult> FavoriteCategory(long id, FavoriteInput body, CancellationToken ct) =>
         FromResult(await Sender.Send(new SetCategoryFavoriteCommand(id, body.IsFavorite), ct), body.IsFavorite ? "Đã thêm vào nhóm yêu thích" : "Đã bỏ yêu thích");
 
+    /// <summary>
+    /// Tra mã HS theo nước nhập khẩu (dbo.Catalog_HsCode): <c>country</c> US / GB / AU, <c>q</c> tên hàng hoặc mã số (≥ 2 ký tự),
+    /// <c>mode</c> verified (mặc định, chỉ mã Việt An đã xác minh) hoặc catalog (toàn danh mục). Tối đa 50 dòng, không trả thuế suất.
+    /// </summary>
+    [HttpGet("catalog/hs-lookup")]
+    [HasPermission(ShipmentsPermissions.View)]
+    [ProducesResponseType<ApiResponse<IReadOnlyList<HsLookupItemDto>>>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> HsLookup([FromQuery] string? country, [FromQuery] string? q, [FromQuery] string? mode, CancellationToken ct) =>
+        OkData(await Sender.Send(new HsLookupQuery(country, q, mode), ct));
+
     /// <summary>Thư viện mặt hàng: mỗi mặt hàng đã khai 1 dòng, đơn giá lần gần nhất; yêu thích lên đầu, mặt hàng đã xóa bị ẩn.</summary>
     [HttpGet("catalog/products")]
     [HasPermission(ShipmentsPermissions.View)]
