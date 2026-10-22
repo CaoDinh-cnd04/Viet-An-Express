@@ -36,3 +36,6 @@ Thumbs.db
 
 # web.config backend có mật khẩu SQL / Jwt secret thật của máy chủ
 backend/scripts/iis/backend.web.config
+
+# Script SQL / triển khai chỉ giữ trên máy, không đưa lên git
+backend/scripts/
