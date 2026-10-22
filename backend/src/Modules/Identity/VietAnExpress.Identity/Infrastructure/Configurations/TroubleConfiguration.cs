@@ -2,6 +2,7 @@ using System.Globalization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using VietAnExpress.Identity.Domain;
+using VietAnExpress.SharedKernel.Persistence;
 
 namespace VietAnExpress.Identity.Infrastructure.Configurations;
 
@@ -14,7 +15,7 @@ internal sealed class TroubleConfiguration : IEntityTypeConfiguration<Trouble>
 {
     public void Configure(EntityTypeBuilder<Trouble> b)
     {
-        b.ToTable("TContact", "dbo", t => t.ExcludeFromMigrations());
+        b.ToTable("TContact", "dbo", t => t.LegacyTable());
         b.HasKey(x => x.Id);
         b.Property(x => x.Id).HasColumnName("ID").UseIdentityColumn();
         b.Property(x => x.Kind).HasColumnName("FormType").HasMaxLength(250)

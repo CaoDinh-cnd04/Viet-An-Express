@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using VietAnExpress.SharedKernel.Persistence;
 
 namespace VietAnExpress.Shipments.Infrastructure.Legacy;
 
@@ -101,7 +102,7 @@ internal sealed class LegacyOrderConfiguration : IEntityTypeConfiguration<Legacy
 {
     public void Configure(EntityTypeBuilder<LegacyOrder> b)
     {
-        b.ToTable("MaVanDon", "dbo", t => t.ExcludeFromMigrations());
+        b.ToTable("MaVanDon", "dbo", t => t.LegacyTable());
         b.HasKey(x => x.Id);
         // Đơn chưa in (Status = 0) chỉ hiện ở "Đơn nháp & chưa in" — mọi truy vấn đơn khác bỏ qua; xử lý nháp dùng IgnoreQueryFilters.
         b.HasQueryFilter(x => x.Status == null || x.Status != LegacyOrder.DraftStatus);

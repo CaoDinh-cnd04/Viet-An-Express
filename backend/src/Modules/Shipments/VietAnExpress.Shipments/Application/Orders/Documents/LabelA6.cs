@@ -45,7 +45,7 @@ internal static class LabelA6
         return $"""
             <section class="page a6 mark">
               <div class="box">
-                {Head(m, c, Code128.Svg(pieceNo, 36), $"<div class=\"awb-no\">{H(m.Bill)} <small>/{index}</small></div>")}
+                {Head(m, c, Code128.Svg(m.Bill, 36), $"<div class=\"awb-no\">{H(m.Bill)} <small>/{index}</small></div>")}
                 <div class="m-title"><span>SHIPPING MARK<br><i>HAWB:</i></span><b>{H(m.Bill)}</b></div>
                 <div class="bar center"><i>Ref no.:</i> {H(o.CustomerBill)}</div>
                 <div class="m-dest">
@@ -99,8 +99,8 @@ internal static class LabelA6
     public const string Css = """
         @page { size: 100mm 150mm; margin: 0; }
         * { box-sizing: border-box; }
-        /* Arial, chữ nhỏ nhất 8px (trước 6px): máy in nhiệt 203 dpi in rõ, không đứt nét. */
-        body { margin: 0; font-family: Arial, Helvetica, sans-serif; font-size: 9px; color: #000; background: #e9ece9;
+        /* Aptos (thiếu thì Arial), chữ nhỏ nhất 8px (trước 6px): máy in nhiệt 203 dpi in rõ, không đứt nét. */
+        body { margin: 0; font-family: Aptos, "Aptos Body", Arial, Helvetica, sans-serif; font-size: 9px; color: #000; background: #e9ece9;
                -webkit-print-color-adjust: exact; print-color-adjust: exact; text-rendering: geometricPrecision; }
         .toolbar { position: sticky; top: 0; display: flex; gap: 12px; align-items: center; padding: 10px 16px; background: #1e6b2c; color: #fff; z-index: 1; font-size: 12px; }
         .toolbar button { padding: 6px 18px; border: 0; border-radius: 6px; background: #fff; color: #1e6b2c; font-weight: 700; cursor: pointer; }
@@ -114,12 +114,12 @@ internal static class LabelA6
         .brand { font-size: 8px; line-height: 1.25; }
         .brand-name { font-size: 14px; font-weight: 700; line-height: 1.1; }
         .brand .k { display: inline-block; min-width: 7mm; font-size: 8px; }
-        .awb { text-align: center; line-height: 1.1; }
-        .awb .barcode { display: block; width: 100%; height: 7mm; }
+        .awb { text-align: center; line-height: 1.1; font-family: Aptos, "Aptos Body", Arial, Helvetica, sans-serif; }
+        .awb .barcode { display: block; width: 100%; height: 8mm; }
         /* Mã bill dưới mã vạch: chữ thường, cỡ tự nhiên, căn giữa (không kéo giãn bằng mã vạch) */
-        .awb-code { margin-top: .5mm; font-size: 10px; font-weight: 400; white-space: nowrap; }
-        .awb-no { font-size: 9px; font-weight: 400; white-space: nowrap; }
-        .awb-no small { font-size: 9px; }
+        .awb-code { margin-top: .5mm; font-size: 14px; font-weight: 400; line-height: 1.05; white-space: nowrap; }
+        .awb-no { margin-top: .3mm; font-size: 13px; font-weight: 400; line-height: 1.05; white-space: nowrap; }
+        .awb-no small { font-size: 10px; }
         .route { font-size: 8px; font-weight: 700; }
         .bar { background: none; font-weight: 700; padding: .3mm 1.5mm; border-top: 1px solid #000; border-bottom: 1px solid #000; }
         .bar.center { text-align: center; }
@@ -160,8 +160,9 @@ internal static class LabelA6
         .foot { display: flex; justify-content: space-between; align-items: flex-end; padding: 1.5mm 1mm 0; }
         .total { font-size: 11px; font-weight: 700; }
         .slip-name { font-size: 8px; }
-        .foot-awb { width: 30mm; text-align: center; font-size: 9px; line-height: 1.1; }
-        .foot-awb .barcode { display: block; width: 100%; height: 6mm; }
+        /* Mã vạch số bill/số kiện để máy quét kho đọc: đủ rộng (vạch ≥ 0,3mm) và cao */
+        .foot-awb { width: 48mm; text-align: center; font-family: Aptos, "Aptos Body", Arial, Helvetica, sans-serif; font-size: 14px; font-weight: 400; line-height: 1.1; }
+        .foot-awb .barcode { display: block; width: 100%; height: 9mm; }
         .m-title { display: flex; justify-content: center; align-items: center; gap: 2mm; padding: .8mm 0; border-bottom: 1px solid #000; }
         .m-title span { font-size: 10px; font-weight: 700; text-align: right; line-height: 1.15; }
         .m-title b { font-size: 26px; line-height: 1; }
@@ -169,7 +170,9 @@ internal static class LabelA6
         .m-dest .qr-frame { margin: 0 auto; width: 22mm; height: 22mm; }
         .m-dest-lbl { font-weight: 700; font-size: 8px; }
         .m-dest-code { font-size: 38px; font-weight: 700; line-height: 1.05; }
-        .m-pcs { display: grid; grid-template-columns: 22mm 1fr; align-items: center; padding: .5mm 3mm; font-size: 12px; font-weight: 700; border-bottom: 1px solid #000; }
+        /* Cùng lưới với .m-dest (lề 1,5mm + cột 30mm) để số kiện thẳng hàng với DESTINATION / mã nước */
+        .m-pcs { display: grid; grid-template-columns: 30mm 1fr; align-items: center; padding: .5mm 1.5mm; font-size: 12px; font-weight: 700; border-bottom: 1px solid #000; }
+        .m-pcs i { padding-left: 1.5mm; }
         .m-pcs b { font-size: 30px; line-height: 1.1; }
         .m-foot { display: flex; justify-content: space-between; align-items: center; gap: 2mm; padding: 1.5mm 1mm 0; font-size: 8px; line-height: 1.5; }
         .m-big { font-size: 12px; }
@@ -177,7 +180,8 @@ internal static class LabelA6
         @media print {
           body { background: #fff; }
           .toolbar { display: none; }
-          .a6 { margin: 0; box-shadow: none; }
+          /* Căn nhãn giữa trang: khổ giấy khác 100×150mm (vd A4, giấy nhiệt khổ rộng) vẫn nằm chính giữa chiều ngang. */
+          .a6 { margin: 0 auto; box-shadow: none; }
         }
         """;
 }

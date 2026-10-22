@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using VietAnExpress.Identity.Domain;
+using VietAnExpress.SharedKernel.Persistence;
 
 namespace VietAnExpress.Identity.Infrastructure.Configurations;
 
@@ -9,7 +10,7 @@ internal sealed class MyTrackingPageConfiguration : IEntityTypeConfiguration<MyT
 {
     public void Configure(EntityTypeBuilder<MyTrackingPage> b)
     {
-        b.ToTable("TCustomer_MyTracking", "dbo", t => t.ExcludeFromMigrations());
+        b.ToTable("TCustomer_MyTracking", "dbo", t => t.LegacyTable());
         b.HasKey(x => x.Id);
         b.Property(x => x.Id).HasColumnName("ID").UseIdentityColumn();
         b.Property(x => x.CustomerId).HasColumnName("CustomerID");
@@ -43,7 +44,7 @@ internal sealed class MyTrackingBannerConfiguration : IEntityTypeConfiguration<M
 {
     public void Configure(EntityTypeBuilder<MyTrackingBanner> b)
     {
-        b.ToTable("TCustomer_MyTracking_Banner", "dbo", t => t.ExcludeFromMigrations());
+        b.ToTable("TCustomer_MyTracking_Banner", "dbo", t => t.LegacyTable());
         b.HasKey(x => x.Id);
         b.Property(x => x.Id).HasColumnName("ID").UseIdentityColumn();
         b.Property(x => x.MyTrackingId).HasColumnName("MyTrackingID");

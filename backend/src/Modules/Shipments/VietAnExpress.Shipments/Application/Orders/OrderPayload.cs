@@ -113,5 +113,7 @@ internal sealed class OrderPayload
         public string Qty { get; init; } = "";
         public string Unit { get; init; } = "";
         public string Price { get; init; } = "";
+        /// <summary>Kiện số mấy (1..tổng số kiện) khi tuyến khai invoice riêng từng kiện; "" = invoice chung.</summary>
+        public string Package { get; init; } = "";
     }
 }

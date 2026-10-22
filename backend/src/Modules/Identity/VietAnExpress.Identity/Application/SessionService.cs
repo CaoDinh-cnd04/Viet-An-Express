@@ -88,29 +88,26 @@ internal sealed class SessionService(ITokenService tokens, ICustomersApi custome
             .ToList();
 
     /// <summary>Null nếu tài khoản không còn đăng nhập được (hồ sơ khách không còn / chưa có mật khẩu).</summary>
-    /// <param name="sessionId">Làm mới phiên → giữ mã phiên cũ; null → phiên mới (đăng nhập).</param>
-    public async Task<AuthSession?> StartAsync(CustomerLogin login, bool persistent, CancellationToken ct, string? sessionId = null)
+    public async Task<AuthSession?> StartAsync(CustomerLogin login, bool persistent, CancellationToken ct)
     {
         if (!login.HasPassword) return null;
         var user = await BuildUserAsync(login, ct);
         if (user is null) return null;
 
-        var sid = sessionId ?? JwtTokenService.NewSessionId();
-        var access = tokens.CreateAccessToken(login.CustomerId, null, user.UserName, AdminRoles, user.Permissions, sid);
-        var refresh = tokens.CreateRefreshToken(login.CustomerId, null, tokens.PasswordStamp(login.CustomerId, login.Password!), persistent, sid);
+        var access = tokens.CreateAccessToken(login.CustomerId, null, user.UserName, AdminRoles, user.Permissions);
+        var refresh = tokens.CreateRefreshToken(login.CustomerId, null, tokens.PasswordStamp(login.CustomerId, login.Password!), persistent);
         return new AuthSession(user, access.Token, access.ExpiresAt, refresh.Token, refresh.ExpiresAt, persistent);
     }
 
     /// <summary>Null nếu tài khoản con đã bị khóa hoặc hồ sơ khách cha không còn.</summary>
-    public async Task<AuthSession?> StartAsync(StaffAccount staff, bool persistent, CancellationToken ct, string? sessionId = null)
+    public async Task<AuthSession?> StartAsync(StaffAccount staff, bool persistent, CancellationToken ct)
     {
         var user = await BuildUserAsync(staff, ct);
         if (user is null) return null;
 
-        var sid = sessionId ?? JwtTokenService.NewSessionId();
-        var access = tokens.CreateAccessToken(staff.CustomerId, staff.Id, user.UserName, StaffRoles, user.Permissions, sid);
+        var access = tokens.CreateAccessToken(staff.CustomerId, staff.Id, user.UserName, StaffRoles, user.Permissions);
         var refresh = tokens.CreateRefreshToken(staff.CustomerId, staff.Id,
-            tokens.PasswordStamp(staff.CustomerId, staff.Password, staff.Id), persistent, sid);
+            tokens.PasswordStamp(staff.CustomerId, staff.Password, staff.Id), persistent);
         return new AuthSession(user, access.Token, access.ExpiresAt, refresh.Token, refresh.ExpiresAt, persistent);
     }
 

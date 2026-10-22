@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using VietAnExpress.Identity.Domain;
+using VietAnExpress.SharedKernel.Persistence;
 
 namespace VietAnExpress.Identity.Infrastructure;
 
@@ -32,7 +33,7 @@ internal sealed class CustomerLoginConfiguration : IEntityTypeConfiguration<Cust
 {
     public void Configure(EntityTypeBuilder<CustomerLogin> b)
     {
-        b.ToTable("TCustomer", "dbo", t => t.ExcludeFromMigrations());
+        b.ToTable("TCustomer", "dbo", t => t.LegacyTable());
         b.HasKey(x => x.CustomerId);
         b.Property(x => x.CustomerId).HasColumnName("CustomerID").ValueGeneratedNever();
         b.Property(x => x.UserName).HasColumnName("Login_UserName").HasMaxLength(50);
@@ -42,7 +43,7 @@ internal sealed class CustomerLoginConfiguration : IEntityTypeConfiguration<Cust
 
 /// <summary>
 /// Bảng khách hàng, người liên hệ, liên hệ / form (dbo.TContact — Hỗ trợ &amp; sự cố) và hai bảng TCustomer_MyTracking / TCustomer_MyTracking_Banner
-/// của hệ thống cũ; bảng portal: dbo.ThongBao + dbo.ThongBao_DaDoc, dbo.PhienThuHoi, dbo.ThongKeSuDung.
+/// của hệ thống cũ; bảng portal: dbo.ThongBao + dbo.ThongBao_DaDoc, dbo.ThongKeSuDung.
 /// Schema "identity" chỉ chứa lịch sử migration.
 /// </summary>
 internal sealed class IdentityDbContext(DbContextOptions<IdentityDbContext> options) : DbContext(options)
@@ -65,9 +66,6 @@ internal sealed class IdentityDbContext(DbContextOptions<IdentityDbContext> opti
 
     /// <summary>Hỗ trợ &amp; sự cố — dòng FormType "Portal - …" của bảng cũ dbo.TContact.</summary>
     public DbSet<Trouble> Troubles => Set<Trouble>();
-
-    /// <summary>Phiên đăng nhập đã đăng xuất (dbo.PhienThuHoi).</summary>
-    public DbSet<RevokedSession> RevokedSessions => Set<RevokedSession>();
 
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)

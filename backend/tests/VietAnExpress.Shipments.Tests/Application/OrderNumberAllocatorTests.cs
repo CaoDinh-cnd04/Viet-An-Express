@@ -8,7 +8,7 @@ namespace VietAnExpress.Shipments.Tests.Application;
 public class OrderNumberAllocatorTests
 {
     [Fact]
-    public void Noi_tiep_so_lon_nhat_cua_he_thong_cu() =>
+    public void Noi_tiep_ngay_sau_so_lon_nhat() =>
         Assert.Equal([6166454L, 6166455L, 6166456L], LegacyOrderNumberAllocator.Next(6166453, 3));
 
     [Fact]

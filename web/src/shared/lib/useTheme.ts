@@ -3,17 +3,17 @@ import { useLocalStorage } from './useLocalStorage';
 
 type Theme = 'light' | 'dark';
 
-const systemTheme = (): Theme => (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-
-/** Giao diện sáng/tối: mặc định theo hệ điều hành, người dùng đổi thì ghi nhớ. */
+/**
+ * Giao diện sáng/tối: khách mới (chưa từng chọn) luôn thấy giao diện sáng, không theo chế độ tối của hệ điều hành;
+ * người dùng bấm đổi thì ghi nhớ (localStorage "va.theme"). index.html gán sẵn data-theme trước khi React chạy để không nháy tối.
+ */
 export function useTheme() {
   const [stored, setStored] = useLocalStorage<Theme | null>('va.theme', null);
-  const theme = stored ?? systemTheme();
+  const theme: Theme = stored ?? 'light';
 
   useEffect(() => {
-    if (stored) document.documentElement.dataset.theme = stored;
-    else delete document.documentElement.dataset.theme;
-  }, [stored]);
+    document.documentElement.dataset.theme = theme;
+  }, [theme]);
 
   return { theme, toggle: () => setStored(theme === 'dark' ? 'light' : 'dark') };
 }

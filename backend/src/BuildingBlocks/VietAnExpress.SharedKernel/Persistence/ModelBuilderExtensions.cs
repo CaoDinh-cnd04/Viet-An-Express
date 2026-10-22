@@ -34,4 +34,15 @@ public static class ModelBuilderExtensions
 
         return modelBuilder;
     }
+
+    /// <summary>
+    /// Bảng của hệ thống cũ: không thuộc migration, và ghi không dùng OUTPUT — bảng cũ trên máy chủ có trigger,
+    /// SQL Server từ chối INSERT/UPDATE ... OUTPUT trên bảng có trigger (lỗi "cannot have any enabled triggers").
+    /// </summary>
+    public static void LegacyTable<TEntity>(this Microsoft.EntityFrameworkCore.Metadata.Builders.TableBuilder<TEntity> table)
+        where TEntity : class
+    {
+        table.ExcludeFromMigrations();
+        table.UseSqlOutputClause(false);
+    }
 }

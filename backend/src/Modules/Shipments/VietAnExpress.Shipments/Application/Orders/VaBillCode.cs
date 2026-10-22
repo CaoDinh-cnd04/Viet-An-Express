@@ -57,16 +57,28 @@ internal static partial class VaBillCode
     }
 
     /// <summary>Mã nước người nhận từ mã đã lưu: "VAHCM6003585US" → "US"; null khi không phải mã VA.</summary>
+    /// <summary>Bỏ hậu tố số kiện của mã vạch nhãn: "6003585/2" → "6003585"; chuỗi khác giữ nguyên (đã trim).</summary>
+    public static string StripPiece(string? input)
+    {
+        var text = input?.Trim() ?? "";
+        var slash = text.LastIndexOf('/');
+        return slash > 0 && slash < text.Length - 1 && text[(slash + 1)..].All(char.IsAsciiDigit) && text[..slash].All(char.IsAsciiDigit)
+            ? text[..slash] : text;
+    }
+
     public static string? CountryOf(string? code)
     {
         var text = code?.Trim().ToUpperInvariant() ?? "";
         return CodePattern().IsMatch(text) ? text[^2..] : null;
     }
 
-    /// <summary>Số VA từ chữ khách nhập: "6003585" hoặc "VAHCM6003585US" (không phân biệt hoa thường) → 6003585; dạng khác → null.</summary>
+    /// <summary>
+    /// Số VA từ chữ khách nhập / máy quét: "6003585", "VAHCM6003585US" (không phân biệt hoa thường) hoặc mã vạch nhãn kiện
+    /// "6003585/2" (số bill / số kiện) → 6003585; dạng khác → null.
+    /// </summary>
     public static long? Number(string? input)
     {
-        var text = input?.Trim().ToUpperInvariant() ?? "";
+        var text = StripPiece(input).ToUpperInvariant();
         if (text.Length == 0) return null;
         if (long.TryParse(text, NumberStyles.None, CultureInfo.InvariantCulture, out var n)) return n;
         var m = CodePattern().Match(text);

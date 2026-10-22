@@ -31,7 +31,7 @@ internal sealed record OrderDto(
     OrderReceiverDto? Receiver = null,
     IReadOnlyList<OrderPackageDto>? Packages = null,
     OrderInvoiceDto? Invoice = null,
-    /// <summary>VSVX ghi lúc cấp bill (Remote_Area_FedEx), vd "Fedex (Tier B)"; null khi không thuộc vùng.</summary>
+    /// <summary>VSVX mọi hãng ghi lúc cấp bill (Remote_Area_FedEx, Remote_Area_UPS, Remote_Area), vd "Fedex (Tier B), UPS"; null khi không thuộc vùng.</summary>
     string? RemoteArea = null,
     decimal? ChargeableWeight = null);
 
@@ -40,7 +40,8 @@ internal sealed record OrderPackageDto(int Qty, string PackType, int Length, int
     decimal? VolumetricWeight = null, decimal? ChargeableWeight = null);
 
 /// <summary>1 dòng hàng invoice (dbo.MaVanDon_ChiTietHang).</summary>
-internal sealed record OrderItemDto(string DescEn, string DescVi, decimal Qty, string Unit, decimal Price, decimal Amount, string Hs, string Origin);
+internal sealed record OrderItemDto(string DescEn, string DescVi, decimal Qty, string Unit, decimal Price, decimal Amount, string Hs, string Origin,
+    int? Package = null);
 
 /// <summary>Invoice của vận đơn — chỉ trả ở GET /orders/{bill}.</summary>
 internal sealed record OrderInvoiceDto(string Currency, string ExportType, decimal? ShippingFee, decimal? GoodsValue, IReadOnlyList<OrderItemDto> Items);

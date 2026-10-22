@@ -180,11 +180,16 @@ internal static class LegacyOrderFactory
                     HsCode = Clip(i.Hs, 500),
                     Manufacturer = Clip(i.Manufacturer, 999),
                     Origin = Clip(i.Origin, 300),
-                    Currency = currency
+                    Currency = currency,
+                    Package = PackageNumber(i.Package)
                 };
             })
             .ToList();
     }
+
+    /// <summary>Kiện số mấy của dòng hàng: "2" → 2; trống / không phải số nguyên dương → null (invoice chung).</summary>
+    public static int? PackageNumber(string? value) =>
+        int.TryParse(value?.Trim(), NumberStyles.None, CultureInfo.InvariantCulture, out var n) && n > 0 ? n : null;
 
     /// <summary>"DHL - Singapore" → "DHL|Singapore" (định dạng cột Dich_Vu của hệ thống cũ).</summary>
     public static string ServiceName(string hub, string carrier)

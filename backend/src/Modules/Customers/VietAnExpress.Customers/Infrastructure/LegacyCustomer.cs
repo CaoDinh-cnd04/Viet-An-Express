@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using VietAnExpress.SharedKernel.Persistence;
 
 namespace VietAnExpress.Customers.Infrastructure;
 
@@ -34,7 +35,7 @@ internal sealed class LegacyCustomerConfiguration : IEntityTypeConfiguration<Leg
 {
     public void Configure(EntityTypeBuilder<LegacyCustomer> b)
     {
-        b.ToTable("TCustomer", "dbo", t => t.ExcludeFromMigrations());
+        b.ToTable("TCustomer", "dbo", t => t.LegacyTable());
         b.HasKey(x => x.Id);
         b.Property(x => x.Id).HasColumnName("CustomerID");
         b.Property(x => x.Code).HasColumnName("CustomerCode");

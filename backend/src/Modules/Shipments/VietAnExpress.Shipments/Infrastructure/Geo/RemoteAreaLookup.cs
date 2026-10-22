@@ -26,19 +26,14 @@ internal interface IRemoteAreaLookup
 /// </summary>
 internal sealed class RemoteAreaLookup(ShipmentsDbContext db, IMemoryCache cache, ILogger<RemoteAreaLookup> logger) : IRemoteAreaLookup
 {
-    /// <summary>
-    /// Như hệ thống cũ (hàm Load_FEDEX_Remote_Area): chỉ dùng các dòng FedEx của bảng. Dòng UPS / Au-Post / CT-VA có trong bảng
-    /// nhưng hệ thống cũ không dùng để cảnh báo hay ghi vào đơn (vd Norway 4375: cũ chỉ ghi "Fedex (Tier B)", cột UPS trống).
-    /// </summary>
-    public const string LegacyCarrier = "Fedex";
-
     public async Task<IReadOnlyList<RemoteAreaHit>> FindAsync(string countryCode, string? postalCode, string? city, CancellationToken cancellationToken)
     {
         var cc = countryCode.Trim().ToUpperInvariant();
         if (cc.Length != 2 || !cc.All(char.IsAsciiLetterUpper)) return [];
         if (string.IsNullOrWhiteSpace(postalCode) && string.IsNullOrWhiteSpace(city)) return [];
 
-        var key = $"geo:remote:{LegacyCarrier}:{cc}";
+        // Mọi hãng trong bảng (FedEx, UPS, Au-Post, CT-VA…): 1 mã bưu chính có thể thuộc VSVX của nhiều hãng cùng lúc.
+        var key = $"geo:remote:all:{cc}";
         if (!cache.TryGetValue(key, out IReadOnlyList<RemoteAreaRow>? rows) || rows is null)
         {
             try
@@ -46,7 +41,7 @@ internal sealed class RemoteAreaLookup(ShipmentsDbContext db, IMemoryCache cache
                 rows = await db.Database
                     .SqlQuery<RemoteAreaRow>($"""
                         SELECT DichVu AS Carrier, City, [Begin Postal Code] AS BeginPostal, [End Postal Code] AS EndPostal, [To Parcel Services] AS ToParcel
-                        FROM dbo.VungXauVungXa WHERE [Country Code] = {cc} AND DichVu = {LegacyCarrier}
+                        FROM dbo.VungXauVungXa WHERE [Country Code] = {cc}
                         """)
                     .AsNoTracking()
                     .ToListAsync(cancellationToken);

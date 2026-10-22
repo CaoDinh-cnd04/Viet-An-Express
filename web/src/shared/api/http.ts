@@ -1,6 +1,7 @@
 /**
  * HTTP client dùng chung cho toàn bộ feature.
- * - Base URL: VITE_API_BASE_URL (mặc định /api/v1; dev được Vite proxy sang backend).
+ * - Base URL: VITE_API_BASE_URL (mặc định /api/v1; dev được Vite proxy sang backend). Bản đưa lên máy chủ đặt địa chỉ đầy đủ
+ *   khi backend ở tên miền riêng, vd http://api.vietanexpress.com.vn/api/v1 (publish-ftp.ps1 truyền vào lúc build).
  * - Lỗi HTTP được chuẩn hóa thành ApiError để UI hiển thị thống nhất.
  * - Hợp đồng API từng endpoint: xem web/docs/API_CONTRACT.md.
  */
@@ -49,11 +50,19 @@ export type QueryParams = Record<string, string | number | boolean | null | unde
 export const apiUrl = (path: string, params?: QueryParams): string => buildUrl(path, params);
 
 function buildUrl(path: string, params?: QueryParams): string {
-  const url = new URL(BASE_URL + path, window.location.origin);
+  return resolveApiUrl(BASE_URL, path, params, window.location.origin);
+}
+
+/**
+ * URL gọi API: cùng tên miền với trang → đường dẫn tương đối ("/api/v1/orders?page=2");
+ * backend ở tên miền khác (base là địa chỉ đầy đủ) → giữ nguyên tên miền đó. Hàm thuần — có test.
+ */
+export function resolveApiUrl(base: string, path: string, params: QueryParams | undefined, origin: string): string {
+  const url = new URL(base + path, origin);
   Object.entries(params ?? {}).forEach(([key, value]) => {
     if (value !== undefined && value !== null && value !== '') url.searchParams.set(key, String(value));
   });
-  return url.pathname + url.search;
+  return url.origin === new URL(origin).origin ? url.pathname + url.search : url.href;
 }
 
 interface RequestOptions {

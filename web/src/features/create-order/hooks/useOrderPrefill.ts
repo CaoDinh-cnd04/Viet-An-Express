@@ -6,7 +6,7 @@ import { useDebouncedCallback } from '@/shared/lib/useDebouncedCallback';
 import { useToast } from '@/shared/ui';
 import { useDrafts } from '@/features/drafts/api';
 import { useOrderCopy } from '@/features/orders/api';
-import { copyOrderValues } from '../lib/copy-order';
+import { cleanLoadedContacts, copyOrderValues } from '../lib/copy-order';
 import { defaultValues, type CreateOrderValues } from '../schema';
 
 /**
@@ -28,7 +28,8 @@ export const copyAutosaveKey = (storageKey: string, bill: string): string => `${
 export function readAutosave(key: string): CreateOrderValues | undefined {
   try {
     const raw = window.sessionStorage.getItem(key);
-    return raw ? { ...defaultValues(), ...(JSON.parse(raw) as Partial<CreateOrderValues>) } : undefined;
+    // Ghép từng nhóm với mặc định — bản tự lưu cũ có thể thiếu trường mới của form (vd goods.multi).
+    return raw ? copyOrderValues(JSON.parse(raw) as Partial<CreateOrderValues>) : undefined;
   } catch {
     return undefined;
   }
@@ -86,7 +87,8 @@ export function useOrderPrefill(form: UseFormReturn<CreateOrderValues>, storageK
     if (unsaved) {
       form.reset(unsaved);
       toast.show('Đã khôi phục thay đổi chưa lưu của đơn nháp này.');
-    } else if (looksLikeForm(draft.payload)) form.reset({ ...defaultValues(), ...draft.payload });
+    // Ghép từng nhóm với giá trị mặc định: nháp đọc từ dbo.MaVanDon thiếu trường form (vd goods.multi) → không báo lỗi ô ẩn.
+    } else if (looksLikeForm(draft.payload)) form.reset(cleanLoadedContacts(copyOrderValues(draft.payload)));
     else form.reset({ ...defaultValues(), receiver: { ...defaultValues().receiver, company: draft.cnee, country: draft.ct }, service: { ...defaultValues().service, reference: draft.ref } });
   }, [draftId, drafts.data, form, storageKey, toast]);
 
@@ -106,7 +108,8 @@ export function useOrderPrefill(form: UseFormReturn<CreateOrderValues>, storageK
     const appliedKey = `from:${storageKey}:${fromBill}`;
     if (draftId || !fromBill || !source.data || applied.current === appliedKey) return;
     applied.current = appliedKey;
-    const values = copyOrderValues(readAutosave(key) ?? source.data);
+    const saved = readAutosave(key);
+    const values = saved ? copyOrderValues(saved) : cleanLoadedContacts(copyOrderValues(source.data));
     form.reset(values);
     try { window.sessionStorage.setItem(key, JSON.stringify(values)); } catch { /* storage unavailable */ }
   }, [draftId, fromBill, source.data, form, key, storageKey]);

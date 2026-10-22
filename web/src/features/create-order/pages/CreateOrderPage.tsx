@@ -26,6 +26,7 @@ import { useShipmentSync } from '../hooks/useShipmentSync';
 import { evaluatePackages, hasCritical, type PackageWarning } from '../lib/carrier-limits';
 import { buildDraftPayload, summarizePackages, toNumber } from '../lib/shipment';
 import { stepProgress } from '../lib/step-progress';
+import { listFormErrors } from '../lib/form-errors';
 import { STEP_FIELDS, type CreateOrderValues } from '../schema';
 import styles from './CreateOrderPage.module.css';
 
@@ -87,13 +88,13 @@ function useActiveSection(ids: readonly string[]) {
   return active;
 }
 
-/** Cuộn tới ô lỗi đầu tiên sau khi kiểm tra không đạt. */
+/** Cuộn tới ô lỗi đầu tiên sau khi kiểm tra không đạt — đợi khung đang thu gọn (vd người gửi) tự mở ra trước. */
 const focusFirstError = () =>
-  requestAnimationFrame(() => {
-    const el = document.querySelector<HTMLElement>('[aria-invalid="true"]');
+  window.setTimeout(() => {
+    const el = [...document.querySelectorAll<HTMLElement>('[aria-invalid="true"]')].find(e => e.offsetParent !== null);
     el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     el?.focus({ preventScroll: true });
-  });
+  }, 120);
 
 /**
  * Trang tạo đơn. Hai chế độ dùng chung một form và các khối con:
@@ -224,7 +225,10 @@ export default function CreateOrderPage({ mode }: { mode: CreateMode }) {
       const firstBad = STEP_FIELDS.findIndex(fields => fields.some(f => errors[f]));
       if (firstBad >= 0) setStep(firstBad);
     }
-    toast.show('Còn ô bắt buộc chưa điền — đã tô đỏ giúp bạn', 'error');
+    // Nói rõ ô nào sai — ô có thể nằm ở phần khách không đang nhìn (vd dữ liệu cũ của đơn nháp: email "=", SĐT lẫn chữ).
+    const list = listFormErrors(errors);
+    const shown = list.slice(0, 3).map(e => `${t(e.label)}: ${t(e.message)}`).join(' · ');
+    toast.show(list.length ? `${t('Còn ô chưa đúng')} — ${shown}${list.length > 3 ? ' …' : ''}` : 'Còn ô bắt buộc chưa điền — đã tô đỏ giúp bạn', 'error');
     focusFirstError();
   };
 

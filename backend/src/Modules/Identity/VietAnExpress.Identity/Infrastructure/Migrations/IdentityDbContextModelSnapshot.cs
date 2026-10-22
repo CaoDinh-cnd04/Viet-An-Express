@@ -286,30 +286,6 @@ namespace VietAnExpress.Identity.Infrastructure.Migrations
                     b.ToTable("ThongBao_DaDoc", "dbo");
                 });
 
-            modelBuilder.Entity("VietAnExpress.Identity.Domain.RevokedSession", b =>
-                {
-                    b.Property<string>("SessionId")
-                        .HasMaxLength(36)
-                        .IsUnicode(false)
-                        .HasColumnType("varchar(36)")
-                        .HasColumnName("Ma_Phien");
-
-                    b.Property<DateTime>("ExpiresAt")
-                        .HasColumnType("datetime2")
-                        .HasColumnName("Het_Han");
-
-                    b.Property<DateTime>("RevokedAt")
-                        .HasColumnType("datetime2")
-                        .HasColumnName("Ngay_Thu_Hoi");
-
-                    b.HasKey("SessionId");
-
-                    b.HasIndex("ExpiresAt")
-                        .HasDatabaseName("IX_PhienThuHoi_Het_Han");
-
-                    b.ToTable("PhienThuHoi", "dbo");
-                });
-
             modelBuilder.Entity("VietAnExpress.Identity.Domain.StaffAccount", b =>
                 {
                     b.Property<long>("Id")

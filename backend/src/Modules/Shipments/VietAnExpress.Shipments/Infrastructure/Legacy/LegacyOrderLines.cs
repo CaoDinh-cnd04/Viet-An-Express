@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using VietAnExpress.SharedKernel.Persistence;
 
 namespace VietAnExpress.Shipments.Infrastructure.Legacy;
 
@@ -41,13 +42,18 @@ internal sealed class LegacyInvoiceLine
     public string? Currency { get; set; }
     public string? GrossWeight { get; set; }
     public string? NetWeight { get; set; }
+    /// <summary>
+    /// Số thứ tự kiện (1..tổng số kiện) của dòng hàng khi tuyến yêu cầu invoice riêng từng kiện (vd Chuyên tuyến Úc / EU / Canada);
+    /// null = invoice chung của cả đơn (đơn cũ, hệ thống cũ). Cột portal thêm vào bảng cũ: dbo.MaVanDon_ChiTietHang.Kien.
+    /// </summary>
+    public int? Package { get; set; }
 }
 
 internal sealed class LegacyPackageLineConfiguration : IEntityTypeConfiguration<LegacyPackageLine>
 {
     public void Configure(EntityTypeBuilder<LegacyPackageLine> b)
     {
-        b.ToTable("MaVanDon_PCS_DIM", "dbo", t => t.ExcludeFromMigrations());
+        b.ToTable("MaVanDon_PCS_DIM", "dbo", t => t.LegacyTable());
         b.HasKey(x => x.Id);
         b.Property(x => x.Id).HasColumnName("ID").ValueGeneratedOnAdd();
         b.Property(x => x.OrderId).HasColumnName("MaVanDonID");
@@ -66,7 +72,7 @@ internal sealed class LegacyInvoiceLineConfiguration : IEntityTypeConfiguration<
 {
     public void Configure(EntityTypeBuilder<LegacyInvoiceLine> b)
     {
-        b.ToTable("MaVanDon_ChiTietHang", "dbo", t => t.ExcludeFromMigrations());
+        b.ToTable("MaVanDon_ChiTietHang", "dbo", t => t.LegacyTable());
         b.HasKey(x => x.Id);
         b.Property(x => x.Id).HasColumnName("ID").ValueGeneratedOnAdd();
         b.Property(x => x.OrderId).HasColumnName("MaVanDonID");
@@ -82,5 +88,6 @@ internal sealed class LegacyInvoiceLineConfiguration : IEntityTypeConfiguration<
         b.Property(x => x.Currency).HasColumnName("Loai_Tien").HasMaxLength(150);
         b.Property(x => x.GrossWeight).HasMaxLength(150);
         b.Property(x => x.NetWeight).HasMaxLength(150);
+        b.Property(x => x.Package).HasColumnName("Kien");
     }
 }

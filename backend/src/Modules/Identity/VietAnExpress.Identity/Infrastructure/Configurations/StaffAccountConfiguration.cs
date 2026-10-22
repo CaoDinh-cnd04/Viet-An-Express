@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using VietAnExpress.Identity.Domain;
+using VietAnExpress.SharedKernel.Persistence;
 
 namespace VietAnExpress.Identity.Infrastructure.Configurations;
 
@@ -12,7 +13,7 @@ internal sealed class StaffAccountConfiguration : IEntityTypeConfiguration<Staff
 {
     public void Configure(EntityTypeBuilder<StaffAccount> b)
     {
-        b.ToTable("TCustomer_NguoiLienLac", "dbo", t => t.ExcludeFromMigrations());
+        b.ToTable("TCustomer_NguoiLienLac", "dbo", t => t.LegacyTable());
         b.HasKey(x => x.Id);
         b.Property(x => x.Id).HasColumnName("ID").UseIdentityColumn();
         b.Property(x => x.CustomerId).HasColumnName("CustomerID");

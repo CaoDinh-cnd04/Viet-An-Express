@@ -12,8 +12,7 @@ const OPTS = { shouldDirty: true } as const;
  * Đồng bộ cân nặng giữa bước 1 và bảng kiện (bước 2):
  * - Bảng có 1 dòng: sửa cân ở bước 1 → cập nhật cân/kiện của dòng đó (= tổng cân / SL dòng).
  * - Sửa bảng kiện → tổng cân ở bước 1 cập nhật theo; nhiều dòng thì ô cân bước 1 chỉ đọc.
- * "Số kiện" là tổng khách khai, KHÔNG tự đổi SL trong bảng kiện (dòng mới mặc định SL 1) và ngược lại —
- * tạo đơn mới kiểm tra tổng SL các dòng phải bằng số kiện (schema).
+ * Hàng hóa (PACK): "Số kiện" tự cộng theo SL các dòng kiện (PackagesTable), không sửa tay.
  * Chạy theo sự kiện nhập (không dùng effect) để tránh vòng lặp cập nhật qua lại.
  * Đồng thời áp quy tắc chứng từ / hàng hoá theo cân (applyDocWeightRule):
  * chứng từ > 2kg tự chuyển PACK; PACK do hệ thống tự chuyển mà cân về ≤ 2kg thì trả lại chứng từ.

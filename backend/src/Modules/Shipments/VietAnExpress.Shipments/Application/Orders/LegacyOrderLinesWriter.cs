@@ -63,6 +63,6 @@ internal static class LegacyOrderLinesReader
         var en = i.DescriptionEn?.Trim() ?? "";
         var vi = i.DescriptionVi?.Trim() ?? "";
         return new PrintItem(en.Length == 0 ? vi : en, i.Quantity ?? 0, string.IsNullOrWhiteSpace(i.Unit) ? "PCS" : i.Unit.Trim(), i.UnitPrice ?? 0,
-            Blank(i.HsCode), Blank(i.Origin), en.Length == 0 ? null : Blank(vi), Blank(i.Manufacturer));
+            Blank(i.HsCode), Blank(i.Origin), en.Length == 0 ? null : Blank(vi), Blank(i.Manufacturer), i.Package);
     }
 }

@@ -58,7 +58,7 @@
   height: var(--control-h);
   padding: 0 var(--space-3);
   border: 1px solid var(--color-border-strong);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-control);
   background: var(--color-surface);
   font-size: var(--field-input-size, var(--text-md));
   transition: border-color 0.12s, box-shadow 0.12s;
@@ -81,6 +81,7 @@
 
 .select {
   padding-right: var(--space-6);
+  padding-left: var(--space-4);
 }
 
 .withSuffix {
@@ -100,10 +101,10 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  min-width: 44px;
-  padding: 0 var(--space-2);
+  min-width: 48px;
+  padding: 0 var(--space-2) 0 var(--space-3);
   border-right: 1px solid var(--color-border);
-  border-radius: var(--radius-sm) 0 0 var(--radius-sm);
+  border-radius: var(--radius-control) 0 0 var(--radius-control);
   background: var(--color-surface-muted);
   color: var(--color-text-muted);
   font-size: var(--text-sm);
@@ -151,6 +152,8 @@
 
 .textarea {
   height: auto;
+  /* Ô nhiều dòng giữ bo nhẹ — bo tròn hẳn sẽ cắt chữ ở góc */
+  border-radius: var(--radius-sm);
   min-height: 76px;
   padding: var(--space-2) var(--space-3);
   line-height: 1.5;

@@ -268,6 +268,53 @@ public class OrderDocumentRendererTests
         Assert.Contains("6204", html);
         Assert.Contains("55.00", html); // 40 + 15
     }
+
+    [Fact]
+    public void Invoice_rieng_tung_kien_tach_hang_can_kich_thuoc_theo_kien()
+    {
+        var order = Order(pieces: 3);
+        order.ShippingFee = 10;
+        var items = new[]
+        {
+            new PrintItem("Dress", 2, "PCS", 20, null, "Vietnam", Package: 1),
+            new PrintItem("Shirt", 1, "PCS", 15, null, "Vietnam", Package: 2),
+            new PrintItem("Hat", 3, "PCS", 5, null, "Vietnam", Package: 3)
+        };
+        // 1 dòng kiện SL 2 (5 kg / kiện) + 1 dòng SL 1 (3 kg) → 3 kiện.
+        var model = new OrderPrintModel(order, items, [new PrintPackage(2, 50, 40, 30, 5), new PrintPackage(1, 20, 20, 20, 3)]);
+
+        var scopes = CommercialInvoice.InvoiceScope.PerPackage(model);
+
+        Assert.True(model.InvoicePerPackage);
+        Assert.Equal(3, scopes.Count);
+        Assert.Equal(["Dress"], scopes[0].Lines.Select(l => l.Description));
+        Assert.Equal(["Hat"], scopes[2].Lines.Select(l => l.Description));
+        Assert.Equal([5m, 5m, 3m], scopes.Select(s => s.GrossKg));
+        Assert.Equal(20m, scopes[2].Packages.Single().Length);
+        Assert.Equal([10m, 0m, 0m], scopes.Select(s => s.ShippingFee)); // phí ship của đơn chỉ in ở invoice kiện 1
+
+        var html = System.Net.WebUtility.HtmlDecode(Render(PrintDocs.Invoice, model));
+        Assert.Equal(3 * CommercialInvoice.Copies, html.Split("class=\"page a4 invoice\"").Length - 1);
+        Assert.Contains("1 (Package 2/3)", html);
+    }
+
+    [Fact]
+    public void Invoice_chung_khi_khong_dong_nao_mang_so_kien()
+    {
+        var model = new OrderPrintModel(Order(), [new PrintItem("Dress", 2, "PCS", 20, null, "Vietnam")]);
+        Assert.False(model.InvoicePerPackage);
+        var html = Render(PrintDocs.Invoice, model);
+        Assert.Equal(CommercialInvoice.Copies, html.Split("class=\"page a4 invoice\"").Length - 1);
+    }
+
+    [Theory]
+    [InlineData("2", 2)]
+    [InlineData(" 1 ", 1)]
+    [InlineData("", null)]
+    [InlineData("0", null)]
+    [InlineData("-1", null)]
+    [InlineData("1.5", null)]
+    public void So_kien_cua_dong_hang(string value, int? expected) => Assert.Equal(expected, LegacyOrderFactory.PackageNumber(value));
 }
 
 public class OrderSheetTests

@@ -10,8 +10,6 @@ public static class VaClaimTypes
     public const string CustomerId = "customer_id";
     /// <summary>Có khi người đăng nhập là tài khoản con (nhân viên) của khách — dbo.TaiKhoanNhanVien.ID.</summary>
     public const string StaffId = "staff_id";
-    /// <summary>Mã phiên đăng nhập (giữ nguyên qua các lần làm mới) — đăng xuất thu hồi theo mã này.</summary>
-    public const string SessionId = "sid";
 }
 
 /// <summary>

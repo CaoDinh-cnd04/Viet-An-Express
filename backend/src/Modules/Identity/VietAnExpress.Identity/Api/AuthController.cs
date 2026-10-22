@@ -79,15 +79,14 @@ internal sealed class AuthController(IOptions<JwtOptions> jwt) : ApiControllerBa
     }
 
     /// <summary>
-    /// Thu hồi phiên của thiết bị này ở máy chủ (dbo.PhienThuHoi — access / refresh token của phiên bị từ chối ngay, kể cả
-    /// response làm mới phiên về muộn) rồi xoá cookie. Đổi mật khẩu để huỷ phiên trên mọi thiết bị.
+    /// Xoá cookie đăng nhập của trình duyệt này. Máy chủ không lưu phiên nên token đã cấp còn hiệu lực tới khi hết hạn;
+    /// đổi mật khẩu để huỷ phiên trên mọi thiết bị.
     /// </summary>
     [HttpPost("logout")]
     [AllowAnonymous]
     [ProducesResponseType<ApiMessage>(StatusCodes.Status200OK)]
-    public async Task<IActionResult> Logout(CancellationToken ct)
+    public IActionResult Logout()
     {
-        await Sender.Send(new LogoutCommand(Request.Cookies[AuthCookies.Refresh], User.FindFirst(VaClaimTypes.SessionId)?.Value), ct);
         AuthCookies.Clear(Response, jwt.Value);
         return Ok(new ApiMessage("Đã đăng xuất"));
     }

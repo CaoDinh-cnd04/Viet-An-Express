@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { copyOrderValues } from './copy-order';
+import { cleanLoadedContacts, copyOrderValues } from './copy-order';
 import { defaultValues, emptyPackage, emptyInvoiceItem } from '../schema';
 
 describe('copy entire order form', () => {
@@ -39,5 +39,25 @@ describe('copy entire order form', () => {
     source.goods.docContent = 'Signed contract';
     source.packages = [];
     expect(copyOrderValues(source)).toEqual(source);
+  });
+});
+
+describe('cleanLoadedContacts', () => {
+  it('bỏ email sai (vd "=") và ký tự lạ trong SĐT của đơn cũ', () => {
+    const v = defaultValues();
+    v.shipper.email = '=';
+    v.shipper.tel = '0909 123 456 (Anh)';
+    v.receiver.email = 'a@b.com';
+    const out = cleanLoadedContacts(v);
+    expect(out.shipper.email).toBe('');
+    expect(out.shipper.tel).toBe('0909 123 456 ()');
+    expect(out.receiver.email).toBe('a@b.com');
+  });
+});
+
+describe('mở đơn nháp thiếu trường form', () => {
+  it('goods.multi thiếu → mảng rỗng (không báo lỗi ô ẩn)', () => {
+    const draft = { ...defaultValues(), goods: { category: '', description: 'Clothes', docContent: '' } } as unknown as Partial<ReturnType<typeof defaultValues>>;
+    expect(copyOrderValues(draft).goods.multi).toEqual([]);
   });
 });

@@ -20,6 +20,11 @@
   padding: var(--space-5) var(--space-6) 48px;
 }
 
+.fullScreen {
+  max-width: none;
+  padding: var(--space-3) var(--space-3) var(--space-3);
+}
+
 .loading {
   padding: 48px;
   text-align: center;

@@ -1,4 +1,4 @@
-/* Nút in trên dòng: viên thuốc nhỏ màu đặc, chữ trắng — chứng từ xanh dương, nhãn A6 xanh ngọc để phân biệt */
+/* Nút in trên dòng: hình chữ nhật bo góc nhỏ, màu đặc, chữ trắng — chứng từ xanh ngọc đậm, nhãn A6 cam mơ để phân biệt */
 .stack {
   display: flex;
   flex-direction: column;
@@ -11,8 +11,9 @@
   align-items: center;
   justify-content: center;
   min-width: 58px;
-  padding: 2px 6px;
+  padding: 3px 8px;
   border: 0;
+  /* Hình chữ nhật bo góc (không phải viên thuốc) */
   border-radius: 6px;
   background: var(--color-print-doc);
   font-family: var(--font-sans);
@@ -32,6 +33,7 @@
 
 .label {
   background: var(--color-print-label);
+  color: var(--color-print-label-text);
 }
 
 .label:hover {

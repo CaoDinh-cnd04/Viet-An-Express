@@ -266,5 +266,6 @@ export const orders: Record<string, string> = {
   // Thanh thao tác
   'Xuất bảng kê': 'Export manifest',
   // Ô cân bộ lọc
-  'Cân đến (kg)': 'Weight to (kg)'
+  'Cân đến (kg)': 'Weight to (kg)',
+  '{p} tổng': '{p} of total'
 };

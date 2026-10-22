@@ -1,5 +1,5 @@
 .sidebar {
-  /* Nền trắng, chữ đen (màu theo token --color-sidebar-*): đổi bộ màu dùng bên trong menu (mục đang chọn, rê chuột, đường kẻ, số đếm) */
+  /* Nền xanh rừng, chữ sáng (màu theo token --color-sidebar-*): đổi bộ màu dùng bên trong menu (mục đang chọn, rê chuột, đường kẻ, số đếm) */
   --color-text: var(--color-sidebar-text);
   --color-text-muted: var(--color-sidebar-muted);
   --color-text-faint: var(--color-sidebar-faint);
@@ -55,7 +55,7 @@
   font-size: 15px;
   font-weight: 700;
   letter-spacing: -0.01em;
-  color: var(--color-sidebar-active-text);
+  color: var(--color-sidebar-text);
   white-space: nowrap;
 }
 
@@ -139,6 +139,7 @@
   background: var(--color-sidebar-active-bg);
   color: var(--color-sidebar-active-text);
   font-weight: 700;
+  border-radius: 8px;
 }
 
 .active .icon {

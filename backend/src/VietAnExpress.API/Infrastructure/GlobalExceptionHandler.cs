@@ -7,8 +7,9 @@ namespace VietAnExpress.API.Infrastructure;
 /// <summary>
 /// Bắt mọi exception chưa xử lý → trả ProblemDetails thống nhất (có "error" + "message" cho frontend).
 /// Lỗi nghiệp vụ ghi log mức Warning, lỗi hệ thống ghi Error kèm stack trace (không trả stack trace ra ngoài).
+/// Errors:ShowDetails = true (chỉ bật tạm khi tra lỗi trên máy chủ không xem được log) → lỗi 500 kèm loại + nội dung exception.
 /// </summary>
-internal sealed class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logger) : IExceptionHandler
+internal sealed class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logger, IConfiguration config) : IExceptionHandler
 {
     /// <summary>Mã nginx "client closed request" — trình duyệt đã huỷ request (tải lại / chuyển trang), không phải lỗi máy chủ.</summary>
     private const int ClientClosedRequest = 499;
@@ -29,10 +30,20 @@ internal sealed class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> log
         if (exception is AppException or OperationCanceledException)
             logger.LogWarning("{Method} {Path} → {Status}: {Message}", http.Request.Method, http.Request.Path, problem.Status, exception.Message);
         else
+        {
             logger.LogError(exception, "Lỗi chưa xử lý tại {Method} {Path}", http.Request.Method, http.Request.Path);
+            if (config.GetValue("Errors:ShowDetails", false))
+                problem.Extensions["exception"] = string.Join(" → ",
+                    Chain(exception).Select(e => $"{e.GetType().Name}: {e.Message}"));
+        }
 
         http.Response.StatusCode = problem.Status ?? StatusCodes.Status500InternalServerError;
         await http.Response.WriteAsJsonAsync(problem, (System.Text.Json.JsonSerializerOptions?)null, "application/problem+json", cancellationToken);
         return true;
+    }
+
+    private static IEnumerable<Exception> Chain(Exception e)
+    {
+        for (Exception? x = e; x is not null; x = x.InnerException) yield return x;
     }
 }

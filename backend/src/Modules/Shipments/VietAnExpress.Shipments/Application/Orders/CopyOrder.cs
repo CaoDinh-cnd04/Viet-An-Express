@@ -74,7 +74,7 @@ internal static class OrderCopy
                 Items = items.Select(i => new OrderPayload.InvoiceItemPart
                 {
                     DescEn = S(i.DescriptionEn), DescVi = S(i.DescriptionVi), Manufacturer = S(i.Manufacturer), Origin = S(i.Origin),
-                    Hs = S(i.HsCode), Qty = N(i.Quantity), Unit = S(i.Unit), Price = N(i.UnitPrice)
+                    Hs = S(i.HsCode), Qty = N(i.Quantity), Unit = S(i.Unit), Price = N(i.UnitPrice), Package = N(i.Package)
                 }).ToList()
             }
         };

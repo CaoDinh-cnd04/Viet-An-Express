@@ -52,7 +52,11 @@ export function OrderDrawer({ order, onClose, actions }: OrderDrawerProps) {
   const r = o.receiver;
   const packages = o.packages ?? [];
   const sum = packages.length ? summarizePackages(packages, o.route) : null;
-  const items = o.invoice?.items ?? [];
+  // Invoice riêng từng kiện: xếp dòng hàng theo kiện, cột đầu là số kiện thay cho số thứ tự.
+  const perPackage = (o.invoice?.items ?? []).some(it => it.package);
+  const items = perPackage
+    ? [...(o.invoice?.items ?? [])].sort((a, b) => (a.package ?? 0) - (b.package ?? 0))
+    : o.invoice?.items ?? [];
   const cur = o.invoice?.currency || '';
   const money = (n: number) => `${formatNumber(n)}${cur ? ` ${cur}` : ''}`;
   const troubles = troublesOfBill(troubleList.data ?? [], o.bill);
@@ -184,10 +188,10 @@ export function OrderDrawer({ order, onClose, actions }: OrderDrawerProps) {
                 aside={[o.invoice?.exportType ? t(EXPORT_TYPES[o.invoice.exportType] ?? o.invoice.exportType) : '', cur].filter(Boolean).join(' · ')}
               >
                 <SheetTable
-                  head={['#', 'Mô tả hàng hóa', 'Mã HS', 'Xuất xứ', 'SL / ĐVT', 'Đơn giá', 'Thành tiền']}
+                  head={[perPackage ? 'Kiện' : '#', 'Mô tả hàng hóa', 'Mã HS', 'Xuất xứ', 'SL / ĐVT', 'Đơn giá', 'Thành tiền']}
                   numeric={[4, 5, 6]}
                   rows={items.map((it, i) => [
-                    i + 1,
+                    perPackage ? it.package ?? '—' : i + 1,
                     <>
                       <div>{it.descEn || it.descVi || '—'}</div>
                       {it.descEn && it.descVi && <div className={styles.sub}>{it.descVi}</div>}

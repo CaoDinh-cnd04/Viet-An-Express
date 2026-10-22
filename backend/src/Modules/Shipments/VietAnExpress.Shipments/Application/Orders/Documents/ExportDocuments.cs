@@ -18,19 +18,54 @@ internal static class CommercialInvoice
 
     private static readonly CultureInfo En = CultureInfo.GetCultureInfo("en-US");
 
+    /// <summary>Invoice chung: 3 bản. Đơn khai invoice riêng từng kiện: mỗi kiện 3 bản, chỉ hàng / cân / kích thước của kiện đó.</summary>
     public static string Render(OrderPrintModel m)
     {
-        var page = Page(m);
-        return string.Concat(Enumerable.Repeat(page, Copies));
+        if (!m.InvoicePerPackage) return string.Concat(Enumerable.Repeat(Page(m, InvoiceScope.Whole(m)), Copies));
+        var pages = new StringBuilder();
+        foreach (var scope in InvoiceScope.PerPackage(m))
+        {
+            var page = Page(m, scope);
+            for (var i = 0; i < Copies; i++) pages.Append(page);
+        }
+        return pages.ToString();
+    }
+
+    /// <summary>Phạm vi 1 tờ invoice: cả đơn, hoặc 1 kiện (số kiện, cân, kích thước, dòng hàng của riêng kiện đó).</summary>
+    internal sealed record InvoiceScope(IReadOnlyList<PrintItem> Lines, IReadOnlyList<PrintPackage> Packages, int Pieces, decimal GrossKg,
+        decimal ShippingFee, string? PackageLabel)
+    {
+        public static InvoiceScope Whole(OrderPrintModel m) =>
+            new(m.InvoiceLines, m.Packages, m.TotalPieces, m.TotalGrossKg, m.Order.ShippingFee is > 0 ? m.Order.ShippingFee.Value : 0m, null);
+
+        /// <summary>
+        /// Kiện 1..N (N = tổng số kiện, hoặc số kiện lớn nhất có dòng hàng nếu lớn hơn). Shipping fee của đơn in ở invoice kiện 1
+        /// để tổng các invoice khớp tổng giá trị đơn. Hàm thuần — có test.
+        /// </summary>
+        public static IReadOnlyList<InvoiceScope> PerPackage(OrderPrintModel m)
+        {
+            var singles = m.SinglePackages;
+            var count = Math.Max(Math.Max(singles.Count, m.TotalPieces), m.Items.Max(i => i.Package ?? 0));
+            var fee = m.Order.ShippingFee is > 0 ? m.Order.ShippingFee.Value : 0m;
+            return [.. Enumerable.Range(1, count).Select(n =>
+            {
+                var pkg = n <= singles.Count ? singles[n - 1] : null;
+                return new InvoiceScope(
+                    [.. m.Items.Where(i => i.Package == n)],
+                    pkg is null ? [] : [pkg], 1, pkg?.GrossKg ?? 0,
+                    n == 1 ? fee : 0m,
+                    string.Create(CultureInfo.InvariantCulture, $"{n}/{count}"));
+            })];
+        }
     }
 
     /// <summary>Ngày trên invoice dạng "Sep 25, 2026" như mẫu.</summary>
     public static string InvoiceDate(DateTime? value) => value?.ToString("MMM d, yyyy", En) ?? "";
 
-    private static string Page(OrderPrintModel m)
+    private static string Page(OrderPrintModel m, InvoiceScope scope)
     {
         var o = m.Order;
-        var lines = m.InvoiceLines;
+        var lines = scope.Lines;
         var currency = Doc.H(string.IsNullOrWhiteSpace(o.Currency) ? "USD" : o.Currency.Trim());
         var rows = new StringBuilder();
         foreach (var l in lines)
@@ -46,14 +81,14 @@ internal static class CommercialInvoice
                 """);
         }
         // Shipping fee khách khai (nếu có) in thành 1 dòng riêng và cộng vào Total Value — khớp tổng invoice lúc tạo đơn.
-        var fee = o.ShippingFee is > 0 ? o.ShippingFee.Value : 0m;
+        var fee = scope.ShippingFee;
         var feeRow = fee > 0
             ? $"<tr class=\"fee\"><td colspan=\"5\">Shipping fee (in {currency})</td><td class=\"num\">{Doc.Money(fee)} {currency}</td></tr>"
             : "";
         var total = lines.Sum(l => l.Amount) + fee;
-        var gross = m.TotalGrossKg;
-        var pieces = m.TotalPieces;
-        var dims = string.Join("<br>", m.Packages.Select(p =>
+        var gross = scope.GrossKg;
+        var pieces = scope.PackageLabel is null ? scope.Pieces.ToString(CultureInfo.InvariantCulture) : $"1 (Package {scope.PackageLabel})";
+        var dims = string.Join("<br>", scope.Packages.Select(p =>
             Doc.H(string.Create(CultureInfo.InvariantCulture, $"{p.Qty}*({Doc.Qty(p.Length)}*{Doc.Qty(p.Width)}*{Doc.Qty(p.Height)})"))));
         // Như hệ thống cũ: dòng 1 địa chỉ ở "Address", dòng 2 nối sau số điện thoại ở "Phone/Fax/Mail".
         var (addr1, addr2) = BillA4.SplitAddress(o.SenderAddress, 60);
@@ -87,7 +122,7 @@ internal static class CommercialInvoice
                 <div class="inv-right">
                   <div class="kv awb"><span>Air waybill<br>No.:</span><b>{{Doc.H(m.Bill)}}</b></div>
                   <div class="kv"><span>Date:</span><div>{{InvoiceDate(o.CreateDate)}}</div></div>
-                  <div class="kv"><span>No. of pkgs :</span><div>{{pieces}}</div></div>
+                  <div class="kv"><span>No. of pkgs :</span><div>{{Doc.H(pieces)}}</div></div>
                   <div class="kv"><span>Weight:</span><div>{{Doc.Qty(gross)}} kg</div></div>
                   <div class="kv"><span>Dimensions:</span><div>{{dims}}</div></div>
                 </div>
@@ -121,7 +156,7 @@ internal static class CommercialInvoice
 
     /// <summary>Kích thước đo theo mẫu PDF (A4 dọc, lề trái / phải ~19 mm).</summary>
     public const string Css = """
-        .invoice { font-family: Arial, Helvetica, sans-serif; font-size: 9px; color: #222; padding: 14mm 19mm; }
+        .invoice { font-family: Aptos, "Aptos Body", Arial, Helvetica, sans-serif; font-size: 9px; color: #222; padding: 14mm 19mm; }
         .inv-head { display: grid; grid-template-columns: 85mm 37mm; align-items: center; height: 12mm; margin-bottom: 4mm; }
         .inv-title { padding-left: 25mm; font-size: 21px; color: #555; letter-spacing: .3px; }
         .inv-head .barcode { display: block; width: 37mm; height: 8mm; }
@@ -230,7 +265,7 @@ internal static class CommitmentLetter
     }
 
     public const string Css = """
-        .cvck { font-family: "Times New Roman", Times, serif; font-size: 15px; line-height: 1.35; }
+        .cvck { font-family: Aptos, "Aptos Body", Arial, Helvetica, sans-serif; font-size: 15px; line-height: 1.35; }
         .cvck .c { text-align: center; }
         .cvck .title { font-weight: 700; margin-top: 6mm; }
         .cvck .subtitle { font-weight: 700; font-style: italic; }

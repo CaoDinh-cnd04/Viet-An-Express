@@ -1,108 +1,97 @@
-/* Dải trạng thái đầu khung lọc: tab không khung, tab đang chọn nền nhạt cùng màu trạng thái; tổng bên phải */
+/* Đầu khung lọc: 5 ô số liệu (mẫu 2c) — nền nhạt cùng màu trạng thái, ô đang chọn đặc màu chữ trắng; hàng tổng bên dưới */
 .overview {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px var(--space-3);
-  padding: 5px var(--space-3);
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
   border-bottom: 1px solid var(--color-border);
 }
 
-.statuses {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1px;
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: var(--space-2);
 }
 
-.status {
-  --tone: var(--color-text-muted);
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  height: 26px;
-  padding: 0 8px;
+.tile {
+  --tone: var(--color-status-all);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  min-width: 0;
+  padding: 10px 14px;
   border: 0;
-  border-radius: 999px;
-  background: none;
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--tone) 13%, var(--color-surface));
   color: var(--color-text);
   font: inherit;
-  font-size: 12px;
-  font-weight: 500;
-  white-space: nowrap;
+  text-align: left;
   cursor: pointer;
-  transition: background-color 0.12s, color 0.12s;
+  transition: background-color 0.12s, color 0.12s, box-shadow 0.12s;
 }
 
-.status:hover {
-  background: color-mix(in srgb, var(--tone) 10%, transparent);
+.tile:hover {
+  background: color-mix(in srgb, var(--tone) 22%, var(--color-surface));
 }
 
-.status:focus-visible {
+.tile:focus-visible {
   outline: 2px solid var(--tone);
   outline-offset: 2px;
 }
 
-.dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--tone);
+.label {
+  color: var(--tone);
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
 }
 
 .count {
-  min-width: 18px;
-  padding: 0 5px;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--color-border) 55%, var(--color-surface));
-  color: var(--color-text);
-  font-size: 11px;
-  font-weight: 700;
-  line-height: 16px;
-  text-align: center;
+  font-size: 26px;
+  font-weight: 800;
+  line-height: 1.15;
   font-variant-numeric: tabular-nums;
 }
 
-/* Đang chọn: nền nhạt cùng màu trạng thái, chữ cùng màu; chỉ số đếm tô đặc */
-.on,
-.on:hover {
-  background: color-mix(in srgb, var(--tone) 12%, var(--color-surface));
-  color: var(--tone);
-  font-weight: 700;
+.share {
+  color: var(--color-text-muted);
+  font-size: 12px;
 }
 
-.on .count {
+/* Đang chọn: đặc màu trạng thái, chữ trắng, bóng nhẹ cùng màu */
+.on,
+.on:hover {
   background: var(--tone);
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--tone) 35%, transparent);
+}
+
+.on .label,
+.on .count,
+.on .share {
   color: var(--color-on-hero);
 }
 
-.all {
-  --tone: var(--color-print-doc);
+.all { --tone: var(--color-status-all); }
+.wait { --tone: var(--color-status-wait); }
+.fly { --tone: var(--color-status-fly); }
+.nd { --tone: var(--color-status-nd); }
+.ok { --tone: var(--color-status-ok); }
+
+/* Tổng kiện · Tổng cân · Kết quả + thao tác — hàng dưới các ô, căn phải */
+.bottom {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px var(--space-3);
 }
 
-.info {
-  --tone: var(--color-info);
-}
-
-.success,
-.brand {
-  --tone: var(--color-success);
-}
-
-.warning {
-  --tone: var(--color-warning);
-}
-
-.danger {
-  --tone: var(--color-danger);
-}
-
-/* Tổng kiện · Tổng cân · Kết quả — đẩy sang phải, thao tác ngay sau */
 .totals {
   display: flex;
   flex-wrap: wrap;
-  align-self: center;
   gap: var(--space-1) 10px;
-  margin: 0 0 0 auto;
+  margin: 0;
 }
 
 .totals div {
@@ -129,11 +118,24 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* Thao tác cuối hàng, ngăn với tổng bằng vạch mảnh */
 .actions {
   display: flex;
   align-items: center;
-  margin-left: auto;
   padding-left: 10px;
   border-left: 1px solid var(--color-border);
+}
+
+@media (max-width: 900px) {
+  .tiles {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .tiles {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .count {
+    font-size: 22px;
+  }
 }

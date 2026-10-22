@@ -170,11 +170,6 @@ function OrderRow({ order: o, index, checked, onToggle, actions, cell }: OrderRo
       <td className={styles.colRef} {...cell(0)}>{o.ref ? <span className="tabular">{o.ref}</span> : null}</td>
       <td className={styles.colBill} {...cell(1)}>
         <div className={styles.bill}>{o.bill}</div>
-        {trouble && (
-          <div className={styles.troubleTag} title={t('Sự cố {id}: {type} — bấm biểu tượng con mắt để xem', { id: trouble.id, type: t(trouble.type) })}>
-            <Icon name="alert" size={12} /> {t('Sự cố')} · {t(TROUBLE_STATUS[trouble.status].label)}
-          </div>
-        )}
       </td>
       <td className={styles.colCarrier} {...cell(2)} title={o.connect ? t('Mã tracking hãng / last-mile') : undefined}>
         {o.connect && <span className={styles.connect}>{o.connect}</span>}
@@ -200,11 +195,19 @@ function OrderRow({ order: o, index, checked, onToggle, actions, cell }: OrderRo
         )}
       </td>
       <td className={styles.colDate} {...cell(4)}>
-        {o.sent ? <div className="tabular">{o.sent}</div> : <Nil>{'Chưa gửi'}</Nil>}
+        {/* Dịch vụ - hub trên (xuống dòng trong ô hẹp), ngày gửi dưới */}
         {o.route && <div className={styles.route}>{t(o.route)}</div>}
+        {o.sent ? <div className="tabular">{o.sent}</div> : <Nil>{'Chưa gửi'}</Nil>}
       </td>
       <td className={styles.colPod} {...cell(5)}>
         <StatusPill tone={status.tone}>{status.label}</StatusPill>
+        {trouble && (
+          <div>
+            <span className={styles.troubleTag} title={t('Sự cố {id}: {type} — bấm biểu tượng con mắt để xem', { id: trouble.id, type: t(trouble.type) })}>
+              <Icon name="alert" size={12} /> {t('Sự cố')} · {t(TROUBLE_STATUS[trouble.status].label)}
+            </span>
+          </div>
+        )}
         {o.pod ? (
           <>
             <div className={cx('tabular', styles.podDate)}>{o.pod.date}</div>

@@ -197,7 +197,7 @@ export function ReportTroubleDialog({ open, context, preset, onClose }: ReportTr
               <Me onEdit={() => goTo('bill')}><span className="mono">{bill.trim()}</span></Me>
             ) : (
               <div className={styles.inputRow}>
-                <input autoFocus className={styles.input} value={bill} onChange={e => setBill(e.target.value)} onKeyDown={e => e.key === 'Enter' && confirmBill()} placeholder="VAHCM…" aria-label={t('Mã vận đơn (VA Bill)')} />
+                <input autoFocus className={styles.input} value={bill} onChange={e => setBill(e.target.value)} onKeyDown={e => e.key === 'Enter' && confirmBill()} placeholder="6179215" aria-label={t('Mã vận đơn (VA Bill)')} />
                 <Button variant="primary" size="sm" onClick={confirmBill}>{t('Tiếp tục')}</Button>
               </div>
             )}

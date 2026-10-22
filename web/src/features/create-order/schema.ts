@@ -5,6 +5,8 @@ import { DEFAULT_SERVICE, MULTI_CATEGORY, RULES } from './constants';
 import { DEFAULT_UNIT, qtyError, UNIT_MAX } from './lib/units';
 import { hasMaxDecimals } from './lib/cell-nav';
 import { euCountryCode } from '@/shared/config/eu';
+import { isPerPackageInvoice } from '@/shared/config/domain';
+import { packageCount, packageInvoiceIssues } from './lib/package-invoice';
 import { EORI_MESSAGE, IOSS_MESSAGE, validateEoriNo, validateIossNo } from './lib/eu-tax';
 
 /*
@@ -48,7 +50,9 @@ export const invoiceItemSchema = z.object({
   hs: z.string(),
   qty: z.string(),
   unit: z.string(),
-  price: z.string()
+  price: z.string(),
+  /** Số thứ tự kiện ("1".."N") khi tuyến khai invoice riêng từng kiện; "" = invoice chung. Nháp cũ có thể thiếu. */
+  package: z.string().optional()
 });
 
 export const createOrderSchema = z
@@ -155,6 +159,11 @@ export const createOrderSchema = z
     if (!v.invoice.dutyTerms) issue(['invoice', 'dutyTerms'], 'Chọn hình thức chịu thuế');
     if (!v.invoice.currency) issue(['invoice', 'currency'], 'Chọn đơn vị tiền tệ');
     if (!v.invoice.items.length) issue(['invoice', 'items'], 'Cần ít nhất 1 mặt hàng');
+    // Tuyến khai invoice riêng từng kiện: kiện nào cũng phải có mặt hàng, không còn dòng hàng của kiện đã bớt.
+    if (isPerPackageInvoice(v.service.hub)) {
+      const [first] = packageInvoiceIssues(v.invoice.items, packageCount(v.packages));
+      if (first) issue(['invoice', 'items', 'root'], first);
+    }
     v.invoice.items.forEach((it, i) => {
       if (!it.descEn.trim()) issue(['invoice', 'items', i, 'descEn'], 'Nhập tên hàng (EN)');
       if (!it.descVi.trim()) issue(['invoice', 'items', i, 'descVi'], 'Nhập tên hàng (VN)');
@@ -182,7 +191,7 @@ export const STEP_FIELDS = [
 ] as const satisfies ReadonlyArray<ReadonlyArray<keyof CreateOrderValues>>;
 
 export const emptyPackage = (): PackageValues => ({ qty: '1', packaging: 'Thùng carton', length: '', width: '', height: '', weight: '', category: '', description: '' });
-export const emptyInvoiceItem = (): InvoiceItemValues => ({ descEn: '', descVi: '', manufacturer: '', origin: 'VN', hs: '', qty: '', unit: DEFAULT_UNIT, price: '' });
+export const emptyInvoiceItem = (): InvoiceItemValues => ({ descEn: '', descVi: '', manufacturer: '', origin: 'VN', hs: '', qty: '', unit: DEFAULT_UNIT, price: '', package: '' });
 
 export const defaultValues = (): CreateOrderValues => ({
   shipper: { company: '', originalShipper: '', contact: '', tel: '', address: '', taxId: '', email: '', country: 'Vietnam', branch: 'TP.HCM' },

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type MouseEvent } from 'react';
 import { cellRange, inRange, rangeSize, rangeToText, type CellPos, type CellRange } from './cell-range';
+import { copyText } from './clipboard';
 
 /** Bấm vào các phần tử này thì không bắt đầu chọn ô (để nút / link / ô tick vẫn dùng bình thường). */
 const INTERACTIVE = 'button, a, input, select, textarea, label';
@@ -31,7 +32,7 @@ export function useCellSelection(value: (row: number, col: number) => string, on
 
   const copy = useCallback(async () => {
     if (!range) return;
-    await navigator.clipboard.writeText(rangeToText(range, value));
+    await copyText(rangeToText(range, value));
     onCopied?.(rangeSize(range));
   }, [range, value, onCopied]);
 

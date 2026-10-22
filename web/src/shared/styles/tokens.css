@@ -7,46 +7,60 @@
    * Phối màu 60 – 30 – 10:
    *  60% chủ đạo  — nền trung tính xám / trắng (--color-bg, --color-surface)
    *  30% thứ cấp  — đen than: thanh menu, đầu bảng, tiêu đề khung (--color-secondary)
-   *  10% nhấn     — xanh dương: nút chính, liên kết, mục đang chọn (--color-brand)
+   *  10% nhấn     — xanh lục bảo thẫm: nút chính, liên kết, mục đang chọn (--color-brand)
    * Trang ngoài (landing, tra cứu, chính sách) vẫn dùng xanh lá Việt An: .page của các trang đó gán lại
    * --color-brand* = --color-success*.
    */
-  --color-brand: #3b6ea8;
-  --color-brand-strong: #2c5282;
-  --color-brand-deep: #1a365d;
-  --color-brand-soft: #ebf2fa;
-  --color-brand-softer: #f5f9ff;
+  --color-brand: #0b4d39;
+  --color-brand-strong: #083d2d;
+  --color-brand-deep: #05261c;
+  --color-brand-soft: #dcefe8;
+  --color-brand-softer: #eef7f3;
   /* Xanh lá Việt An: trạng thái thành công (đã đi, đã phát, thông báo thành công) và màu chính trang ngoài */
   --color-success: #2e8b3e;
   --color-success-strong: #1e6b2c;
   --color-success-deep: #145220;
   --color-success-soft: #e6f4ea;
   --color-success-softer: #f0f9f2;
-  /* Mục đang chọn trên thanh menu: nền xanh dương nhạt, chữ navy */
-  --color-sidebar-active-bg: #ebf2fa;
-  --color-sidebar-active-text: #1a365d;
+  /* Mục đang chọn trên thanh menu: nền cam mơ đặc, chữ nâu đậm (nổi trên nền lục bảo thẫm) */
+  --color-sidebar-active-bg: #fb923c;
+  --color-sidebar-active-text: #2b1200;
   /* Màu thứ cấp (đen than) và chữ đặt trên nó */
   --color-secondary: #1a202c;
   --color-secondary-strong: #11151d;
   --color-on-secondary: #ffffff;
   /* Tiêu đề khung trong form dài */
   --color-section-title: #1a202c;
-  /* Bảng Đơn hàng: hàng tiêu đề xanh dương nhạt; nút in chứng từ xanh dương, nút nhãn A6 xanh ngọc */
-  --color-table-head-bg: #ebf2fa;
-  --color-table-head-text: #1a365d;
-  --color-table-head-line: #d3e0ef;
-  --color-print-doc: #3b6ea8;
-  --color-print-doc-hover: #2f5a8c;
-  --color-print-label: #2c7a7b;
-  --color-print-label-hover: #23615f;
-  /* Thanh menu nền trắng, chữ đen; mục đang chọn xanh dương nhạt */
-  --color-sidebar-bg: #ffffff;
-  --color-sidebar-text: #1a202c;
-  --color-sidebar-muted: #4a5568;
-  --color-sidebar-faint: #5b6678;
-  --color-sidebar-line: #e2e6ec;
-  --color-sidebar-hover: #f3f5f8;
-  --color-sidebar-active: #ebf2fa;
+  /* Bảng Đơn hàng: hàng tiêu đề xanh lục bảo nhạt; nút in chứng từ xanh ngọc đậm, nút nhãn A6 cam mơ nhạt (chữ nâu đậm) */
+  --color-table-head-bg: #dcefe8;
+  --color-table-head-text: #05261c;
+  --color-table-head-line: #c3e0d5;
+  /* Bảng Đơn hàng của tôi: hàng tiêu đề lục bảo thẫm chữ trắng; dòng chẵn xám xanh (slate); rê chuột / đã tick đậm hơn */
+  --color-grid-head-bg: #0b4d39;
+  --color-grid-head-text: #ffffff;
+  --color-grid-head-line: #05261c;
+  --color-grid-stripe: #eef2f6;
+  --color-grid-hover: #e2e8f0;
+  --color-grid-checked: #d5dee9;
+  --color-print-doc: #2c7a7b;
+  --color-print-doc-hover: #23615f;
+  --color-print-label: #fdba74;
+  --color-print-label-hover: #fb923c;
+  --color-print-label-text: #2b1200;
+  /* Ô trạng thái đơn (Đơn hàng của tôi): nền nhạt cùng màu, ô đang chọn đặc màu */
+  --color-status-all: #047857;
+  --color-status-wait: #475569;
+  --color-status-fly: #059669;
+  --color-status-nd: #a4133c;
+  --color-status-ok: #14b8a6;
+  /* Thanh menu nền xanh lục bảo thẫm, chữ sáng — dùng chung giao diện sáng và tối */
+  --color-sidebar-bg: #05261c;
+  --color-sidebar-text: #ffffff;
+  --color-sidebar-muted: #bfdcd1;
+  --color-sidebar-faint: #7fb3a1;
+  --color-sidebar-line: rgba(255, 255, 255, 0.09);
+  --color-sidebar-hover: rgba(255, 255, 255, 0.06);
+  --color-sidebar-active: rgba(110, 231, 183, 0.14);
   /* Nền hero trang ngoài (luôn đậm, chữ trắng) */
   /* Trang ngoài (giới thiệu, tra cứu): nền navy, nút xanh lá Việt An */
   --color-hero-from: #10233f;
@@ -88,6 +102,8 @@
 
   /* Kích thước */
   --radius-sm: 8px;
+  /* Nút, ô nhập, ô chọn: bo tròn hẳn (viên thuốc) */
+  --radius-control: 999px;
   --radius-md: 12px;
   --radius-lg: 16px;
   --control-h: 34px;
@@ -123,35 +139,42 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
-    --color-brand: #3b78c4;
-    --color-brand-strong: #8bb8ec;
-    --color-brand-deep: #c7d9ef;
-    --color-brand-soft: #172a42;
-    --color-brand-softer: #121f31;
+    --color-brand: #2fa37b;
+    --color-brand-strong: #7fd6b5;
+    --color-brand-deep: #c3ecdc;
+    --color-brand-soft: #10302a;
+    --color-brand-softer: #0c231e;
     --color-success: #3fc06f;
     --color-success-strong: #34a860;
     --color-success-deep: #8fe0ad;
     --color-success-soft: #14281c;
     --color-success-softer: #101f16;
-    --color-sidebar-active-bg: #172a42;
-    --color-sidebar-active-text: #c7d9ef;
+    --color-sidebar-active-bg: #fb923c;
+    --color-sidebar-active-text: #2b1200;
     --color-secondary: #232a36;
     --color-secondary-strong: #2d3748;
     --color-section-title: #e2e8f0;
-    --color-sidebar-bg: #161a22;
-    --color-sidebar-text: #e4e8ee;
-    --color-sidebar-muted: #b6beca;
-    --color-sidebar-faint: #8e98a8;
-    --color-sidebar-line: #2d3440;
+    --color-sidebar-bg: #05261c;
+    --color-sidebar-text: #ffffff;
+    --color-sidebar-muted: #bfdcd1;
+    --color-sidebar-faint: #7fb3a1;
+    --color-sidebar-line: rgba(255, 255, 255, 0.09);
     --color-sidebar-hover: rgba(255, 255, 255, 0.06);
-    --color-sidebar-active: #172a42;
-    --color-table-head-bg: #1a2636;
-    --color-table-head-text: #c7d9ef;
-    --color-table-head-line: #2a3a50;
-    --color-print-doc: #3b6ea8;
-    --color-print-doc-hover: #4a7fbb;
-    --color-print-label: #2c7a7b;
-    --color-print-label-hover: #379192;
+    --color-sidebar-active: rgba(110, 231, 183, 0.14);
+    --color-table-head-bg: #10302a;
+    --color-table-head-text: #c3ecdc;
+    --color-table-head-line: #1c4a3d;
+    --color-grid-head-bg: #0f3d30;
+    --color-grid-head-text: #e6f4ee;
+    --color-grid-head-line: #05261c;
+    --color-grid-stripe: rgba(255, 255, 255, 0.03);
+    --color-grid-hover: rgba(255, 255, 255, 0.07);
+    --color-grid-checked: #1d2b3a;
+    --color-print-doc: #2c7a7b;
+    --color-print-doc-hover: #379192;
+    --color-print-label: #fdba74;
+    --color-print-label-hover: #fb923c;
+    --color-print-label-text: #2b1200;
   --color-hero-from: #0a1626;
   --color-hero-to: #142a47;
     --color-bg: #0f1218;
@@ -176,35 +199,42 @@
 }
 
 :root[data-theme='dark'] {
-  --color-brand: #3b78c4;
-  --color-brand-strong: #8bb8ec;
-  --color-brand-deep: #c7d9ef;
-  --color-brand-soft: #172a42;
-  --color-brand-softer: #121f31;
+  --color-brand: #2fa37b;
+  --color-brand-strong: #7fd6b5;
+  --color-brand-deep: #c3ecdc;
+  --color-brand-soft: #10302a;
+  --color-brand-softer: #0c231e;
   --color-success: #3fc06f;
   --color-success-strong: #34a860;
   --color-success-deep: #8fe0ad;
   --color-success-soft: #14281c;
   --color-success-softer: #101f16;
-  --color-sidebar-active-bg: #172a42;
-  --color-sidebar-active-text: #c7d9ef;
+  --color-sidebar-active-bg: #fb923c;
+  --color-sidebar-active-text: #2b1200;
   --color-secondary: #232a36;
   --color-secondary-strong: #2d3748;
   --color-section-title: #e2e8f0;
-  --color-sidebar-bg: #161a22;
-  --color-sidebar-text: #e4e8ee;
-  --color-sidebar-muted: #b6beca;
-  --color-sidebar-faint: #8e98a8;
-  --color-sidebar-line: #2d3440;
+  --color-sidebar-bg: #05261c;
+  --color-sidebar-text: #ffffff;
+  --color-sidebar-muted: #bfdcd1;
+  --color-sidebar-faint: #7fb3a1;
+  --color-sidebar-line: rgba(255, 255, 255, 0.09);
   --color-sidebar-hover: rgba(255, 255, 255, 0.06);
-  --color-sidebar-active: #172a42;
-  --color-table-head-bg: #1a2636;
-  --color-table-head-text: #c7d9ef;
-  --color-table-head-line: #2a3a50;
-  --color-print-doc: #3b6ea8;
-  --color-print-doc-hover: #4a7fbb;
-  --color-print-label: #2c7a7b;
-  --color-print-label-hover: #379192;
+  --color-sidebar-active: rgba(110, 231, 183, 0.14);
+  --color-table-head-bg: #10302a;
+  --color-table-head-text: #c3ecdc;
+  --color-table-head-line: #1c4a3d;
+  --color-grid-head-bg: #0f3d30;
+  --color-grid-head-text: #e6f4ee;
+  --color-grid-head-line: #05261c;
+  --color-grid-stripe: rgba(255, 255, 255, 0.03);
+  --color-grid-hover: rgba(255, 255, 255, 0.07);
+  --color-grid-checked: #1d2b3a;
+  --color-print-doc: #2c7a7b;
+  --color-print-doc-hover: #379192;
+  --color-print-label: #fdba74;
+  --color-print-label-hover: #fb923c;
+  --color-print-label-text: #2b1200;
   --color-hero-from: #0a1626;
   --color-hero-to: #142a47;
   --color-bg: #0f1218;

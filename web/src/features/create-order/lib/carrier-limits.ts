@@ -7,26 +7,29 @@ export interface CarrierLimit {
   maxSide: number;
   /** Tổng 3 cạnh tối đa (cm) */
   maxSum: number;
-  /** Cân tối đa mỗi kiện trước khi bị phụ phí hàng nặng (kg) */
-  maxWeight: number;
+  /** Kiện từ mức cân này trở lên (≥, kg) bị phụ phí hàng nặng */
+  heavyWeight: number;
   /** Vượt mức này hãng không nhận (cm / kg) */
   nonSide: number;
   nonWeight: number;
 }
+
+/** Kiện nặng từ 25kg trở lên bị phụ thu phí xử lý hàng nặng — áp chung các hãng chuyển phát (trừ SEA). */
+export const HEAVY_PIECE_KG = 25;
 
 /**
  * Giới hạn kích thước / cân nặng theo hãng — lấy theo quy định của Việt An
  * (đề xuất endpoint GET /services/limits — docs/API_CONTRACT.md §3). Khi backend có API, thay bằng dữ liệu API.
  */
 export const CARRIER_LIMITS: Record<string, CarrierLimit> = {
-  _default: { maxSide: 120, maxSum: 300, maxWeight: 30, nonSide: 200, nonWeight: 100 },
-  DHL: { maxSide: 120, maxSum: 300, maxWeight: 31.5, nonSide: 120, nonWeight: 70 },
-  Fedex: { maxSide: 121, maxSum: 330, maxWeight: 31.5, nonSide: 121, nonWeight: 68 },
-  UPS: { maxSide: 122, maxSum: 330, maxWeight: 31.5, nonSide: 122, nonWeight: 70 },
-  Aramex: { maxSide: 120, maxSum: 300, maxWeight: 30, nonSide: 150, nonWeight: 70 },
-  'Chuyên tuyến': { maxSide: 150, maxSum: 330, maxWeight: 45, nonSide: 220, nonWeight: 120 },
-  Ecommerce: { maxSide: 100, maxSum: 250, maxWeight: 20, nonSide: 150, nonWeight: 50 },
-  SEA: { maxSide: 300, maxSum: 600, maxWeight: 1000, nonSide: 600, nonWeight: 2000 }
+  _default: { maxSide: 120, maxSum: 300, heavyWeight: HEAVY_PIECE_KG, nonSide: 200, nonWeight: 100 },
+  DHL: { maxSide: 120, maxSum: 300, heavyWeight: HEAVY_PIECE_KG, nonSide: 120, nonWeight: 70 },
+  Fedex: { maxSide: 121, maxSum: 330, heavyWeight: HEAVY_PIECE_KG, nonSide: 121, nonWeight: 68 },
+  UPS: { maxSide: 122, maxSum: 330, heavyWeight: HEAVY_PIECE_KG, nonSide: 122, nonWeight: 70 },
+  Aramex: { maxSide: 120, maxSum: 300, heavyWeight: HEAVY_PIECE_KG, nonSide: 150, nonWeight: 70 },
+  'Chuyên tuyến': { maxSide: 150, maxSum: 330, heavyWeight: HEAVY_PIECE_KG, nonSide: 220, nonWeight: 120 },
+  Ecommerce: { maxSide: 100, maxSum: 250, heavyWeight: HEAVY_PIECE_KG, nonSide: 150, nonWeight: 50 },
+  SEA: { maxSide: 300, maxSum: 600, heavyWeight: 1000, nonSide: 600, nonWeight: 2000 }
 };
 
 export type WarningLevel = 'critical' | 'warning' | 'info';
@@ -74,11 +77,11 @@ export function evaluatePackages(carrier: string, packages: ReadonlyArray<Packag
         detail: fill('D+R+C = {sum}cm > {max}cm — có thể bị phụ phí quá khổ.', { sum: fmt(sum), max: limit.maxSum })
       });
     }
-    if (g > limit.maxWeight) {
+    if (g >= limit.heavyWeight) {
       out.push({
         level: 'warning',
         title: fill('Kiện {i}: quá nặng', { i }),
-        detail: fill('Cân {kg}kg > {max}kg/kiện — phụ phí xử lý hàng nặng.', { kg: fmt(g), max: limit.maxWeight })
+        detail: fill('Cân {kg}kg ≥ {max}kg/kiện — phụ phí xử lý hàng nặng.', { kg: fmt(g), max: limit.heavyWeight })
       });
     }
   });

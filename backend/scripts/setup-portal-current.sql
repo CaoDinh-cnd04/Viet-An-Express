@@ -1,11 +1,11 @@
 ﻿-- Việt An Express: cấu trúc portal hiện hành — 15/10/2026.
 -- Chọn đúng database vietanexpress trong SSMS rồi chạy TOÀN BỘ file (F5).
 -- Đây là script dựng schema hiện hành sau khi đã nạp các bảng hệ thống cũ.
--- Không tạo lại các bảng đã nạp; chỉ thêm 10 bảng portal, các cột/index cần thiết
+-- Không tạo lại các bảng đã nạp; chỉ thêm 9 bảng portal, các cột/index cần thiết
 -- trên 4 bảng cũ, danh mục kênh mặc định và 3 bảng lịch sử migration.
 -- Không chứa DROP TABLE, không xóa/ghi đè dữ liệu nghiệp vụ có sẵn.
--- Database đang dùng cấu trúc portal đời trước: dùng create-portal-tables.sql
--- hoặc update-database.ps1 để chuyển dữ liệu, không dùng file baseline này.
+-- Database đang dùng cấu trúc portal đời trước: dùng update-database.ps1
+-- để chuyển dữ liệu, không dùng file baseline này.
 -- Script chạy lại được; schema không phù hợp sẽ báo lỗi và rollback toàn bộ.
 -- Các lỗi ghi đồng thời trong báo cáo audit chưa được sửa bằng script này.
 SET NOCOUNT ON;
@@ -97,6 +97,10 @@ IF COL_LENGTH(N'dbo.MaVanDon', N'ConsigneeEoriNo') IS NULL
 
 IF COL_LENGTH(N'dbo.MaVanDon', N'VA_Bill') IS NULL
     EXEC(N'ALTER TABLE [dbo].[MaVanDon] ADD [VA_Bill] nvarchar(30) NULL');
+
+-- Kiện số mấy của dòng hàng khi tuyến khai invoice riêng từng kiện (Chuyên tuyến Úc / EU / Canada); NULL = invoice chung.
+IF COL_LENGTH(N'dbo.MaVanDon_ChiTietHang', N'Kien') IS NULL
+    EXEC(N'ALTER TABLE [dbo].[MaVanDon_ChiTietHang] ADD [Kien] int NULL');
 
 IF COL_LENGTH(N'dbo.TCustomer_NguoiLienLac', N'Quyen') IS NULL
     EXEC(N'ALTER TABLE [dbo].[TCustomer_NguoiLienLac] ADD [Quyen] nvarchar(1000) NULL');
@@ -430,14 +434,6 @@ IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id=OBJECT_ID(N'dbo.KetNoiT
 
 -- Module Identity
 
-IF OBJECT_ID(N'dbo.PhienThuHoi',N'U') IS NULL
-    EXEC(N'CREATE TABLE [dbo].[PhienThuHoi] (
-    [Ma_Phien] varchar(36) NOT NULL,
-    [Het_Han] datetime2 NOT NULL,
-    [Ngay_Thu_Hoi] datetime2 NOT NULL,
-    CONSTRAINT [PK_PhienThuHoi] PRIMARY KEY ([Ma_Phien])
-);');
-
 IF OBJECT_ID(N'dbo.ThongBao',N'U') IS NULL
     EXEC(N'CREATE TABLE [dbo].[ThongBao] (
     [ID] bigint NOT NULL IDENTITY,
@@ -478,9 +474,6 @@ IF OBJECT_ID(N'dbo.ThongBao_DaDoc',N'U') IS NULL
     CONSTRAINT [PK_ThongBao_DaDoc] PRIMARY KEY ([ID]),
     CONSTRAINT [FK_ThongBao_DaDoc_ThongBao_ThongBao_ID] FOREIGN KEY ([ThongBao_ID]) REFERENCES [dbo].[ThongBao] ([ID]) ON DELETE CASCADE
 );');
-
-IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id=OBJECT_ID(N'dbo.PhienThuHoi') AND name=N'IX_PhienThuHoi_Het_Han')
-    EXEC(N'CREATE INDEX [IX_PhienThuHoi_Het_Han] ON [dbo].[PhienThuHoi] ([Het_Han]);');
 
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id=OBJECT_ID(N'dbo.ThongBao') AND name=N'IX_ThongBao_Ngay_Tao')
     EXEC(N'CREATE INDEX [IX_ThongBao_Ngay_Tao] ON [dbo].[ThongBao] ([Ngay_Tao]);');
@@ -632,9 +625,6 @@ INSERT @expectedColumns VALUES
 (N'DonTMDT',N'Ngay_Xac_Nhan',N'datetime',NULL,NULL,NULL,1,0),
 (N'DonTMDT',N'CreateDate',N'datetime',NULL,NULL,NULL,0,0),
 (N'DonTMDT',N'ModifyDate',N'datetime',NULL,NULL,NULL,1,0),
-(N'PhienThuHoi',N'Ma_Phien',N'varchar',36,NULL,NULL,0,0),
-(N'PhienThuHoi',N'Het_Han',N'datetime2',NULL,NULL,NULL,0,0),
-(N'PhienThuHoi',N'Ngay_Thu_Hoi',N'datetime2',NULL,NULL,NULL,0,0),
 (N'ThongBao',N'ID',N'bigint',NULL,NULL,NULL,0,1),
 (N'ThongBao',N'CustomerID',N'bigint',NULL,NULL,NULL,1,0),
 (N'ThongBao',N'Tieu_De',N'nvarchar',400,NULL,NULL,0,0),
@@ -715,9 +705,6 @@ IF EXISTS (SELECT 1 FROM sys.check_constraints WHERE parent_object_id=OBJECT_ID(
 IF NOT EXISTS (SELECT 1 FROM sys.objects WHERE parent_object_id=OBJECT_ID(N'dbo.DonTMDT') AND name=N'FK_DonTMDT_KetNoiTMDT_ID' AND type=N'F')
     THROW 51000, N'Thiếu ràng buộc FK_DonTMDT_KetNoiTMDT_ID trong bảng có sẵn; cần đối chiếu cấu trúc.', 1;
 
-IF NOT EXISTS (SELECT 1 FROM sys.objects WHERE parent_object_id=OBJECT_ID(N'dbo.PhienThuHoi') AND name=N'PK_PhienThuHoi' AND type=N'PK')
-    THROW 51000, N'Thiếu ràng buộc PK_PhienThuHoi trong bảng có sẵn; cần đối chiếu cấu trúc.', 1;
-
 IF NOT EXISTS (SELECT 1 FROM sys.objects WHERE parent_object_id=OBJECT_ID(N'dbo.ThongBao') AND name=N'PK_ThongBao' AND type=N'PK')
     THROW 51000, N'Thiếu ràng buộc PK_ThongBao trong bảng có sẵn; cần đối chiếu cấu trúc.', 1;
 
@@ -758,11 +745,9 @@ INSERT @expectedIndexes VALUES
 (N'DonTMDT',N'UX_DonTMDT_CustomerID_Nguon_Ma_Don_San',1,N'CustomerID,Nguon,Ma_Don_San',N'[Ma_Don_San] IS NOT NULL'),
 (N'KetNoiTMDT',N'IX_KetNoiTMDT_Ma_Kenh_Ma_Shop',0,N'Ma_Kenh,Ma_Shop',N''),
 (N'KetNoiTMDT',N'UX_KetNoiTMDT_CustomerID_Ma_Kenh_Ma_Shop',1,N'CustomerID,Ma_Kenh,Ma_Shop',N''),
-(N'PhienThuHoi',N'PK_PhienThuHoi',1,N'Ma_Phien',N''),
 (N'ThongBao',N'PK_ThongBao',1,N'ID',N''),
 (N'ThongKeSuDung',N'PK_ThongKeSuDung',1,N'Id',N''),
 (N'ThongBao_DaDoc',N'PK_ThongBao_DaDoc',1,N'ID',N''),
-(N'PhienThuHoi',N'IX_PhienThuHoi_Het_Han',0,N'Het_Han',N''),
 (N'ThongBao',N'IX_ThongBao_Ngay_Tao',0,N'Ngay_Tao',N''),
 (N'ThongBao_DaDoc',N'IX_ThongBao_DaDoc_ThongBao_ID',0,N'ThongBao_ID',N''),
 (N'ThongBao_DaDoc',N'UX_ThongBao_DaDoc_TaiKhoan',1,N'CustomerID,TaiKhoanCon_ID,ThongBao_ID',N''),
@@ -788,7 +773,7 @@ IF SCHEMA_ID(N'shipments') IS NULL EXEC(N'CREATE SCHEMA [shipments]');
 IF OBJECT_ID(N'shipments.__EFMigrationsHistory',N'U') IS NULL
     EXEC(N'CREATE TABLE [shipments].[__EFMigrationsHistory] ([MigrationId] nvarchar(150) NOT NULL, [ProductVersion] nvarchar(32) NOT NULL, CONSTRAINT [PK___EFMigrationsHistory] PRIMARY KEY ([MigrationId]));');
 
-EXEC(N'IF EXISTS (SELECT 1 FROM [shipments].[__EFMigrationsHistory] WHERE MigrationId NOT IN (N''20260929030747_InitialCreate'',N''20260929065200_AddOrderDraftsAndLegacyNumbers'',N''20260929070409_AddDraftPrintedOrderNumber'',N''20260929123938_MapLegacyOrderLines'',N''20260929132942_DropShipmentsKeepDrafts'',N''20260930064849_AddGoodsCategories'',N''20261001081556_AddCatalogMarks'',N''20261002021735_AddReceiverEuTaxNumbers'',N''20261006022517_AddOrderCreators'',N''20261009063942_AddVaBillCode'',N''20261009070046_MapRemoteAreaColumns'',N''20261014094748_MapHsCodeCatalog'',N''20261015092126_DropOrderDraftsUseMaVanDon'')) THROW 51000, N''Lịch sử Shipments chứa migration không có trong bản code này; không hạ phiên bản.'', 1;');
+EXEC(N'IF EXISTS (SELECT 1 FROM [shipments].[__EFMigrationsHistory] WHERE MigrationId NOT IN (N''20260929030747_InitialCreate'',N''20260929065200_AddOrderDraftsAndLegacyNumbers'',N''20260929070409_AddDraftPrintedOrderNumber'',N''20260929123938_MapLegacyOrderLines'',N''20260929132942_DropShipmentsKeepDrafts'',N''20260930064849_AddGoodsCategories'',N''20261001081556_AddCatalogMarks'',N''20261002021735_AddReceiverEuTaxNumbers'',N''20261006022517_AddOrderCreators'',N''20261009063942_AddVaBillCode'',N''20261009070046_MapRemoteAreaColumns'',N''20261014094748_MapHsCodeCatalog'',N''20261015092126_DropOrderDraftsUseMaVanDon'',N''20261016080004_MoveCreatorToCustomerStaffId'',N''20261020091106_AddInvoiceLinePackage'')) THROW 51000, N''Lịch sử Shipments chứa migration không có trong bản code này; không hạ phiên bản.'', 1;');
 
 EXEC(N'IF NOT EXISTS (SELECT 1 FROM [shipments].[__EFMigrationsHistory] WHERE MigrationId=N''20260929030747_InitialCreate'') INSERT [shipments].[__EFMigrationsHistory] ([MigrationId],[ProductVersion]) VALUES (N''20260929030747_InitialCreate'',N''10.0.12'');');
 
@@ -816,6 +801,8 @@ EXEC(N'IF NOT EXISTS (SELECT 1 FROM [shipments].[__EFMigrationsHistory] WHERE Mi
 
 EXEC(N'IF NOT EXISTS (SELECT 1 FROM [shipments].[__EFMigrationsHistory] WHERE MigrationId=N''20261015092126_DropOrderDraftsUseMaVanDon'') INSERT [shipments].[__EFMigrationsHistory] ([MigrationId],[ProductVersion]) VALUES (N''20261015092126_DropOrderDraftsUseMaVanDon'',N''10.0.12'');');
 
+EXEC(N'IF NOT EXISTS (SELECT 1 FROM [shipments].[__EFMigrationsHistory] WHERE MigrationId=N''20261020091106_AddInvoiceLinePackage'') INSERT [shipments].[__EFMigrationsHistory] ([MigrationId],[ProductVersion]) VALUES (N''20261020091106_AddInvoiceLinePackage'',N''10.0.12'');');
+
 IF SCHEMA_ID(N'ecommerce') IS NULL EXEC(N'CREATE SCHEMA [ecommerce]');
 
 IF OBJECT_ID(N'ecommerce.__EFMigrationsHistory',N'U') IS NULL
@@ -842,7 +829,7 @@ IF SCHEMA_ID(N'identity') IS NULL EXEC(N'CREATE SCHEMA [identity]');
 IF OBJECT_ID(N'identity.__EFMigrationsHistory',N'U') IS NULL
     EXEC(N'CREATE TABLE [identity].[__EFMigrationsHistory] ([MigrationId] nvarchar(150) NOT NULL, [ProductVersion] nvarchar(32) NOT NULL, CONSTRAINT [PK___EFMigrationsHistory] PRIMARY KEY ([MigrationId]));');
 
-EXEC(N'IF EXISTS (SELECT 1 FROM [identity].[__EFMigrationsHistory] WHERE MigrationId NOT IN (N''20261006014226_AddStaffAccountsAndMyTracking'',N''20261009090958_AddFeedback'',N''20261009092814_AddFeedbackRating'',N''20261009100000_HideFeedbackFromCustomer'',N''20261012023956_AddFeedbackSurvey'',N''20261012030236_AddNotifications'',N''20261012031211_AddNotificationLink'',N''20261012034406_AddTroubles'',N''20261012065017_AddRevokedSessions'',N''20261013024726_AddUsageAnalytics'',N''20261013091550_AddSenderInfoRequests'',N''20261013094827_EnsureSenderReviewConsistency'',N''20261015084334_MergeSupportIntoSuCo'',N''20261015090242_MoveStaffToNguoiLienLac'',N''20261015093129_MoveMyTrackingToLegacyTables'',N''20261015093943_MoveSupportToTContact'')) THROW 51000, N''Lịch sử Identity chứa migration không có trong bản code này; không hạ phiên bản.'', 1;');
+EXEC(N'IF EXISTS (SELECT 1 FROM [identity].[__EFMigrationsHistory] WHERE MigrationId NOT IN (N''20261006014226_AddStaffAccountsAndMyTracking'',N''20261009090958_AddFeedback'',N''20261009092814_AddFeedbackRating'',N''20261009100000_HideFeedbackFromCustomer'',N''20261012023956_AddFeedbackSurvey'',N''20261012030236_AddNotifications'',N''20261012031211_AddNotificationLink'',N''20261012034406_AddTroubles'',N''20261012065017_AddRevokedSessions'',N''20261013024726_AddUsageAnalytics'',N''20261013091550_AddSenderInfoRequests'',N''20261013094827_EnsureSenderReviewConsistency'',N''20261015084334_MergeSupportIntoSuCo'',N''20261015090242_MoveStaffToNguoiLienLac'',N''20261015093129_MoveMyTrackingToLegacyTables'',N''20261015093943_MoveSupportToTContact'',N''20261016083107_AllowNullLegacyStaffColumns'',N''20261021042903_RemoveRevokedSessions'')) THROW 51000, N''Lịch sử Identity chứa migration không có trong bản code này; không hạ phiên bản.'', 1;');
 
 EXEC(N'IF NOT EXISTS (SELECT 1 FROM [identity].[__EFMigrationsHistory] WHERE MigrationId=N''20261006014226_AddStaffAccountsAndMyTracking'') INSERT [identity].[__EFMigrationsHistory] ([MigrationId],[ProductVersion]) VALUES (N''20261006014226_AddStaffAccountsAndMyTracking'',N''10.0.12'');');
 
@@ -875,6 +862,10 @@ EXEC(N'IF NOT EXISTS (SELECT 1 FROM [identity].[__EFMigrationsHistory] WHERE Mig
 EXEC(N'IF NOT EXISTS (SELECT 1 FROM [identity].[__EFMigrationsHistory] WHERE MigrationId=N''20261015093129_MoveMyTrackingToLegacyTables'') INSERT [identity].[__EFMigrationsHistory] ([MigrationId],[ProductVersion]) VALUES (N''20261015093129_MoveMyTrackingToLegacyTables'',N''10.0.12'');');
 
 EXEC(N'IF NOT EXISTS (SELECT 1 FROM [identity].[__EFMigrationsHistory] WHERE MigrationId=N''20261015093943_MoveSupportToTContact'') INSERT [identity].[__EFMigrationsHistory] ([MigrationId],[ProductVersion]) VALUES (N''20261015093943_MoveSupportToTContact'',N''10.0.12'');');
+
+EXEC(N'IF NOT EXISTS (SELECT 1 FROM [identity].[__EFMigrationsHistory] WHERE MigrationId=N''20261016083107_AllowNullLegacyStaffColumns'') INSERT [identity].[__EFMigrationsHistory] ([MigrationId],[ProductVersion]) VALUES (N''20261016083107_AllowNullLegacyStaffColumns'',N''10.0.12'');');
+
+EXEC(N'IF NOT EXISTS (SELECT 1 FROM [identity].[__EFMigrationsHistory] WHERE MigrationId=N''20261021042903_RemoveRevokedSessions'') INSERT [identity].[__EFMigrationsHistory] ([MigrationId],[ProductVersion]) VALUES (N''20261021042903_RemoveRevokedSessions'',N''10.0.12'');');
 
 COMMIT TRANSACTION;
     PRINT N'Đã hoàn tất schema portal hiện hành. Các bảng đã nạp không thay đổi cấu trúc được giữ nguyên.';

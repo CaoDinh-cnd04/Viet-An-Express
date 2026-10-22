@@ -56,14 +56,13 @@ internal sealed class LoginHandler(IdentityDbContext db, SessionService sessions
 internal sealed record RefreshSessionCommand(string RefreshToken) : IRequest<Result<AuthSession>>;
 
 internal sealed class RefreshSessionHandler(
-    IdentityDbContext db, ITokenService tokens, SessionService sessions, SessionRevocations revocations, ILogger<RefreshSessionHandler> logger)
+    IdentityDbContext db, ITokenService tokens, SessionService sessions, ILogger<RefreshSessionHandler> logger)
     : IRequestHandler<RefreshSessionCommand, Result<AuthSession>>
 {
     public async Task<Result<AuthSession>> Handle(RefreshSessionCommand cmd, CancellationToken ct)
     {
         var claims = await tokens.ReadRefreshTokenAsync(cmd.RefreshToken);
-        if (claims is null) return Rejected("refresh token hết hạn, sai chữ ký (Jwt:Secret khác?) hoặc cấp trước khi có mã phiên", null, null);
-        if (await revocations.IsRevokedAsync(claims.SessionId, ct)) return Rejected("phiên đã đăng xuất", claims.CustomerId, claims.StaffId);
+        if (claims is null) return Rejected("refresh token hết hạn hoặc sai chữ ký (Jwt:Secret khác?)", null, null);
 
         if (claims.StaffId is { } staffId)
         {
@@ -72,7 +71,7 @@ internal sealed class RefreshSessionHandler(
             if (!staff.IsActive) return Rejected("tài khoản con đã bị khóa", claims.CustomerId, staffId);
             if (!JwtTokenService.FixedTimeEquals(tokens.PasswordStamp(staff.CustomerId, staff.Password, staff.Id), claims.PasswordStamp))
                 return Rejected("mật khẩu tài khoản con đã đổi", claims.CustomerId, staffId);
-            var staffSession = await sessions.StartAsync(staff, claims.IsPersistent, ct, claims.SessionId);
+            var staffSession = await sessions.StartAsync(staff, claims.IsPersistent, ct);
             return staffSession is null ? Rejected("hồ sơ khách cha không còn", claims.CustomerId, staffId) : staffSession;
         }
 
@@ -81,7 +80,7 @@ internal sealed class RefreshSessionHandler(
         if (!JwtTokenService.FixedTimeEquals(tokens.PasswordStamp(login.CustomerId, login.Password!), claims.PasswordStamp))
             return Rejected("mật khẩu tài khoản chính đã đổi (dbo.TCustomer.Login_Password)", claims.CustomerId, null);
 
-        var session = await sessions.StartAsync(login, claims.IsPersistent, ct, claims.SessionId);
+        var session = await sessions.StartAsync(login, claims.IsPersistent, ct);
         return session is null ? Rejected("hồ sơ khách không còn", claims.CustomerId, null) : session;
     }
 
@@ -90,44 +89,6 @@ internal sealed class RefreshSessionHandler(
     {
         logger.LogWarning("Không làm mới được phiên (khách {CustomerId}, tài khoản con {StaffId}): {Reason}", customerId, staffId, reason);
         return IdentityErrors.SessionExpired;
-    }
-}
-
-// ---------- Đăng xuất ----------
-
-/// <summary>
-/// Thu hồi phiên của thiết bị đang dùng (dbo.PhienThuHoi): lấy mã phiên từ refresh token (hạn = hạn refresh token),
-/// không có thì từ access token (hạn = thời hạn refresh dài nhất). Thiết bị khác của cùng tài khoản không bị ảnh hưởng.
-/// Trả false nếu không có phiên để thu hồi hoặc không ghi được (vẫn xoá cookie ở controller).
-/// </summary>
-internal sealed record LogoutCommand(string? RefreshToken, string? AccessSessionId) : IRequest<bool>;
-
-internal sealed class LogoutHandler(
-    ITokenService tokens, SessionRevocations revocations, IOptions<JwtOptions> jwt, TimeProvider clock, ILogger<LogoutHandler> logger)
-    : IRequestHandler<LogoutCommand, bool>
-{
-    public async Task<bool> Handle(LogoutCommand cmd, CancellationToken ct)
-    {
-        string? sessionId = null;
-        var expires = clock.GetUtcNow().AddDays(jwt.Value.RefreshTokenDays);
-        if (cmd.RefreshToken is { Length: > 0 } rt && await tokens.ReadRefreshTokenAsync(rt) is { } claims)
-        {
-            sessionId = claims.SessionId;
-            expires = claims.ExpiresAt;
-        }
-        else if (cmd.AccessSessionId is { Length: > 0 } accessSid) sessionId = accessSid;
-        if (sessionId is null) return false;
-
-        try
-        {
-            await revocations.RevokeAsync(sessionId, expires, ct);
-            return true;
-        }
-        catch (Exception e) when (e is not OperationCanceledException)
-        {
-            logger.LogError(e, "Không ghi được thu hồi phiên {SessionId} khi đăng xuất", sessionId);
-            return false;
-        }
     }
 }
 

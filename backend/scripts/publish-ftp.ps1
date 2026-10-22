@@ -4,8 +4,8 @@
 
 .DESCRIPTION
   Kết quả trong <repo>/publish:
-    frontend/         giao diện (React build tĩnh + web.config URL Rewrite) — gốc site IIS
-    backend/          API .NET 10 — IIS Application gắn ở /api
+    frontend/         giao diện (React build tĩnh + web.config URL Rewrite) — site http://beta.vietanexpress.com.vn
+    backend/          API .NET 10 — site riêng http://api.vietanexpress.com.vn (route /api/v1/...)
     app_offline.htm   đặt vào backend/ trên máy chủ khi cập nhật để IIS nhả file .dll
     HUONG_DAN_IIS.md  hướng dẫn cho người quản trị máy chủ (cấu hình một lần)
 
@@ -13,7 +13,14 @@
   Cập nhật frontend: ghi đè nội dung frontend/ (không cần dừng gì).
   Bí mật (connection string, Jwt:Secret...) nằm trong appsettings.Production.json do quản trị tạo trên máy chủ;
   script không sinh file đó nên lần đẩy sau không ghi đè.
+
+.PARAMETER ApiBaseUrl
+  Địa chỉ API giao diện gọi tới (ghi vào bản build). Backend ở tên miền riêng → địa chỉ đầy đủ;
+  backend là Application /api cùng tên miền với giao diện → "/api/v1".
 #>
+param(
+    [string]$ApiBaseUrl = 'http://api.vietanexpress.com.vn/api/v1'
+)
 $ErrorActionPreference = 'Stop'
 $repo = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
 $web = Join-Path $repo 'web'
@@ -30,16 +37,22 @@ try {
         npm.cmd install
         if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
     }
+    Write-Host "   API: $ApiBaseUrl"
+    $env:VITE_API_BASE_URL = $ApiBaseUrl
     npm.cmd run build
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-} finally { Pop-Location }
+} finally {
+    Remove-Item Env:VITE_API_BASE_URL -ErrorAction SilentlyContinue
+    Pop-Location
+}
 
 if (Test-Path $out) { Remove-Item $out -Recurse -Force }
 
 Write-Host '== Publish backend'
 # Build vào thư mục tạm riêng: không đụng bin/Release của backend đang chạy trên máy (file .exe / .dll bị khóa).
 $buildDir = Join-Path ([IO.Path]::GetTempPath()) 'vietan-publish-build'
-dotnet publish (Join-Path $repo 'backend/src/VietAnExpress.API') -c Release -o $backend --artifacts-path $buildDir
+# Self-contained win-x64: kèm sẵn runtime .NET 10, máy chủ không cần cài .NET 10 (chỉ cần module ASP.NET Core của IIS).
+dotnet publish (Join-Path $repo 'backend/src/VietAnExpress.API') -c Release -o $backend --artifacts-path $buildDir -r win-x64 --self-contained true
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 # File cấu hình máy dev không đưa lên máy chủ.
 Get-ChildItem $backend -Filter 'appsettings.Development*.json' | Remove-Item -Force

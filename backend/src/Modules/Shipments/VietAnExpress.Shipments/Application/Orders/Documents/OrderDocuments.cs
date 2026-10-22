@@ -25,8 +25,9 @@ internal static class PrintDocs
 }
 
 /// <summary>1 dòng hàng trên invoice / CVCK. <paramref name="Description"/> là tên tiếng Anh.</summary>
+/// <paramref name="Package"/>: kiện số mấy khi đơn khai invoice riêng từng kiện; null = invoice chung.
 internal sealed record PrintItem(string Description, decimal Quantity, string Unit, decimal UnitPrice, string? HsCode, string? Origin,
-    string? DescriptionVi = null, string? Manufacturer = null)
+    string? DescriptionVi = null, string? Manufacturer = null, int? Package = null)
 {
     public decimal Amount => decimal.Round(Quantity * UnitPrice, 2, MidpointRounding.AwayFromZero);
 
@@ -50,6 +51,14 @@ internal sealed record OrderPrintModel(LegacyOrder Order, IReadOnlyList<PrintIte
 
     /// <summary>Nước người gửi in trên chứng từ — đơn nội địa (chưa khai hoặc mã nước 231) là "Viet Nam".</summary>
     public string SenderCountryText => Order.SenderCountryId is null or 231 ? "Viet Nam" : "";
+
+    /// <summary>Đơn khai invoice riêng từng kiện (có dòng hàng mang số kiện) → in mỗi kiện 1 invoice.</summary>
+    public bool InvoicePerPackage => Items.Any(i => i.Package is not null);
+
+    /// <summary>Dòng kiện tách thành từng kiện (SL 3 → 3 kiện SL 1), theo thứ tự: kiện số n là phần tử thứ n - 1.</summary>
+    public IReadOnlyList<PrintPackage> SinglePackages =>
+        [.. Packages.SelectMany(p => Enumerable.Repeat(p with { Qty = 1, StoredVolumeKg = p.Qty > 0 && p.StoredVolumeKg is { } v ? v / p.Qty : null },
+            Math.Max(0, p.Qty)))];
 
     /// <summary>Không có chi tiết hàng (đơn hệ thống cũ) → 1 dòng từ tên hàng, số kiện, giá trị tổng.</summary>
     public IReadOnlyList<PrintItem> InvoiceLines
@@ -193,7 +202,7 @@ internal static class OrderDocumentRenderer
     /// <summary>Trang gộp: thanh công cụ + mỗi loại chứng từ 1 khung xem trước.</summary>
     private const string BundleCss = """
         * { box-sizing: border-box; }
-        body { margin: 0; font-family: Arial, "Segoe UI", sans-serif; font-size: 13px; color: #111; background: #e9ece9; }
+        body { margin: 0; font-family: Aptos, "Aptos Body", Arial, Helvetica, sans-serif; font-size: 13px; color: #111; background: #e9ece9; }
         .toolbar { position: sticky; top: 0; display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; padding: 10px 16px; background: #1e6b2c; color: #fff; z-index: 1; }
         .toolbar button { padding: 6px 14px; border: 0; border-radius: 6px; background: #fff; color: #1e6b2c; font-weight: 700; cursor: pointer; }
         .toolbar button.ghost { background: transparent; color: #fff; border: 1px solid rgba(255,255,255,.6); font-weight: 600; }
@@ -216,7 +225,7 @@ internal static class OrderDocumentRenderer
     private const string A4Css = """
         @page { size: A4; margin: 12mm; }
         * { box-sizing: border-box; }
-        body { margin: 0; font-family: Arial, "Segoe UI", sans-serif; font-size: 12px; color: #111; background: #e9ece9; }
+        body { margin: 0; font-family: Aptos, "Aptos Body", Arial, Helvetica, sans-serif; font-size: 12px; color: #111; background: #e9ece9; }
         .toolbar { position: sticky; top: 0; display: flex; gap: 12px; align-items: center; padding: 10px 16px; background: #1e6b2c; color: #fff; z-index: 1; }
         .toolbar button { padding: 6px 18px; border: 0; border-radius: 6px; background: #fff; color: #1e6b2c; font-weight: 700; cursor: pointer; }
         .toolbar .hint { opacity: .85; font-size: 12px; }

@@ -21,7 +21,7 @@ it('dòng mới để trống số lượng; chép mặt hàng không dùng lạ
   expect(emptyInvoiceItem().qty).toBe('');
   const product = { ...p('Dress', 'Váy', false, '6204'), manufacturer: 'ABC', price: '25' };
   expect(invoiceItemFromProduct(product)).toEqual({
-    descEn: 'Dress', descVi: 'Váy', manufacturer: 'ABC', origin: 'VN', hs: '6204', unit: 'PCS', qty: '', price: '0'
+    descEn: 'Dress', descVi: 'Váy', manufacturer: 'ABC', origin: 'VN', hs: '6204', unit: 'PCS', qty: '', price: '0', package: ''
   });
 });
 

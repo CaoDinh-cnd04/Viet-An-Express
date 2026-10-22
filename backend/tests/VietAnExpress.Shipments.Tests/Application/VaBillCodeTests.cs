@@ -52,9 +52,20 @@ public class VaBillCodeTests
     }
 
     [Fact]
-    public void Hien_thi_VA_Bill_neu_co_don_cu_hien_7_so()
+    public void Ma_vach_nhan_kien_quet_vao_van_nhan_ra_so_bill()
     {
-        Assert.Equal("VAHCM6003585US", LegacyOrderView.BillOf(new LegacyOrder { Id = 1, OrderNumber = 6003585, VaBill = "VAHCM6003585US" }));
+        Assert.Equal(6177728, VaBillCode.Number("6177728/1"));
+        Assert.Equal(6177728, VaBillCode.Number(" 6177728/12 "));
+        Assert.Equal("6177728", VaBillCode.StripPiece("6177728/3"));
+        Assert.Equal("ABC/1", VaBillCode.StripPiece("ABC/1")); // không phải số bill → giữ nguyên
+        Assert.Null(VaBillCode.Number("6177728/"));
+    }
+
+    [Fact]
+    public void Hien_thi_so_OrderNumber_7_so_ke_ca_khi_co_VA_Bill()
+    {
+        Assert.Equal("6003585", LegacyOrderView.BillOf(new LegacyOrder { Id = 1, OrderNumber = 6003585, VaBill = "VAHCM6003585US" }));
+        Assert.Equal("15", LegacyOrderView.BillOf(new LegacyOrder { Id = 15, VaBill = "VAHN" })); // nháp chưa có số
         Assert.Equal("6003584", LegacyOrderView.BillOf(new LegacyOrder { Id = 2, OrderNumber = 6003584 }));
     }
 }

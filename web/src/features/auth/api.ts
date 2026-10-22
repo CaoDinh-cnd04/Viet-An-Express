@@ -44,7 +44,7 @@ export function useLogin() {
 }
 
 /**
- * Đăng xuất: đợi lần làm mới phiên đang chạy xong (tránh response về muộn ghi lại cookie), máy chủ thu hồi phiên rồi xoá cookie;
+ * Đăng xuất: đợi lần làm mới phiên đang chạy xong (tránh response về muộn ghi lại cookie), máy chủ xoá cookie;
  * sau đó tải lại hẳn trang /login để xoá mọi dữ liệu còn trong bộ nhớ — bấm Back không hiện lại danh sách đơn cũ.
  */
 export function useLogout() {

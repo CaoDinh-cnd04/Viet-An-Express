@@ -295,7 +295,7 @@ internal sealed class PrintDraftHandler(
             var remote = await remoteAreas.FindAsync(countryCode, payload.Receiver.Postal, payload.Receiver.City, ct);
             var branch = VaBillCode.BranchOfPrefix(order.VaBill);
 
-            // Cấp số trong transaction: khóa dãy số tới khi commit, không trùng với hệ thống cũ.
+            // Cấp số trong transaction: khóa dãy số tới khi commit (không trùng giữa các lần in trên portal).
             number = (await numbers.NextAsync(1, ct))[0];
             order.OrderNumber = number;
             order.VaBill = VaBillCode.Format(branch, number, countryCode);
@@ -303,11 +303,13 @@ internal sealed class PrintDraftHandler(
             order.CreateDate = today;
             order.ModifyDate = today;
             RemoteAreaColumns.Apply(order, remote);
-            code = order.VaBill;
+            code = LegacyOrderView.BillOf(order);
             await db.SaveChangesAsync(ct);
             await tx.CommitAsync(ct);
         });
         if (failure is not null) return failure;
+        // Hệ thống cũ chèn trùng số ngay sau khi commit → cấp số khác trước khi khách nhận bill.
+        if ((await numbers.ReissueTakenAsync([cmd.Id], ct)).TryGetValue(cmd.Id, out var reissued)) code = reissued;
         var bill = code ?? number.ToString(CultureInfo.InvariantCulture);
         return new PrintDraftResponse($"Đã cấp mã vận đơn {bill}", bill);
     }

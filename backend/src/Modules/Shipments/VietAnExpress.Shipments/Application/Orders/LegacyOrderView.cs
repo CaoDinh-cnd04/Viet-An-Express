@@ -48,10 +48,12 @@ internal static partial class LegacyOrderView
     [GeneratedRegex(@"^(delivered|signed for by:?)[\s,:]*", RegexOptions.IgnoreCase)]
     private static partial Regex PodPrefix();
 
-    /// <summary>Mã bill hiển thị: VA_Bill (vd VAHCM6003585US) nếu có, đơn cũ → 7 số.</summary>
+    /// <summary>
+    /// Mã bill hiển thị / in: số OrderNumber 7 chữ số như hệ thống cũ (vd 6179215) — không dùng mã VA_Bill (VAHCM6179215MY).
+    /// Chưa có số (đơn nháp) → ID dòng. Cột VA_Bill vẫn ghi để biết chi nhánh / nước đến, tra cứu vẫn nhận cả 2 dạng.
+    /// </summary>
     public static string BillOf(LegacyOrder o) =>
-        o.VaBill?.Trim() is { Length: > 0 } code ? code
-        : o.OrderNumber?.ToString(CultureInfo.InvariantCulture) ?? o.Id.ToString(CultureInfo.InvariantCulture);
+        o.OrderNumber?.ToString(CultureInfo.InvariantCulture) ?? o.Id.ToString(CultureInfo.InvariantCulture);
 
     public static OrderDto ToDto(LegacyOrder o, DateTime today)
     {
@@ -76,7 +78,7 @@ internal static partial class LegacyOrderView
             Pod: ParsePod(o.Pod),
             Photos: 0,
             PodEstimate: Date(o.PodEstimate),
-            RemoteArea: string.IsNullOrWhiteSpace(o.RemoteAreaFedEx) ? null : o.RemoteAreaFedEx.Trim(),
+            RemoteArea: RemoteAreaText(o),
             ChargeableWeight: o.WeightKg);
     }
 
@@ -115,7 +117,7 @@ internal static partial class LegacyOrderView
         var qty = i.Quantity ?? 0;
         var price = i.UnitPrice ?? 0;
         return new OrderItemDto(S(i.DescriptionEn), S(i.DescriptionVi), qty, string.IsNullOrWhiteSpace(i.Unit) ? "PCS" : i.Unit.Trim(), price,
-            i.Amount ?? decimal.Round(qty * price, 2, MidpointRounding.AwayFromZero), S(i.HsCode), S(i.Origin));
+            i.Amount ?? decimal.Round(qty * price, 2, MidpointRounding.AwayFromZero), S(i.HsCode), S(i.Origin), i.Package);
     }
 
     private static string S(string? value) => value?.Trim() ?? "";
@@ -157,6 +159,14 @@ internal static partial class LegacyOrderView
     }
 
     public static bool IsDocument(string? goodsName) => LegacyDocumentRule.Matches(goodsName);
+
+    /// <summary>VSVX của mọi hãng đã ghi lúc cấp bill (3 cột FedEx · UPS · hãng khác), vd "Fedex (Tier B), UPS"; null khi không thuộc vùng.</summary>
+    public static string? RemoteAreaText(LegacyOrder o)
+    {
+        var parts = new[] { o.RemoteAreaFedEx, o.RemoteAreaUps, o.RemoteArea }
+            .Select(v => v?.Trim()).Where(v => !string.IsNullOrEmpty(v)).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        return parts.Count == 0 ? null : string.Join(", ", parts);
+    }
 
     private static string? Date(DateTime? value) => value?.ToString("dd/MM/yyyy", CultureInfo.InvariantCulture);
 }

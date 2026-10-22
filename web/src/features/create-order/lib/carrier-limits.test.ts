@@ -25,6 +25,14 @@ describe('evaluatePackages', () => {
     expect(hasCritical(w)).toBe(false);
   });
 
+  it('kiện từ 25kg trở lên bị phụ phí hàng nặng, mọi hãng chuyển phát', () => {
+    for (const carrier of ['DHL', 'Fedex', 'UPS', 'Chuyên tuyến', 'Hãng lạ']) {
+      const heavy = (kg: string) => evaluatePackages(carrier, [pkg('30', '20', '15', kg)]).some(x => x.title.includes('quá nặng'));
+      expect(heavy('24.9')).toBe(false);
+      expect(heavy('25')).toBe(true);
+    }
+  });
+
   it('gợi ý khi quy đổi lớn hơn cân thực', () => {
     const w = evaluatePackages('UPS', [pkg('60', '50', '40', '5')]);
     expect(w.some(x => x.level === 'info')).toBe(true);

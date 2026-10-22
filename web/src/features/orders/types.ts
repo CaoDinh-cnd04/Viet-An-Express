@@ -147,6 +147,8 @@ export interface OrderInvoiceItem {
   amount: number;
   hs: string;
   origin: string;
+  /** Kiện số mấy khi đơn khai invoice riêng từng kiện (Chuyên tuyến Úc / EU / Canada); null = invoice chung. */
+  package?: number | null;
 }
 
 export interface OrderInvoice {

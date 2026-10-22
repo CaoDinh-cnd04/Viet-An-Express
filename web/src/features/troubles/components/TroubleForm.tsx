@@ -57,7 +57,7 @@ export function TroubleForm({ kind, bill = '', topic, onSent, onCancel }: Troubl
       {kind === 'su_co' && (
         <>
           <Row label="Mã vận đơn" required>
-            <input value={values.bill} onChange={e => set({ bill: e.target.value })} placeholder="VAHCM…" autoFocus={!bill} />
+            <input value={values.bill} onChange={e => set({ bill: e.target.value })} placeholder="6179215" autoFocus={!bill} />
           </Row>
           <Row label="Vấn đề" required>
             <select value={values.type} onChange={e => set({ type: e.target.value })}>

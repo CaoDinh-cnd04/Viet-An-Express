@@ -5,7 +5,8 @@ namespace VietAnExpress.Shipments.Application.Orders.Documents;
 
 /// <summary>
 /// Mã vạch Code 128 dạng SVG để in trên bill / nhãn (máy quét kho đọc được).
-/// Chuỗi toàn chữ số, độ dài chẵn → bộ C (gọn gấp đôi); còn lại → bộ B (ASCII 32–127).
+/// Đoạn chữ số đầu chuỗi (≥ 4 số) mã bằng bộ C (2 số / ký tự → vạch to hơn, máy quét dễ đọc); số lẻ thì chữ số đầu
+/// đi bộ B rồi chuyển C. Phần còn lại (vd "/1" của số kiện) chuyển về bộ B (ASCII 32–127).
 /// </summary>
 internal static class Code128
 {
@@ -28,32 +29,42 @@ internal static class Code128
     private const int StartB = 104;
     private const int StartC = 105;
     private const int Stop = 106;
+    /// <summary>Đổi sang bộ C (khi đang ở bộ B) / sang bộ B (khi đang ở bộ C).</summary>
+    private const int CodeC = 99;
+    private const int CodeB = 100;
 
     /// <summary>Dãy giá trị mã hoá (start + dữ liệu + checksum + stop).</summary>
     public static IReadOnlyList<int> Encode(string text)
     {
         if (string.IsNullOrEmpty(text)) throw new ArgumentException("Mã vạch không được rỗng", nameof(text));
 
+        foreach (var ch in text)
+            if (ch < 32 || ch > 127) throw new ArgumentException($"Ký tự '{ch}' không mã hoá được bằng Code 128B", nameof(text));
+
         var values = new List<int>();
-        if (text.Length % 2 == 0 && text.All(char.IsAsciiDigit))
+        var digits = 0;
+        while (digits < text.Length && char.IsAsciiDigit(text[digits])) digits++;
+        var i = 0;
+        if (digits >= 4)
         {
-            values.Add(StartC);
-            for (var i = 0; i < text.Length; i += 2)
-                values.Add(int.Parse(text.AsSpan(i, 2), CultureInfo.InvariantCulture));
-        }
-        else
-        {
-            values.Add(StartB);
-            foreach (var ch in text)
+            if (digits % 2 == 1)
             {
-                if (ch < 32 || ch > 127) throw new ArgumentException($"Ký tự '{ch}' không mã hoá được bằng Code 128B", nameof(text));
-                values.Add(ch - 32);
+                // Số chữ số lẻ: chữ số đầu ở bộ B, phần chẵn còn lại ở bộ C.
+                values.Add(StartB);
+                values.Add(text[0] - 32);
+                values.Add(CodeC);
+                i = 1;
             }
+            else values.Add(StartC);
+            for (; i < digits; i += 2) values.Add(int.Parse(text.AsSpan(i, 2), CultureInfo.InvariantCulture));
+            if (i < text.Length) values.Add(CodeB);
         }
+        else values.Add(StartB);
+        for (; i < text.Length; i++) values.Add(text[i] - 32);
 
         // Checksum = (start + Σ giá trị × vị trí) mod 103
         var sum = values[0];
-        for (var i = 1; i < values.Count; i++) sum += values[i] * i;
+        for (var k = 1; k < values.Count; k++) sum += values[k] * k;
         values.Add(sum % 103);
         values.Add(Stop);
         return values;

@@ -249,6 +249,10 @@ namespace VietAnExpress.Shipments.Infrastructure.Migrations
                         .HasColumnType("nvarchar(300)")
                         .HasColumnName("Nuoc_SX");
 
+                    b.Property<int?>("Package")
+                        .HasColumnType("int")
+                        .HasColumnName("Kien");
+
                     b.Property<decimal?>("Quantity")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)")

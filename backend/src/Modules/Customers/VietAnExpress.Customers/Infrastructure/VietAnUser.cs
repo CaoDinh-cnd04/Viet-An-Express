@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using VietAnExpress.SharedKernel.Persistence;
 
 namespace VietAnExpress.Customers.Infrastructure;
 
@@ -31,7 +32,7 @@ internal sealed class VietAnUserConfiguration : IEntityTypeConfiguration<VietAnU
 {
     public void Configure(EntityTypeBuilder<VietAnUser> b)
     {
-        b.ToTable("USERS", "dbo", t => t.ExcludeFromMigrations());
+        b.ToTable("USERS", "dbo", t => t.LegacyTable());
         b.HasKey(x => x.Id);
         b.Property(x => x.Id).HasColumnName("ID");
         b.Property(x => x.Deleted).HasColumnName("DELETED");

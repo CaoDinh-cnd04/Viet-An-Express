@@ -1,7 +1,23 @@
 import { defaultValues, emptyInvoiceItem, emptyPackage, type CreateOrderValues } from '../schema';
 import { MULTI_CATEGORY } from '../constants';
+import { sanitizePhone } from '@/shared/lib/phone';
 
 const packagingNames: Record<string, string> = { CARTON: 'Thùng carton', CTN: 'Thùng carton', BOX: 'Thùng carton', BAG: 'Bao / túi', PALLET: 'Pallet', 'WOODEN CASE': 'Kiện gỗ' };
+
+const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/**
+ * Làm sạch liên hệ đọc từ đơn cũ / đơn nháp (dbo.MaVanDon có dữ liệu cũ như email "=", SĐT lẫn chữ):
+ * email sai → bỏ trống (ô không bắt buộc), SĐT → bỏ ký tự lạ. Tránh form báo lỗi ở ô khách không để ý.
+ */
+export function cleanLoadedContacts(v: CreateOrderValues): CreateOrderValues {
+  const email = (s: string | undefined) => (EMAIL.test((s ?? '').trim()) ? (s ?? '').trim() : '');
+  return {
+    ...v,
+    shipper: { ...v.shipper, email: email(v.shipper.email), tel: sanitizePhone(v.shipper.tel ?? '').trim() },
+    receiver: { ...v.receiver, email: email(v.receiver.email), tel: sanitizePhone(v.receiver.tel ?? '').trim() }
+  };
+}
 
 /** Copy all form fields into independent objects; source IDs/status never become a draft ID. */
 export function copyOrderValues(payload: Partial<CreateOrderValues>): CreateOrderValues {

@@ -112,13 +112,13 @@ internal sealed class ImportOrdersHandler(
         {
             var existing = await db.LegacyOrders.AsNoTracking()
                 .Where(o => o.CustomerId == legacyCustomerId && o.CustomerBill != null && distinct.Contains(o.CustomerBill))
-                .Select(o => new { o.CustomerBill, o.OrderNumber, o.VaBill, o.BillConnect })
+                .Select(o => new { o.CustomerBill, o.OrderNumber, o.BillConnect })
                 .ToListAsync(ct);
             foreach (var (line, reference) in refs)
             {
                 var hit = existing.FirstOrDefault(e => string.Equals(e.CustomerBill, reference, StringComparison.OrdinalIgnoreCase));
                 if (hit is not null)
-                    Add(line, $"Ref_No \"{reference}\" đã có ở vận đơn {hit.VaBill ?? hit.OrderNumber?.ToString(CultureInfo.InvariantCulture) ?? hit.BillConnect}");
+                    Add(line, $"Ref_No \"{reference}\" đã có ở vận đơn {hit.OrderNumber?.ToString(CultureInfo.InvariantCulture) ?? hit.BillConnect}");
             }
         }
         return result;
@@ -142,14 +142,16 @@ internal sealed class ImportOrdersHandler(
 
         var strategy = db.Database.CreateExecutionStrategy();
         var codes = new Dictionary<int, string>();
+        var savedOrders = new Dictionary<int, Infrastructure.Legacy.LegacyOrder>();
         await strategy.ExecuteAsync(async () =>
         {
             db.ChangeTracker.Clear();
             await using var tx = await db.Database.BeginTransactionAsync(ct);
-            // Cấp số trong transaction: khóa dãy số tới khi commit, không trùng với hệ thống cũ.
+            // Cấp số trong transaction: khóa dãy số tới khi commit (không trùng giữa các lần cấp trên portal).
             var issued = await numbers.NextAsync(rows.Count, ct);
             planned.Clear();
             codes.Clear(); // chạy lại khi lỗi tạm thời: cấp lại số từ đầu
+            savedOrders.Clear();
             planned.AddRange(rows.Select((row, i) => (row, issued[i])));
 
             var saved = new List<(Infrastructure.Legacy.LegacyOrder, OrderPayload)>();
@@ -157,11 +159,12 @@ internal sealed class ImportOrdersHandler(
             {
                 var countryId = LegacyCountryLookup.FindId(legacyCountries, row.CountryCode, row.Payload.Receiver.Country);
                 var order = LegacyOrderFactory.FromPayload(row.Payload, customer, number, today, countryId);
-                codes[row.Line] = order.VaBill ?? number.ToString(CultureInfo.InvariantCulture);
+                codes[row.Line] = number.ToString(CultureInfo.InvariantCulture);
                 RemoteAreaColumns.Apply(order, remote[row.Line]);
                 access.StampCreator(order);
                 db.LegacyOrders.Add(order);
                 saved.Add((order, row.Payload));
+                savedOrders[row.Line] = order;
             }
             await db.SaveChangesAsync(ct);
 
@@ -171,6 +174,10 @@ internal sealed class ImportOrdersHandler(
             await tx.CommitAsync(ct);
         });
 
+        // Hệ thống cũ chèn trùng số ngay sau khi commit → cấp số khác trước khi trả kết quả cho khách.
+        var reissued = await numbers.ReissueTakenAsync([.. savedOrders.Values.Select(o => o.Id)], ct);
+        foreach (var (line, order) in savedOrders)
+            if (reissued.TryGetValue(order.Id, out var code)) codes[line] = code;
         return codes;
     }
 

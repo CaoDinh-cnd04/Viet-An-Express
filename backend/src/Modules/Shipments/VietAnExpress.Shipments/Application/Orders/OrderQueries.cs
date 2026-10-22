@@ -163,6 +163,7 @@ internal static class OrderListFilter
     private static Expression<Func<LegacyOrder, bool>> Match(string? field, string term)
     {
         // Không phân biệt hoa / thường ở mọi collation: so sánh UPPER(cột) với từ khóa viết hoa.
+        term = VaBillCode.StripPiece(term); // máy quét nhãn kiện gõ "số bill/số kiện"
         var like = term.ToUpperInvariant().ToLikePattern()!;
         // Gõ 1 phần số VA (vd "6010") cũng tìm ra — so khớp chuỗi số, không cần gõ đủ.
         var digits = term.All(char.IsAsciiDigit);

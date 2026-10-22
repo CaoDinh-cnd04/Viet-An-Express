@@ -31,7 +31,45 @@ public class DraftConcurrencySqlServerTests(DraftSqlServerFixture fixture) : ICl
         var remote = new Mock<IRemoteAreaLookup>();
         remote.Setup(r => r.FindAsync(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync([]);
-        return new PrintDraftHandler(db, Access(), new LegacyOrderNumberAllocator(db), remote.Object, geo.Object, TimeProvider.System);
+        return new PrintDraftHandler(db, Access(), Numbers(db), remote.Object, geo.Object, TimeProvider.System);
+    }
+
+    private static LegacyOrderNumberAllocator Numbers(ShipmentsDbContext db) =>
+        new(db, TimeProvider.System, Microsoft.Extensions.Logging.Abstractions.NullLogger<LegacyOrderNumberAllocator>.Instance);
+
+    [Fact(Skip = "Set VIETAN_TEST_SQLSERVER to run disposable SQL Server integration tests", SkipUnless = nameof(SqlServerAvailable))]
+    public async Task He_thong_cu_chen_trung_so_vua_in_thi_portal_cap_lai_so_khac()
+    {
+        var id = await fixture.AddReadyDraftAsync();
+        long number;
+        await using (var db = fixture.CreateDb())
+        {
+            Assert.True((await Print(db).Handle(new PrintDraftCommand(id), Ct)).IsSuccess);
+            number = (await db.LegacyOrders.AsNoTracking().SingleAsync(o => o.Id == id, Ct)).OrderNumber!.Value;
+        }
+
+        // Phần mềm cũ (MAX + 1, đọc không khóa) đã đọc MAX trước khi portal ghi số → chèn đơn trùng số ngay sau khi portal commit.
+        long legacyId;
+        await using (var db = fixture.CreateDb())
+        {
+            var legacy = new LegacyOrder { CustomerId = 7, Status = LegacyOrder.IssuedStatus, OrderNumber = number, ConsigneeName = "Legacy" };
+            db.LegacyOrders.Add(legacy);
+            await db.SaveChangesAsync(Ct);
+            legacyId = legacy.Id;
+        }
+
+        await using (var db = fixture.CreateDb())
+        {
+            var reissued = await Numbers(db).ReissueTakenAsync([id], Ct);
+            Assert.True(reissued.ContainsKey(id));
+        }
+
+        await using var check = fixture.CreateDb();
+        var portal = await check.LegacyOrders.AsNoTracking().SingleAsync(o => o.Id == id, Ct);
+        var old = await check.LegacyOrders.AsNoTracking().SingleAsync(o => o.Id == legacyId, Ct);
+        Assert.Equal(number, old.OrderNumber); // đơn của hệ thống cũ giữ nguyên
+        Assert.NotEqual(number, portal.OrderNumber);
+        Assert.False(await check.LegacyOrders.AnyAsync(o => o.OrderNumber == portal.OrderNumber && o.Id != id, Ct));
     }
 
     [Fact(Skip = "Set VIETAN_TEST_SQLSERVER to run disposable SQL Server integration tests", SkipUnless = nameof(SqlServerAvailable))]
@@ -73,6 +111,31 @@ public class DraftConcurrencySqlServerTests(DraftSqlServerFixture fixture) : ICl
 
         await using var check = fixture.CreateDb();
         Assert.True(await check.LegacyOrders.AnyAsync(o => o.Id == id, Ct));
+    }
+}
+
+public class LegacyTriggerSqlServerTests(DraftSqlServerFixture fixture) : IClassFixture<DraftSqlServerFixture>
+{
+    public static bool SqlServerAvailable => DraftConcurrencySqlServerTests.SqlServerAvailable;
+    private static CancellationToken Ct => TestContext.Current.CancellationToken;
+
+    [Fact(Skip = "Set VIETAN_TEST_SQLSERVER to run disposable SQL Server integration tests", SkipUnless = nameof(SqlServerAvailable))]
+    public async Task Ghi_don_kien_dong_hang_vao_bang_cu_co_trigger()
+    {
+        var id = await fixture.AddReadyDraftAsync();
+        await using (var db = fixture.CreateDb())
+        {
+            db.LegacyPackageLines.Add(new LegacyPackageLine { OrderId = (int)id, Quantity = 1, PackType = "PACK", LengthCm = 10, WidthCm = 10, HeightCm = 10, WeightKg = 1.5m });
+            db.LegacyInvoiceLines.Add(new LegacyInvoiceLine { OrderId = (int)id, DescriptionEn = "Clothes", Quantity = 1, UnitPrice = 5 });
+            var order = await db.LegacyOrders.IgnoreQueryFilters().SingleAsync(o => o.Id == id, Ct);
+            order.ConsigneeName = "Receiver 2";
+            await db.SaveChangesAsync(Ct);
+        }
+
+        await using var check = fixture.CreateDb();
+        Assert.Equal(1, await check.LegacyPackageLines.CountAsync(p => p.OrderId == id, Ct));
+        Assert.Equal(1, await check.LegacyInvoiceLines.CountAsync(i => i.OrderId == id, Ct));
+        Assert.Equal("Receiver 2", (await check.LegacyOrders.IgnoreQueryFilters().SingleAsync(o => o.Id == id, Ct)).ConsigneeName);
     }
 }
 
@@ -142,6 +205,10 @@ public sealed class DraftSqlServerFixture : IAsyncLifetime
         connectionString = new Microsoft.Data.SqlClient.SqlConnectionStringBuilder(server) { InitialCatalog = databaseName }.ConnectionString;
         await using var schema = new TestSchemaDb(new DbContextOptionsBuilder<TestSchemaDb>().UseSqlServer(connectionString).Options);
         await schema.Database.EnsureCreatedAsync();
+        // Bảng thật trên máy chủ có trigger của hệ thống cũ — SQL Server từ chối INSERT/UPDATE ... OUTPUT trên bảng có trigger.
+        await schema.Database.ExecuteSqlRawAsync("CREATE TRIGGER [dbo].[TR_Test_MaVanDon] ON [dbo].[MaVanDon] AFTER INSERT, UPDATE, DELETE AS SET NOCOUNT ON;");
+        await schema.Database.ExecuteSqlRawAsync("CREATE TRIGGER [dbo].[TR_Test_PCS_DIM] ON [dbo].[MaVanDon_PCS_DIM] AFTER INSERT, UPDATE, DELETE AS SET NOCOUNT ON;");
+        await schema.Database.ExecuteSqlRawAsync("CREATE TRIGGER [dbo].[TR_Test_ChiTietHang] ON [dbo].[MaVanDon_ChiTietHang] AFTER INSERT, UPDATE, DELETE AS SET NOCOUNT ON;");
     }
 
     public async ValueTask DisposeAsync()

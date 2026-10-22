@@ -105,7 +105,7 @@ internal static class BillA4
                     <div><b class="k">Hotline</b> : <b>{H(c.Hotline)}</b></div>
                     <div><b class="k">Website</b> : <i>{H(c.Website)}</i></div>
                   </div>
-                  <div class="awb">{Code128.Svg(pieceNo, 40)}<div class="awb-no">{H(m.Bill)} <small>/{index}</small></div><div class="route">{H(RouteCode(o.ServiceName))}</div></div>
+                  <div class="awb">{Code128.Svg(m.Bill, 40)}<div class="awb-no">{H(m.Bill)} <small>/{index}</small></div><div class="route">{H(RouteCode(o.ServiceName))}</div></div>
                 </div>
                 <div class="m-title">SHIPPING MARK</div>
                 <div class="m-hawb"><i>HAWB:</i> <b>{H(m.Bill)}</b></div>
@@ -233,7 +233,7 @@ internal static class BillA4
                 </div>
 
                 <div class="bar">2. Thông tin người nhận(Consignee's information):</div>
-                <div class="rows">
+                <div class="rows cnee">
                   {Row("C.Ty <i>(Company)</i>:", o.ConsigneeName)}
                   {Row("Địa chỉ <i>(Address)</i>:", o.ConsigneeAddress1)}
                   {Row("", o.ConsigneeAddress2)}
@@ -393,10 +393,10 @@ internal static class BillA4
     public const string Css = """
         @page { size: A4 landscape; margin: 7mm; }
         * { box-sizing: border-box; }
-        /* Arial + cỡ chữ thống nhất (chữ thường 12px, chữ nhỏ 11px): nét đều, in laser / in nhiệt không mờ. */
-        body { margin: 0; font-family: Arial, Helvetica, sans-serif; font-size: 12px; color: #000; background: #e9ece9;
+        /* Aptos (font Body của Office) cho mọi chứng từ + cỡ chữ thống nhất (chữ thường 12px, chữ nhỏ 11px); máy chưa có Aptos thì dùng Arial. */
+        body { margin: 0; font-family: Aptos, "Aptos Body", Arial, Helvetica, sans-serif; font-size: 12px; color: #000; background: #e9ece9;
                -webkit-print-color-adjust: exact; print-color-adjust: exact; text-rendering: geometricPrecision; }
-        .toolbar { position: sticky; top: 0; display: flex; gap: 12px; align-items: center; padding: 10px 16px; background: #1e6b2c; color: #fff; z-index: 1; font-family: Arial, "Segoe UI", sans-serif; font-size: 12px; }
+        .toolbar { position: sticky; top: 0; display: flex; gap: 12px; align-items: center; padding: 10px 16px; background: #1e6b2c; color: #fff; z-index: 1; font-family: Aptos, "Aptos Body", Arial, Helvetica, sans-serif; font-size: 12px; }
         .toolbar button { padding: 6px 18px; border: 0; border-radius: 6px; background: #fff; color: #1e6b2c; font-weight: 700; cursor: pointer; }
         .toolbar .hint { opacity: .85; }
         .sheet { width: 297mm; height: 210mm; padding: 7mm; margin: 16px auto; background: #fff; box-shadow: 0 2px 10px rgba(0,0,0,.15);
@@ -409,13 +409,13 @@ internal static class BillA4
         .brand { font-size: 11px; line-height: 1.3; }
         .brand-name { font-size: 22px; font-weight: 700; line-height: 1.1; }
         .brand .k { display: inline-block; min-width: 9mm; font-size: 11px; }
-        .awb { text-align: center; }
-        .awb .barcode { display: block; width: 100%; height: 8mm; }
-        /* Mã bill dưới mã vạch: chữ thường, cỡ tự nhiên, căn giữa (không kéo giãn bằng mã vạch) */
-        .awb-code { margin-top: .6mm; font-size: 13px; font-weight: 400; line-height: 1.2; white-space: nowrap; }
-        /* Mã VA bill 14 ký tự (VAHCM6010840NZ) vừa cột 42mm */
-        .awb-no { font-size: 12px; font-weight: 400; line-height: 1.2; white-space: nowrap; }
-        .route { font-size: 11px; font-weight: 700; }
+        .awb { text-align: center; font-family: Aptos, "Aptos Body", Arial, Helvetica, sans-serif; }
+        .awb .barcode { display: block; width: 100%; height: 9mm; }
+        /* Số bill (OrderNumber) dưới mã vạch: Aptos, to, chữ thường (không đậm), căn giữa */
+        .awb-code { margin-top: .6mm; font-size: 22px; font-weight: 400; line-height: 1.05; white-space: nowrap; }
+        .awb-no { margin-top: .6mm; font-size: 20px; font-weight: 400; line-height: 1.05; white-space: nowrap; }
+        .awb-no small { font-size: 14px; }
+        .route { font-size: 14px; font-weight: 700; line-height: 1.1; }
         .bar { background: #92d050; font-weight: 700; padding: .4mm 1.5mm; border-top: 1px solid #000; border-bottom: 1px solid #000; }
         .sender { display: grid; grid-template-columns: 50mm 1fr; padding: 1mm 3mm 0 0; }
         .qr { display: flex; flex-direction: column; align-items: center; justify-content: center; }
@@ -434,6 +434,9 @@ internal static class BillA4
         .lines .split { border-bottom: 0; }
         .lines .split > span:first-child { border-bottom: 1px dashed #000; }
         .lines .split .ln-in { border-bottom: 1px dashed #000; }
+        /* Mục 1 (người gửi): kẻ dòng chấm chấm. Mục 2 (người nhận): không kẻ dòng. */
+        .lines .ln, .lines .split > span:first-child, .lines .split .ln-in { border-bottom-style: dotted; border-bottom-width: 1.5px; }
+        .cnee .ln, .cnee .split > span, .cnee .ln-in { border-bottom: 0; }
         .rows { padding: .5mm 3mm 0 0; }
         .row { display: grid; grid-template-columns: 50mm 1fr; gap: 2mm; align-items: end; min-height: 4.6mm; }
         .row .lbl { text-align: right; white-space: nowrap; line-height: 4.6mm; }
@@ -466,8 +469,8 @@ internal static class BillA4
         .s-foot { display: flex; justify-content: space-between; align-items: flex-end; padding: 1.5mm 3mm 0; height: 15mm; }
         .total { font-size: 16px; font-weight: 700; margin-bottom: 1.5mm; }
         .slip-name { font-size: 11px; }
-        .foot-awb { width: 42mm; text-align: center; font-size: 13px; line-height: 1; }
-        .foot-awb .barcode { display: block; width: 100%; height: 7mm; }
+        .foot-awb { width: 42mm; text-align: center; font-family: Aptos, "Aptos Body", Arial, Helvetica, sans-serif; font-size: 18px; font-weight: 400; line-height: 1.1; }
+        .foot-awb .barcode { display: block; width: 100%; height: 9mm; }
         .terms-col { font-size: 10.5px; line-height: 1.28; text-align: justify; overflow: hidden; }
         .terms-col p { margin: 0 0 .55mm; }
         .terms-col .sub { padding-left: 3.5mm; }

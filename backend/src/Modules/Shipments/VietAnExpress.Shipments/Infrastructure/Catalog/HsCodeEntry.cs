@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using VietAnExpress.SharedKernel.Persistence;
 
 namespace VietAnExpress.Shipments.Infrastructure.Catalog;
 
@@ -32,7 +33,7 @@ internal sealed class HsCodeEntryConfiguration : IEntityTypeConfiguration<HsCode
 {
     public void Configure(EntityTypeBuilder<HsCodeEntry> b)
     {
-        b.ToTable("Catalog_HsCode", "dbo", t => t.ExcludeFromMigrations());
+        b.ToTable("Catalog_HsCode", "dbo", t => t.LegacyTable());
         b.HasKey(x => x.Id);
         b.Property(x => x.CountryCode).HasMaxLength(10).IsUnicode(false);
         b.Property(x => x.Hs6).HasMaxLength(10).IsUnicode(false);
