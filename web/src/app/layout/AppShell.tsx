@@ -13,9 +13,8 @@ import styles from './AppShell.module.css';
 const MOBILE_QUERY = '(max-width: 1040px)';
 /** Trang bảng nhiều cột dùng hết chiều ngang màn hình (bỏ giới hạn 1560px); cả trang cuộn bình thường. */
 const FULL_SCREEN_PATHS = ['/orders'];
-/** Cuộn quá mốc này (px) thì thu gọn menu; về dưới mốc kia thì mở lại. */
+/** Cuộn quá mốc này (px) thì thu gọn menu; cuộn lên lại không tự mở — rê chuột vào menu mới hiện. */
 const SCROLL_COLLAPSE_AT = 120;
-const SCROLL_EXPAND_AT = 40;
 
 /** Khung trang: sidebar + topbar + nội dung route. */
 export function AppShell() {
@@ -38,8 +37,8 @@ export function AppShell() {
     setPeek(false);
   }, [pathname]);
 
-  // Trang bảng (Đơn hàng của tôi): cuộn xuống → thu gọn tạm menu cho bảng rộng hơn; cuộn về đầu trang → mở lại.
-  // Hai ngưỡng khác nhau để menu không bật / tắt liên tục khi bảng co giãn theo bề rộng.
+  // Trang bảng (Đơn hàng của tôi): cuộn xuống → thu gọn tạm menu cho bảng rộng hơn. Cuộn lên không mở lại;
+  // rê chuột vào menu thì hiện đè lên nội dung, bấm nút menu / Ctrl+B thì mở hẳn.
   useEffect(() => {
     if (!FULL_SCREEN_PATHS.includes(pathname)) return;
     let frame = 0;
@@ -49,10 +48,6 @@ export function AppShell() {
         frame = 0;
         if (window.matchMedia(MOBILE_QUERY).matches) return;
         if (window.scrollY > SCROLL_COLLAPSE_AT) setAutoCollapsed(true);
-        else if (window.scrollY < SCROLL_EXPAND_AT) {
-          setAutoCollapsed(false);
-          setPeek(false);
-        }
       });
     };
     window.addEventListener('scroll', onScroll, { passive: true });

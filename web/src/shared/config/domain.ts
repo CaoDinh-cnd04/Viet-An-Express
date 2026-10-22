@@ -27,7 +27,8 @@ const HUB_NAMES: Record<string, readonly string[]> = {
   UPS: ['Dubai', 'Singapore', 'UK', 'VN Saver', 'TaiWan', 'VN Expedited'],
   'Chuyên tuyến': [
     'Sin (Đông Lạnh)', 'Singapore', 'UK', 'AU_AuPost', 'AU_Toll (T.Phẩm/M.Phẩm)', 'AU_Toll Vip (Hàng thường)', 'Canada', 'Dubai',
-    'Indonesia', 'Korea', 'Laos', 'Saudi', 'USA', 'USA - Sea', 'EU', 'Japan', 'Malaysia', 'China', 'India'
+    'Indonesia', 'Korea', 'Laos', 'Saudi', 'USA', 'USA - Sea', 'EU', 'Japan', 'Malaysia', 'China', 'India',
+    'Russia', 'Taiwan', 'Hong Kong', 'Thailand - AIR', 'Thailand - Truck', 'Cambodia', 'Philippines', 'VA'
   ],
   'Ủy quyền Việt An': ['Tự chọn'],
   Ecommerce: ['SING POST', 'Việt An'],
