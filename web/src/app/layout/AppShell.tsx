@@ -2,7 +2,7 @@ import { Suspense, useEffect, useRef, useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { useLocalStorage } from '@/shared/lib/useLocalStorage';
 import { cx } from '@/shared/lib/cx';
-import { useSession } from '@/features/auth';
+import { IdleLogout, useSession } from '@/features/auth';
 import { ImportantNoticeModal } from '@/features/notifications';
 import { OnboardingTour, useOnboardingTour } from '@/features/onboarding';
 import { useI18n } from '@/shared/i18n';
@@ -108,6 +108,7 @@ export function AppShell() {
           </Suspense>
         </main>
         <ImportantNoticeModal />
+        <IdleLogout />
         <OnboardingTour open={tour.open} onClose={tour.close} />
       </div>
     </div>

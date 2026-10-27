@@ -57,10 +57,13 @@ internal sealed record StaffAccountDto(
 internal sealed record AssignablePermissionDto(string Code, string Description);
 
 /// <summary>Cấu hình MyTracking của khách đang đăng nhập; <c>Config</c> null = chưa cấu hình (frontend dùng mặc định).</summary>
-internal sealed record MyTrackingDto(string Slug, bool Published, RawJson? Config, DateTime? UpdatedAt);
+/// <param name="CustomerCode">Mã khách trong link chính /tracking/{mã khách}/{số bill}.</param>
+/// <param name="CompanyName">Tên công ty theo hồ sơ khách (TCustomer.InvoiceCustomerName, trống thì CustomerName) — trang MyTracking luôn dùng tên này, khách không sửa.</param>
+internal sealed record MyTrackingDto(RawJson? Config, string CustomerCode, string CompanyName);
 
 /// <summary>Trang MyTracking công khai (đã xuất bản).</summary>
-internal sealed record PublicMyTrackingDto(string Slug, RawJson Config);
+/// <param name="CustomerCode">Mã khách chuẩn (đúng hoa thường trong TCustomer) để dựng lại link /tracking/{mã khách}/....</param>
+internal sealed record PublicMyTrackingDto(RawJson Config, string CustomerCode);
 
 /// <summary>
 /// JSON đã lưu (đã kiểm tra khi ghi), trả nguyên văn vào phản hồi — không parse / clone lại cấu hình có thể tới 2 MB

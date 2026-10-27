@@ -1,8 +1,10 @@
 using Asp.Versioning;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using VietAnExpress.Identity.Application.Commands;
 using VietAnExpress.Identity.Contracts;
+using VietAnExpress.Identity.Infrastructure;
 using VietAnExpress.SharedKernel.Authorization;
 using VietAnExpress.SharedKernel.Web;
 
@@ -40,5 +42,22 @@ internal sealed class NotificationsController : ApiControllerBase
     {
         var result = await Sender.Send(new MarkAllNotificationsReadCommand(), ct);
         return result.IsSuccess ? Ok(new ApiMessage("Đã đánh dấu đã đọc tất cả")) : Problem(result.Error);
+    }
+}
+
+/// <summary>Ảnh của tin trong thông báo — công khai để khách và email (Gmail tải ảnh qua proxy) xem được.</summary>
+[ApiVersion(1)]
+[Route("api/v{version:apiVersion}/public/notifications")]
+[Tags("Công khai")]
+[AllowAnonymous]
+internal sealed class PublicNotificationsController : ApiControllerBase
+{
+    [HttpGet("images/{name}")]
+    public IActionResult Image(string name, [FromServices] NotificationImageStore images)
+    {
+        if (images.Find(name) is not { } image) return NotFound();
+        // Tên tệp = mã băm nội dung → không bao giờ đổi.
+        Response.Headers.CacheControl = "public, max-age=31536000, immutable";
+        return PhysicalFile(image.Path, image.ContentType);
     }
 }

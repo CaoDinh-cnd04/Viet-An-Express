@@ -1,5 +1,8 @@
-/** Hỗ trợ & sự cố — hợp đồng API: docs/API_CONTRACT.md §6. Lưu ở bảng cũ dbo.TContact, không có trao đổi qua lại. */
-/** su_co = sự cố 1 vận đơn, ho_tro = yêu cầu hỗ trợ chung, gop_y = góp ý. */
+/**
+ * Hỗ trợ & sự cố — hợp đồng API: docs/API_CONTRACT.md §6. Mỗi yêu cầu (mã TRB-…) = 1 dòng bảng cũ dbo.TContact, như form "Yêu cầu"
+ * của Bill Online cũ; CS phản hồi qua thông báo riêng (không nhắn qua lại).
+ */
+/** ho_tro = hỗ trợ & sự cố (gộp 1, mã vận đơn không bắt buộc), gop_y = góp ý; su_co = sự cố gửi trước 27/10/2026 (chỉ còn để hiển thị). */
 export type TroubleKind = 'su_co' | 'ho_tro' | 'gop_y';
 export type TroublePriority = 'low' | 'mid' | 'high';
 export type TroubleStatus = 'new' | 'doing' | 'waitc' | 'done';
@@ -9,7 +12,7 @@ export interface TroubleTicket {
   id: string;
   /** Thiếu = sự cố (backend cũ). */
   kind?: TroubleKind;
-  /** Mã vận đơn — chỉ sự cố có, hỗ trợ / góp ý để trống. */
+  /** Mã vận đơn — có khi khách hỏi về 1 vận đơn, không thì trống. */
   bill: string;
   cnee: string;
   ct: string;
@@ -30,15 +33,14 @@ export interface TroubleTicket {
 
 export interface NewTrouble {
   kind: TroubleKind;
-  /** Bắt buộc với sự cố. */
+  /** Không bắt buộc — có thì phải là vận đơn của khách. */
   bill?: string;
   cnee?: string;
   ct?: string;
   /** Loại sự cố / chủ đề hỗ trợ; góp ý để trống. */
   type?: string;
-  /** Bắt buộc với yêu cầu hỗ trợ. */
+  /** Không bắt buộc — trống thì tiêu đề = vấn đề. */
   subject?: string;
-  /** Bắt buộc với sự cố. */
   lv?: TroublePriority;
   desc: string;
   req?: string;

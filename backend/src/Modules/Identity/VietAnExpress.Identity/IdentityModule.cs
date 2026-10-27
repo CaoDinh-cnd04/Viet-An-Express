@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
 using VietAnExpress.Identity.Api;
 using VietAnExpress.Identity.Contracts;
@@ -37,7 +38,14 @@ public static class IdentityModule
         // tài khoản con: dbo.TCustomer_NguoiLienLac; MyTracking: dbo.TCustomer_MyTracking + dbo.TCustomer_MyTracking_Banner.
         services.AddModuleDbContext<IdentityDbContext>(configuration, IdentityDbContext.Schema);
         services.AddSingleton<ITokenService, JwtTokenService>();
+        services.AddSingleton<RevokedTokenStore>();
+        services.AddSingleton<LoginAttemptGuard>();
         services.AddScoped<SessionService>();
+        services.AddHttpContextAccessor();
+        services.AddSingleton<MyTrackingImageStore>();
+        // Ảnh tin trong thông báo (Upload/ThongBao) và việc gửi email thông báo hẹn giờ khi tới giờ đăng.
+        services.AddSingleton<NotificationImageStore>();
+        services.AddHostedService<NotificationEmailScheduler>();
         // Chân email (tên, địa chỉ, hotline công ty) + link portal — mục cấu hình Company.
         services.AddSingleton(sp => EmailCompany.From(sp.GetRequiredService<IConfiguration>()));
         services.AddSingleton<IPermissionProvider, IdentityPermissionProvider>();
@@ -65,6 +73,13 @@ public static class IdentityModule
                     {
                         if (string.IsNullOrEmpty(ctx.Token) && ctx.Request.Cookies.TryGetValue(AuthCookies.Access, out var token))
                             ctx.Token = token;
+                        return Task.CompletedTask;
+                    },
+                    // Token đã thu hồi khi đăng xuất → 401 dù chữ ký và hạn còn đúng.
+                    OnTokenValidated = ctx =>
+                    {
+                        if (ctx.SecurityToken is JsonWebToken token && ctx.HttpContext.RequestServices.GetRequiredService<RevokedTokenStore>().IsRevoked(token.Id))
+                            ctx.Fail("Token đã thu hồi");
                         return Task.CompletedTask;
                     },
                     // 401 / 403 cũng trả ProblemDetails có "message" tiếng Việt như mọi lỗi khác.
@@ -101,7 +116,6 @@ internal sealed class IdentityPermissionProvider : IPermissionProvider
         new(IdentityPermissions.Notifications, "Xem thông báo của Việt An", SystemRoles.Customer),
         new(IdentityPermissions.Troubles, "Gửi và theo dõi yêu cầu hỗ trợ & sự cố", SystemRoles.Customer),
         new(IdentityPermissions.AdminNotifications, "Soạn và gửi thông báo cho khách (quản trị Việt An)", SystemRoles.VietAnAdmin),
-        new(IdentityPermissions.AdminTroubles, "Xử lý yêu cầu hỗ trợ & sự cố của khách (quản trị Việt An)", SystemRoles.VietAnAdmin),
-        new(IdentityPermissions.AdminAnalytics, "Thống kê sử dụng (quản trị Việt An)", SystemRoles.VietAnAdmin)
+        new(IdentityPermissions.AdminTroubles, "Xử lý yêu cầu hỗ trợ & sự cố của khách (quản trị Việt An)", SystemRoles.VietAnAdmin)
     ];
 }

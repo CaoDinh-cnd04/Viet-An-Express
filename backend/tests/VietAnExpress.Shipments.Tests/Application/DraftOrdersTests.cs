@@ -20,14 +20,13 @@ public class DraftOrdersTests
     };
 
     [Fact]
-    public void Nhap_ghi_Status_0_chua_co_so_bill_va_giu_tien_to_chi_nhanh()
+    public void Nhap_ghi_Status_0_chua_co_so_bill_va_VA_Bill_de_NULL_nhu_he_thong_cu()
     {
         var o = DraftOrders.Build(Payload(), Customer, Today, consigneeCountryId: 191);
 
         Assert.Equal(LegacyOrder.DraftStatus, o.Status);
         Assert.Null(o.OrderNumber);
-        Assert.Equal("VAHN", o.VaBill);
-        Assert.Equal("Hà Nội", VaBillCode.BranchOfPrefix(o.VaBill));
+        Assert.Null(o.VaBill); // 23/10/2026: không ghi VA_Bill (cả tiền tố chi nhánh) — như hệ thống cũ
         Assert.Equal(("DHL|Singapore", "Jason Teo", 2m, "Watch strap"), (o.ServiceName, o.ConsigneeName, o.WeightKg, o.GoodsName));
         Assert.True(DraftOrders.IsReady(o));
     }
@@ -60,10 +59,11 @@ public class DraftOrdersTests
 
         var dto = DraftOrders.ToDto(o, lines, []);
 
-        Assert.Equal(("850993", "ready", "Jason Teo", "DHL - Singapore", "Hà Nội", "1 kiện · 2 kg", "15/10/2026"),
+        // Không lưu chi nhánh (VA_Bill NULL) → danh sách để trống, mở lại form mặc định TP.HCM.
+        Assert.Equal(("850993", "ready", "Jason Teo", "DHL - Singapore", "", "1 kiện · 2 kg", "15/10/2026"),
             (dto.Id, dto.Stt, dto.Cnee, dto.Service, dto.Branch, dto.Pcs, dto.Date));
         var form = dto.Payload!.Value;
-        Assert.Equal("Hà Nội", form.GetProperty("shipper").GetProperty("branch").GetString());
+        Assert.Equal("TP.HCM", form.GetProperty("shipper").GetProperty("branch").GetString());
         Assert.Equal("1", form.GetProperty("packages")[0].GetProperty("qty").GetString());
     }
 }

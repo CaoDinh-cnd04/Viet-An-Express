@@ -1,37 +1,17 @@
-import { isNotImplemented } from '@/shared/api/http';
 import { useI18n } from '@/shared/i18n';
-import { EmptyState, Modal, Notice } from '@/shared/ui';
-import { useOrderPhotos } from '../api';
+import { Modal, Notice } from '@/shared/ui';
 import type { Order } from '../types';
-import styles from './OrderPhotosDialog.module.css';
 
-/** Ảnh kiện chụp trên cân tại kho — căn cứ đối chiếu khối lượng & tình trạng hàng. */
+/**
+ * Ảnh kiện chụp trên cân tại kho — căn cứ đối chiếu khối lượng & tình trạng hàng.
+ * Chưa có nguồn ảnh ở backend (GET /orders/:bill/photos "Chưa làm"): chỉ báo đang phát triển, không gọi máy chủ.
+ * Khi backend có ảnh: dùng useOrderPhotos (orders/api.ts) hiện lưới ảnh.
+ */
 export function OrderPhotosDialog({ order, onClose }: { order: Order | null; onClose: () => void }) {
   const { t } = useI18n();
-  const photos = useOrderPhotos(order?.bill ?? null);
-
   return (
-    <Modal open={!!order} size="lg" title={order ? t('Ảnh kiện hàng · {bill}', { bill: order.bill }) : ''} onClose={onClose}>
-      {photos.isLoading ? (
-        <p className={styles.muted}>{t('Đang tải ảnh…')}</p>
-      ) : photos.isError ? (
-        <Notice tone={isNotImplemented(photos.error) ? 'warning' : 'danger'}>
-          {isNotImplemented(photos.error) ? 'Chức năng xem ảnh đang được kết nối máy chủ.' : 'Không tải được ảnh, vui lòng thử lại.'}
-        </Notice>
-      ) : !photos.data?.length ? (
-        <EmptyState title="Đơn chưa có ảnh kiện hàng" description="Ảnh sẽ có sau khi kho Việt An nhận và cân hàng." />
-      ) : (
-        <div className={styles.grid}>
-          {photos.data.map((p, i) => (
-            <figure key={p.url} className={styles.card}>
-              <a href={p.url} target="_blank" rel="noreferrer">
-                <img src={p.url} alt={p.caption ?? t('Ảnh kiện {n}', { n: i + 1 })} loading="lazy" />
-              </a>
-              <figcaption>{p.caption ?? t('Kiện {n}', { n: i + 1 })}{p.takenAt ? ` · ${p.takenAt}` : ''}</figcaption>
-            </figure>
-          ))}
-        </div>
-      )}
+    <Modal open={!!order} title={order ? t('Ảnh kiện hàng · {bill}', { bill: order.bill }) : ''} onClose={onClose}>
+      <Notice tone="info">{t('Chức năng xem ảnh kiện đang được phát triển.')}</Notice>
     </Modal>
   );
 }

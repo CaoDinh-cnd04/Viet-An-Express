@@ -12,7 +12,7 @@ Tạo 9 bảng nghiệp vụ portal nếu chưa có:
 |---|---|
 | Vận đơn / danh mục | `NhomHangHoa`, `MatHangKhachHang`, `VanDonNguoiTao` (không còn dùng từ 16/10/2026 — người tạo vận đơn ghi ở `MaVanDon.Customer_Staff_ID`; `update-database.ps1` áp migration chuyển dữ liệu và xóa bảng) |
 | E-commerce | `KenhTMDT`, `KetNoiTMDT`, `DonTMDT` |
-| Thông báo / thống kê | `ThongBao`, `ThongBao_DaDoc`, `ThongKeSuDung` |
+| Thông báo | `TThongBao`, `TThongBao_DaDoc` (bảng `ThongKeSuDung` đã bỏ 27/10/2026) |
 
 Bổ sung cấu trúc trên 5 bảng đã nạp, không tạo lại bảng:
 

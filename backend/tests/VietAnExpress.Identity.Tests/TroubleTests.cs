@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using VietAnExpress.Customers.Contracts;
@@ -57,9 +57,9 @@ public class TroubleTests
         var t = await c.CreateAsync();
 
         Assert.StartsWith("TRB-", t.Id);
-        Assert.Equal(("su_co", "VAHCM6003585US", "John Smith", "United States", "new"), (t.Kind, t.Bill, t.Cnee, t.Ct, t.Status));
+        Assert.Equal(("ho_tro", "VAHCM6003585US", "John Smith", "United States", "new"), (t.Kind, t.Bill, t.Cnee, t.Ct, t.Status)); // sự cố gộp vào hỗ trợ
         Assert.Contains(t.Id, Assert.Single(c.F.Jobs.Jobs).Name);
-        // Phần mềm cũ đọc: FormType "Portal - Sự cố", Title = loại sự cố, Email lấy từ liên hệ là email.
+        // Phần mềm cũ đọc: FormType "Portal - Hỗ trợ", Title = vấn đề, Email lấy từ liên hệ là email.
         var row = await c.F.Db.Troubles.SingleAsync(Ct);
         Assert.Equal(("Giao chậm / trễ hẹn", "lan@sgb.vn"), (row.Title, row.Email));
         Assert.Equal(TroubleErrors.BillNotFound, (await c.Customer.Handle(new CreateTroubleCommand(Request("VAKHAC")), Ct)).Error);
@@ -76,15 +76,14 @@ public class TroubleTests
         Assert.True(replied.IsSuccess, replied.Error.Message);
         Assert.Equal(("doing", "SaigonbayHN"), (replied.Value.Ticket.Status, replied.Value.CustomerCode));
         var notice = Assert.Single((await c.Notifications.Handle(new GetNotificationsQuery(), Ct)).Value.Data);
-        Assert.Equal($"Sự cố {t.Id}: Đang xử lý", notice.Title);
+        Assert.Equal($"Hỗ trợ & sự cố {t.Id}: Đang xử lý", notice.Title);
         Assert.Contains("dự kiến giao 15/10", notice.Body);
         Assert.Equal($"https://portal.test/troubles?id={t.Id}", notice.Link);
 
         // Khách khác không thấy; trang quản trị Thông báo không lẫn thông báo riêng.
         c.F.CurrentUser.SetupGet(u => u.CustomerId).Returns(999);
         Assert.Empty((await c.Notifications.Handle(new GetNotificationsQuery(), Ct)).Value.Data);
-        Assert.Empty(await new AdminNotificationHandlers(c.F.Db, c.F.CurrentUser.Object, c.F.Email, c.F.Jobs, c.F.Clock)
-            .Handle(new GetAdminNotificationsQuery(), Ct));
+        Assert.Empty(await c.F.AdminNotifications.Handle(new GetAdminNotificationsQuery(), Ct));
     }
 
     [Fact]
@@ -132,8 +131,29 @@ public class TroubleTests
     {
         await using var c = new Ctx();
         var t = await c.CreateAsync(Feedback());
-        Assert.Equal(("gop_y", TroubleRules.FeedbackType), (t.Kind, t.Type));
-        Assert.Single(await c.Admin.Handle(new GetAdminTroublesQuery(), Ct));
+        Assert.Equal(("gop_y", "Khác"), (t.Kind, t.Type)); // không chọn nội dung → "Khác" như form cũ
+        // Như form "Yêu cầu" Bill Online: KeyWord = "Feedback", loại góp ý ở Title.
+        var row = await c.F.Db.Troubles.SingleAsync(Ct);
+        Assert.Equal(("Feedback", "Khác"), (row.Type, row.Title));
+        var upgrade = await c.CreateAsync(Feedback() with { Type = "Góp ý nâng cấp" });
+        Assert.Equal("Góp ý nâng cấp", upgrade.Type);
+        Assert.Equal(2, (await c.Admin.Handle(new GetAdminTroublesQuery(), Ct)).Count);
+    }
+
+    [Fact]
+    public async Task Quan_tri_thay_nhan_vien_phu_trach_loc_theo_nhan_vien_chi_con_khach_cua_ho()
+    {
+        await using var c = new Ctx();
+        var t = await c.CreateAsync();
+        c.F.Customers.Setup(x => x.GetAccountManagersAsync(It.IsAny<IReadOnlyCollection<long>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<long, AccountManager> { [IdentityFixture.CustomerId] = new(15, "han.nguyen", "Nguyễn Ngọc Hân", null, null, 1, true) });
+        c.F.Customers.Setup(x => x.GetCustomerIdsOfManagerAsync(15, It.IsAny<CancellationToken>())).ReturnsAsync([IdentityFixture.CustomerId]);
+        c.F.Customers.Setup(x => x.GetCustomerIdsOfManagerAsync(16, It.IsAny<CancellationToken>())).ReturnsAsync([]);
+
+        var all = Assert.Single(await c.Admin.Handle(new GetAdminTroublesQuery(), Ct));
+        Assert.Equal((t.Id, 15, "Nguyễn Ngọc Hân"), (all.Ticket.Id, all.ManagerId, all.ManagerName));
+        Assert.Single(await c.Admin.Handle(new GetAdminTroublesQuery(15), Ct));
+        Assert.Empty(await c.Admin.Handle(new GetAdminTroublesQuery(16), Ct));
     }
 
     [Theory]
@@ -168,12 +188,16 @@ public class TroubleTests
         Assert.Null(TroubleRules.Validate(Request()));
         Assert.Equal(TroubleErrors.Description, TroubleRules.Validate(Request() with { Desc = "ngắn" }));
         Assert.Equal(TroubleErrors.Priority, TroubleRules.Validate(Request() with { Lv = "urgent" }));
-        Assert.Equal(TroubleErrors.Bill, TroubleRules.Validate(Request(" ")));
+        Assert.Null(TroubleRules.Validate(Request(" ")));                      // mã vận đơn không bắt buộc
+        Assert.Equal(TroubleErrors.Bill, TroubleRules.Validate(Request(new string('9', Trouble.BillMaxLength + 1))));
         Assert.Equal(TroubleErrors.Kind, TroubleRules.Validate(Request() with { Kind = "khac" }));
         Assert.Null(TroubleRules.Validate(Support()));
-        Assert.Equal(TroubleErrors.Subject, TroubleRules.Validate(Support("abc")));
+        Assert.Null(TroubleRules.Validate(Support("")));                       // tiêu đề không bắt buộc
+        Assert.Equal(TroubleErrors.Subject, TroubleRules.Validate(Support(new string('a', Trouble.SubjectMaxLength + 1))));
         Assert.Equal(TroubleErrors.Contact, TroubleRules.Validate(Support() with { Contact = " " }));
         Assert.Null(TroubleRules.Validate(Feedback()));
+        Assert.Null(TroubleRules.Validate(Feedback() with { Type = "Góp ý nâng cấp" }));
+        Assert.Equal(TroubleErrors.FeedbackTopic, TroubleRules.Validate(Feedback() with { Type = "Giao chậm" }));
         Assert.Equal(TroubleErrors.FileType, TroubleRules.Validate(Support(), new TroubleFile("x.exe", "application/octet-stream", [1])));
         Assert.Equal(TroubleErrors.FileTooLarge, TroubleRules.Validate(Support(), new TroubleFile("x.pdf", "application/pdf", new byte[Trouble.FileMaxBytes + 1])));
     }

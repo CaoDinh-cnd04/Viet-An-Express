@@ -72,6 +72,18 @@ internal static class GeoRegistration
             c.Timeout = TimeSpan.FromSeconds(6);
             c.DefaultRequestHeaders.UserAgent.ParseAdd(UserAgent);
         });
+        // Tracking HUB-EZ (chỉ đọc hành trình theo mã hãng của đơn thuộc hub đi HUB-EZ).
+        services.AddOptions<Infrastructure.Carriers.HubEz.HubEzOptions>()
+            .Bind(configuration.GetSection(Infrastructure.Carriers.HubEz.HubEzOptions.Section))
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
+        services.AddHttpClient<Infrastructure.Carriers.HubEz.IHubEzTracking, Infrastructure.Carriers.HubEz.HubEzTrackingClient>((sp, c) =>
+        {
+            var o = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<Infrastructure.Carriers.HubEz.HubEzOptions>>().Value;
+            c.BaseAddress = new Uri(o.TrackingBaseUrl.TrimEnd('/') + "/");
+            c.Timeout = TimeSpan.FromSeconds(o.TimeoutSeconds);
+            c.DefaultRequestHeaders.UserAgent.ParseAdd(UserAgent);
+        });
         // VSVX: bảng dbo.VungXauVungXa của hệ thống cũ (dùng DbContext → scoped).
         services.AddScoped<Infrastructure.Geo.IRemoteAreaLookup, Infrastructure.Geo.RemoteAreaLookup>();
         return services;

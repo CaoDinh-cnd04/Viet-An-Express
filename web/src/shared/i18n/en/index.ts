@@ -11,6 +11,7 @@ import { feedback } from './feedback';
 import { support } from './support';
 import { start } from './start';
 import { mytracking } from './mytracking';
+import { notifications } from './notifications';
 import { staff } from './staff';
 import { troubles } from './troubles';
 
@@ -33,5 +34,6 @@ export const EN: Readonly<Record<string, string>> = {
   ...landing,
   ...categories,
   ...feedback,
-  ...troubles
+  ...troubles,
+  ...notifications
 };

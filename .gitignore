@@ -33,9 +33,13 @@ Thumbs.db
 
 # ---------- Sao lưu dữ liệu trên máy (không commit) ----------
 /backup/
+/backend/src/VietAnExpress.API/Upload/
 
 # web.config backend có mật khẩu SQL / Jwt secret thật của máy chủ
 backend/scripts/iis/backend.web.config
 
 # Script SQL / triển khai chỉ giữ trên máy, không đưa lên git
 backend/scripts/
+
+# Token đã thu hồi khi đăng xuất (backend tự ghi)
+App_Data/

@@ -1,6 +1,22 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { COMPRESSED_IMAGE_BYTES } from '../schema';
-import { readImage, validateImageUrl } from './images';
+import { normalizeImageUrl, readImage, validateImageUrl } from './images';
+
+describe('normalizeImageUrl', () => {
+  it('lấy link ảnh thật từ Google Hình ảnh / link chuyển hướng Google', () => {
+    const img = 'https://cdn.example.com/a.jpg';
+    expect(normalizeImageUrl(`https://www.google.com/imgres?imgurl=${encodeURIComponent(img)}&imgrefurl=x`)).toBe(img);
+    expect(normalizeImageUrl(`https://www.google.com.vn/url?url=${encodeURIComponent(img)}&sa=t`)).toBe(img);
+  });
+  it('link chia sẻ Google Drive → ảnh thu nhỏ của Drive', () => {
+    expect(normalizeImageUrl('https://drive.google.com/file/d/1AbC-d_E/view?usp=sharing')).toBe('https://drive.google.com/thumbnail?id=1AbC-d_E&sz=w1600');
+    expect(normalizeImageUrl('https://drive.google.com/open?id=XYZ')).toBe('https://drive.google.com/thumbnail?id=XYZ&sz=w1600');
+  });
+  it('link khác giữ nguyên (bỏ khoảng trắng)', () => {
+    expect(normalizeImageUrl(' https://cdn.example.com/a.png ')).toBe('https://cdn.example.com/a.png');
+    expect(normalizeImageUrl('không phải link')).toBe('không phải link');
+  });
+});
 
 afterEach(() => { vi.unstubAllGlobals(); vi.useRealTimers(); });
 
@@ -27,7 +43,7 @@ describe('remote image validation', () => {
   it('rejects a broken image URL', async () => {
     const image = mockImage();
     const result = validateImageUrl('https://example.com/page');
-    const assertion = expect(result).rejects.toThrow('link trực tiếp');
+    const assertion = expect(result).rejects.toThrow('Sao chép địa chỉ hình ảnh');
     image.onerror?.();
     await assertion;
     expect(image.src).toBe('');
@@ -36,7 +52,7 @@ describe('remote image validation', () => {
   it('rejects an image with no decoded pixels', async () => {
     const image = mockImage();
     image.naturalWidth = 0;
-    const assertion = expect(validateImageUrl('https://example.com/empty')).rejects.toThrow('Không tải được ảnh');
+    const assertion = expect(validateImageUrl('https://example.com/empty')).rejects.toThrow('không phải link file ảnh');
     image.onload?.();
     await assertion;
   });
@@ -45,7 +61,7 @@ describe('remote image validation', () => {
     vi.useFakeTimers();
     mockImage();
     const result = validateImageUrl('https://example.com/stalled');
-    const assertion = expect(result).rejects.toThrow('Không tải được ảnh');
+    const assertion = expect(result).rejects.toThrow('không phải link file ảnh');
     await vi.advanceTimersByTimeAsync(15000);
     await assertion;
   });

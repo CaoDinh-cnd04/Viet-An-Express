@@ -1,25 +1,29 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { useParams, useSearchParams } from 'react-router-dom';
-import { billsFromQuery, billsToQuery, parseBills, TrackingDetail, useTracking } from '@/features/landing';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { parseBills } from '@/features/landing';
 import { getErrorMessage } from '@/shared/api/http';
 import { useI18n } from '@/shared/i18n';
 import { Icon, Notice } from '@/shared/ui';
-import { usePublicMyTracking } from '../api';
-import { TrackingLayout } from '../components/TrackingLayout';
+import { useCustomerTracking, usePublicMyTracking } from '../api';
+import { customerTrackingQuery } from '../lib/link';
+import { ClassicTrackingDetail } from '../components/ClassicTrackingDetail';
+import { HomeButton, TrackingLayout } from '../components/TrackingLayout';
 import layout from './MyTrackingPage.module.css';
 import styles from './PublicMyTrackingPage.module.css';
 
 /**
- * Trang tra cứu MyTracking công khai của khách: /t/{đường dẫn}?bills=MA1,MA2.
- * Khách gửi link cho người nhận hàng; không cần đăng nhập. Tra cứu dùng POST /public/tracking như trang ngoài.
+ * Trang tra cứu MyTracking công khai của khách, không cần đăng nhập — khách gửi link cho người nhận hàng:
+ * /tracking/{mã khách}/{số bill}?ref={mã REF}: chỉ tra đơn của khách đó; không có số bill thì tra theo mã REF.
+ * Trên tên miền MyTracking, /tracking/{mã khách} (chưa có số bill) cũng vào đây — `customerCode` truyền từ route.
  */
-export default function PublicMyTrackingPage() {
+export default function PublicMyTrackingPage({ customerCode }: { customerCode?: string }) {
   const { t } = useI18n();
-  const { slug = '' } = useParams();
-  const [params, setParams] = useSearchParams();
-  const page = usePublicMyTracking(slug);
-  const bills = billsFromQuery(params.get('bills'));
-  const tracking = useTracking(bills);
+  const { code = customerCode ?? '', bill } = useParams();
+  const [params] = useSearchParams();
+  const navigate = useNavigate();
+  const page = usePublicMyTracking(code);
+  const bills = customerTrackingQuery(bill, params.get('ref'));
+  const tracking = useCustomerTracking(code, bills);
   const config = page.data?.config;
 
   useEffect(() => {
@@ -33,18 +37,19 @@ export default function PublicMyTrackingPage() {
         <div className={styles.missing}>
           <Icon name="search" size={28} />
           <h1>{t('Không tìm thấy trang tra cứu')}</h1>
-          <p>{t('Trang tra cứu không tồn tại hoặc chưa được xuất bản. Vui lòng kiểm tra lại đường dẫn.')}</p>
+          <p>{t('Trang tra cứu không tồn tại. Vui lòng kiểm tra lại đường dẫn.')}</p>
         </div>
       </div>
     );
   }
 
-  const search = (next: string[]) => setParams(next.length ? { bills: billsToQuery(next) } : {}, { replace: false });
+  const search = (next: string[]) =>
+    navigate(`/tracking/${encodeURIComponent(page.data?.customerCode ?? code)}/${next.map(encodeURIComponent).join(',')}`);
 
   return (
     <div className={styles.page}>
       <TrackingLayout config={config} standalone>
-        <SearchForm key={params.get('bills') ?? ''} initial={bills} busy={tracking.isFetching} onSearch={search} />
+        <SearchForm key={bills.join(',')} initial={bills} busy={tracking.isFetching} onSearch={search} website={config.brand.website} />
         <h2 className={layout.blackBar}>TRACKING DETAIL</h2>
         {bills.length === 0 ? (
           <div className={layout.trackingPlaceholder}>
@@ -60,7 +65,7 @@ export default function PublicMyTrackingPage() {
             {bills.map(bill => {
               const result = tracking.data?.find(r => r.bill === bill);
               return result?.found
-                ? <TrackingDetail key={bill} result={result} />
+                ? <ClassicTrackingDetail key={bill} result={result} />
                 : <p key={bill} className={styles.notFound}>{t('Không tìm thấy vận đơn {bill}', { bill })}</p>;
             })}
           </div>
@@ -71,7 +76,12 @@ export default function PublicMyTrackingPage() {
   );
 }
 
-function SearchForm({ initial, busy, onSearch }: { initial: string[]; busy: boolean; onSearch: (bills: string[]) => void }) {
+function SearchForm({ initial, busy, onSearch, website }: {
+  initial: string[];
+  busy: boolean;
+  onSearch: (bills: string[]) => void;
+  website: string;
+}) {
   const { t } = useI18n();
   const [text, setText] = useState(() => initial.join(', '));
   const [error, setError] = useState<string>();
@@ -93,6 +103,7 @@ function SearchForm({ initial, busy, onSearch }: { initial: string[]; busy: bool
         <input value={text} onChange={e => setText(e.target.value)} aria-label="Tracking number" placeholder="Tracking number"
           autoComplete="off" spellCheck={false} aria-invalid={error ? true : undefined} />
         <button type="submit" disabled={busy}>Track</button>
+        <HomeButton website={website} />
       </div>
       {error && <p className={styles.error} role="alert">{error}</p>}
     </form>

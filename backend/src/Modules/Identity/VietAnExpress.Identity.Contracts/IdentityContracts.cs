@@ -15,7 +15,6 @@ public static class IdentityPermissions
     public const string Troubles = "account.troubles";
     /// <summary>Xem, trả lời, đổi trạng thái yêu cầu hỗ trợ &amp; sự cố của mọi khách — chỉ quản trị Việt An (vai trò va_admin).</summary>
     public const string AdminTroubles = "admin.troubles";
-    public const string AdminAnalytics = "admin.analytics";
 
     public static readonly IReadOnlySet<string> AdminOnly = new HashSet<string>(StringComparer.Ordinal) { ManageStaff, MyTracking, ChangePassword };
 

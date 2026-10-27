@@ -73,7 +73,8 @@ internal static class DraftOrders
     {
         var order = LegacyOrderFactory.FromPayload(p, customer, orderNumber: 0, todayVn, consigneeCountryId);
         order.OrderNumber = null;
-        order.VaBill = VaBillCode.DraftPrefix(p.Shipper.Branch);
+        // VA_Bill để NULL như hệ thống cũ (23/10/2026) — không lưu được chi nhánh; mở lại nháp mặc định TP.HCM.
+        order.VaBill = null;
         order.Status = LegacyOrder.DraftStatus;
         // Form chưa khai hàng: không ghi chữ mặc định "Goods" / "Documents" để mở lại nháp vẫn trống.
         var isDoc = string.Equals(p.Shipment.Type, "DOC", StringComparison.OrdinalIgnoreCase);
@@ -293,12 +294,11 @@ internal sealed class PrintDraftHandler(
             // VSVX (bảng tĩnh, có cache) ghi vào đơn như hệ thống cũ.
             var countryCode = RemoteAreaColumns.CountryCode(payload, countries);
             var remote = await remoteAreas.FindAsync(countryCode, payload.Receiver.Postal, payload.Receiver.City, ct);
-            var branch = VaBillCode.BranchOfPrefix(order.VaBill);
 
             // Cấp số trong transaction: khóa dãy số tới khi commit (không trùng giữa các lần in trên portal).
             number = (await numbers.NextAsync(1, ct))[0];
             order.OrderNumber = number;
-            order.VaBill = VaBillCode.Format(branch, number, countryCode);
+            order.VaBill = null; // như hệ thống cũ; mã bill hiển thị = OrderNumber (nháp cũ còn tiền tố chi nhánh thì xóa luôn)
             order.Status = LegacyOrder.IssuedStatus;
             order.CreateDate = today;
             order.ModifyDate = today;

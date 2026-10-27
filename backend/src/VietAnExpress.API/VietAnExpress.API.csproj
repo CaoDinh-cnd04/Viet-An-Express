@@ -21,4 +21,9 @@
     <ProjectReference Include="..\Modules\Shipments\VietAnExpress.Shipments\VietAnExpress.Shipments.csproj" />
     <ProjectReference Include="..\Modules\Ecommerce\VietAnExpress.Ecommerce\VietAnExpress.Ecommerce.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <!-- App_Data/revoked-tokens.json: danh sách token thu hồi do backend tự ghi lúc chạy — không đóng gói (tránh đè file trên máy chủ). -->
+    <Content Remove="App_Data\**" />
+    <None Remove="App_Data\**" />
+  </ItemGroup>
 </Project>

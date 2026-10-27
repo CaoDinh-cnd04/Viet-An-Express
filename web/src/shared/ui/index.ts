@@ -1,6 +1,7 @@
 export { Button, ExternalLinkButton, LinkButton } from './Button';
 export { Card } from './Card';
 export { DataTable, type Column } from './DataTable';
+export { Drawer } from './Drawer';
 export { DropdownMenu, type MenuItem } from './DropdownMenu';
 export { EmptyState } from './EmptyState';
 export { FileDrop, KeyValueList, Notice, StatCard, StatGrid } from './Feedback';

@@ -94,10 +94,3 @@ internal static class StaffRules
         v.RuleFor(phone2).MaximumLength(StaffAccount.PhoneMaxLength);
     }
 }
-
-internal sealed class SaveMyTrackingCommandValidator : AbstractValidator<SaveMyTrackingCommand>
-{
-    public SaveMyTrackingCommandValidator() =>
-        RuleFor(x => x.Slug).Must(s => MyTrackingPage.IsValidSlug(s.Trim().ToLowerInvariant()))
-            .WithMessage($"Đường dẫn từ {MyTrackingPage.SlugMinLength} đến {MyTrackingPage.SlugMaxLength} ký tự, chỉ gồm chữ thường không dấu, số và dấu gạch ngang");
-}

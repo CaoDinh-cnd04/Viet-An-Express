@@ -15,7 +15,7 @@ export function useTroubles() {
   });
 }
 
-/** Gửi yêu cầu mới (sự cố / hỗ trợ / góp ý) — multipart/form-data để kèm tệp. */
+/** Gửi yêu cầu mới (hỗ trợ & sự cố / góp ý) — multipart/form-data để kèm tệp. */
 export function useCreateTrouble() {
   const qc = useQueryClient();
   const toast = useToast();

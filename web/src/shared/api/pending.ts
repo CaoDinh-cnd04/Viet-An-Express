@@ -5,7 +5,7 @@
  */
 export const PENDING_ENDPOINTS: readonly string[] = [
   '/ecom/settings', '/ecom/import-csv',
-  '/addresses/senders', '/catalog/addon-fees', '/rates', '/services', '/public/contact'
+  '/addresses/senders', '/catalog/addon-fees', '/rates', '/services'
 ];
 
 /** Đường dẫn thuộc endpoint chưa làm: trùng hoặc nằm dưới 1 mục (bỏ query). Hàm thuần — có test. */

@@ -72,6 +72,65 @@ public class DraftConcurrencySqlServerTests(DraftSqlServerFixture fixture) : ICl
         Assert.False(await check.LegacyOrders.AnyAsync(o => o.OrderNumber == portal.OrderNumber && o.Id != id, Ct));
     }
 
+    private static async Task<long> CounterAsync(ShipmentsDbContext db) =>
+        (await db.Database.SqlQuery<long>($"SELECT CAST(ConfigValue_Int AS bigint) AS [Value] FROM dbo.TConfig WHERE ConfigName = N'MaxOrderNumber'")
+            .ToListAsync(Ct)).Single();
+
+    [Fact(Skip = "Set VIETAN_TEST_SQLSERVER to run disposable SQL Server integration tests", SkipUnless = nameof(SqlServerAvailable))]
+    public async Task In_bill_lay_so_tu_bo_dem_TConfig_nhu_he_thong_cu()
+    {
+        // Hệ thống cũ (p_MVD_Print_Bill) cấp số = TConfig.MaxOrderNumber + 1 → portal dùng chung bộ đếm đó.
+        var id = await fixture.AddReadyDraftAsync();
+        await using var db = fixture.CreateDb();
+        var before = await CounterAsync(db);
+        Assert.True((await Print(db).Handle(new PrintDraftCommand(id), Ct)).IsSuccess);
+
+        Assert.Equal(before + 1, (await db.LegacyOrders.AsNoTracking().SingleAsync(o => o.Id == id, Ct)).OrderNumber);
+        Assert.Equal(before + 1, await CounterAsync(db)); // bộ đếm đã tăng — lần in sau của hệ thống cũ ra số kế tiếp
+    }
+
+    [Fact(Skip = "Set VIETAN_TEST_SQLSERVER to run disposable SQL Server integration tests", SkipUnless = nameof(SqlServerAvailable))]
+    public async Task Bo_dem_thap_hon_so_da_dung_thi_bo_qua_so_do()
+    {
+        // Portal trước 23/10/2026 cấp MAX + 1 không qua bộ đếm → bộ đếm có thể đưa ra số đã có đơn dùng.
+        var id = await fixture.AddReadyDraftAsync();
+        long before;
+        await using (var db = fixture.CreateDb())
+        {
+            before = await CounterAsync(db);
+            db.LegacyOrders.Add(new LegacyOrder { CustomerId = 7, Status = LegacyOrder.IssuedStatus, OrderNumber = before + 1, ConsigneeName = "Legacy" });
+            await db.SaveChangesAsync(Ct);
+            var lot = (before + 2).ToString(System.Globalization.CultureInfo.InvariantCulture);
+            await db.Database.ExecuteSqlAsync($"INSERT dbo.Orders (OrderNumber, CustomerID) VALUES ({lot}, 188722), (N'XOART5462180', 1)", Ct);
+            Assert.True((await Print(db).Handle(new PrintDraftCommand(id), Ct)).IsSuccess);
+        }
+
+        await using var check = fixture.CreateDb();
+        Assert.Equal(before + 3, (await check.LegacyOrders.AsNoTracking().SingleAsync(o => o.Id == id, Ct)).OrderNumber);
+        Assert.Equal(before + 3, await CounterAsync(check));
+    }
+
+    [Fact(Skip = "Set VIETAN_TEST_SQLSERVER to run disposable SQL Server integration tests", SkipUnless = nameof(SqlServerAvailable))]
+    public async Task Lo_hang_khach_khac_ghi_trung_so_ngay_sau_khi_in_thi_portal_cap_lai()
+    {
+        var id = await fixture.AddReadyDraftAsync();
+        long number;
+        await using (var db = fixture.CreateDb())
+        {
+            Assert.True((await Print(db).Handle(new PrintDraftCommand(id), Ct)).IsSuccess);
+            number = (await db.LegacyOrders.AsNoTracking().SingleAsync(o => o.Id == id, Ct)).OrderNumber!.Value;
+            var text = number.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            // Lô cùng khách = nhân viên đang xử lý chính đơn portal → không coi là trùng; lô khách khác → trùng.
+            await db.Database.ExecuteSqlAsync($"INSERT dbo.Orders (OrderNumber, CustomerID) VALUES ({text}, {(int)DraftSqlServerFixture.CustomerId})", Ct);
+            Assert.Empty(await Numbers(db).ReissueTakenAsync([id], Ct));
+            await db.Database.ExecuteSqlAsync($"INSERT dbo.Orders (OrderNumber, CustomerID) VALUES ({text}, 188722)", Ct);
+            Assert.True((await Numbers(db).ReissueTakenAsync([id], Ct)).ContainsKey(id));
+        }
+
+        await using var check = fixture.CreateDb();
+        Assert.NotEqual(number, (await check.LegacyOrders.AsNoTracking().SingleAsync(o => o.Id == id, Ct)).OrderNumber);
+    }
+
     [Fact(Skip = "Set VIETAN_TEST_SQLSERVER to run disposable SQL Server integration tests", SkipUnless = nameof(SqlServerAvailable))]
     public async Task Hai_nguoi_cung_in_1_nhap_chi_1_nguoi_duoc_cap_bill_nguoi_sau_bao_don_da_in()
     {
@@ -209,6 +268,10 @@ public sealed class DraftSqlServerFixture : IAsyncLifetime
         await schema.Database.ExecuteSqlRawAsync("CREATE TRIGGER [dbo].[TR_Test_MaVanDon] ON [dbo].[MaVanDon] AFTER INSERT, UPDATE, DELETE AS SET NOCOUNT ON;");
         await schema.Database.ExecuteSqlRawAsync("CREATE TRIGGER [dbo].[TR_Test_PCS_DIM] ON [dbo].[MaVanDon_PCS_DIM] AFTER INSERT, UPDATE, DELETE AS SET NOCOUNT ON;");
         await schema.Database.ExecuteSqlRawAsync("CREATE TRIGGER [dbo].[TR_Test_ChiTietHang] ON [dbo].[MaVanDon_ChiTietHang] AFTER INSERT, UPDATE, DELETE AS SET NOCOUNT ON;");
+        // Bảng lô hàng của phần mềm cũ (dùng chung dãy số bill, OrderNumber kiểu chữ) — chỉ các cột portal đọc.
+        await schema.Database.ExecuteSqlRawAsync("CREATE TABLE [dbo].[Orders] ([OrderID] int IDENTITY PRIMARY KEY, [OrderNumber] nvarchar(50) NULL, [CustomerID] int NULL);");
+        // Bộ đếm số bill của hệ thống cũ (thủ tục p_MVD_Print_Bill tăng dòng này).
+        await schema.Database.ExecuteSqlRawAsync("CREATE TABLE [dbo].[TConfig] ([ConfigName] nvarchar(100) NOT NULL PRIMARY KEY, [ConfigValue_Int] int NULL); INSERT [dbo].[TConfig] VALUES (N'MaxOrderNumber', 6180000);");
     }
 
     public async ValueTask DisposeAsync()

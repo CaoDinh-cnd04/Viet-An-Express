@@ -15,7 +15,7 @@ internal sealed class CompanyInfo
     public string Phone { get; init; } = "+8428 3948 3949";
     public string Hotline { get; init; } = "+84 909 805 845";
     public string Website { get; init; } = "www.Vietanexpress.com.vn";
-    /// <summary>Địa chỉ portal — mã QR trên bill trỏ tới {PortalUrl}/tracking/{số bill}.</summary>
+    /// <summary>Địa chỉ portal — link ở số bill dưới QR trỏ tới {PortalUrl}/tracking/{số bill}; QR chỉ chứa số bill để CMS quét.</summary>
     public string PortalUrl { get; init; } = "http://beta.vietanexpress.com.vn";
     public string TaxCode { get; init; } = "0310278855";
 }

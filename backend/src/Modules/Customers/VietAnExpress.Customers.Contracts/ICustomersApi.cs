@@ -9,6 +9,9 @@ public interface ICustomersApi
     /// <param name="customerId">dbo.TCustomer.CustomerID.</param>
     Task<CustomerSummary?> GetByIdAsync(long customerId, CancellationToken cancellationToken = default);
 
+    /// <summary>Khách theo mã khách (TCustomer.CustomerCode, không phân biệt hoa thường) — vd link MyTracking /tracking/{mã khách}/....</summary>
+    Task<CustomerSummary?> GetByCodeAsync(string code, CancellationToken cancellationToken = default);
+
     /// <summary>Nhiều khách một lần (bỏ mã không tồn tại) — vd lấy email để gửi thông báo.</summary>
     Task<IReadOnlyList<CustomerSummary>> GetByIdsAsync(IReadOnlyCollection<long> customerIds, CancellationToken cancellationToken = default);
 
@@ -20,6 +23,9 @@ public interface ICustomersApi
 
     /// <summary>Nhân viên phụ trách của nhiều khách một lần (bỏ khách chưa phân công) — vd danh sách yêu cầu ở trang quản trị.</summary>
     Task<IReadOnlyDictionary<long, AccountManager>> GetAccountManagersAsync(IReadOnlyCollection<long> customerIds, CancellationToken cancellationToken = default);
+
+    /// <summary>Mã khách (CustomerID) do 1 nhân viên phụ trách (TCustomer.Staff_ID = USERS.ID) — vd nhân viên chỉ xem yêu cầu của khách mình.</summary>
+    Task<IReadOnlyList<long>> GetCustomerIdsOfManagerAsync(int managerId, CancellationToken cancellationToken = default);
 }
 
 /// <summary>Nhân viên Việt An (dbo.USERS) phụ trách khách. <see cref="Id"/> = USERS.ID = TCustomer.Staff_ID.</summary>
@@ -34,4 +40,9 @@ public sealed record CustomerSummary(
     string? Email,
     string? Phone,
     string? Address,
-    string? TaxCode);
+    string? TaxCode,
+    string? InvoiceName = null)
+{
+    /// <summary>Tên công ty trên trang MyTracking: TCustomer.InvoiceCustomerName, trống thì dùng CustomerName.</summary>
+    public string TrackingName => string.IsNullOrWhiteSpace(InvoiceName) ? CompanyName : InvoiceName.Trim();
+}

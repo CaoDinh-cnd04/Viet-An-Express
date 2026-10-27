@@ -4,7 +4,9 @@ import { useI18n } from '@/shared/i18n';
 import { uuid } from '@/shared/lib/uuid';
 import { Button, Icon, TextAreaField, TextField } from '@/shared/ui';
 import type { StorageMode } from '../hooks/useMyTrackingConfig';
+import { CONTACT_TYPES, isHexColor, MAX_CHANNELS, SOCIAL_TYPES } from '../lib/channels';
 import { MAX_AD_IMAGES, type MyTrackingConfig } from '../schema';
+import { ChannelListEditor } from './ChannelListEditor';
 import { ConfigImage } from './ConfigImage';
 import { ImagePicker } from './ImagePicker';
 import styles from '../pages/MyTrackingPage.module.css';
@@ -14,13 +16,11 @@ interface Props {
   onSave: FormEventHandler<HTMLFormElement>;
   onRestore: () => void;
   disabled: boolean;
-  /** `server`: lưu + xuất bản trên server; `local`: chỉ lưu bản thử nghiệm trên trình duyệt. */
+  /** `server`: lưu trên server (trang hiện công khai ngay); `local`: chỉ lưu bản thử nghiệm trên trình duyệt. */
   mode: StorageMode;
-  published: boolean;
-  onPublish: (published: boolean) => void;
 }
 
-export function ConfigForm({ form, onSave, onRestore, disabled, mode, published, onPublish }: Props) {
+export function ConfigForm({ form, onSave, onRestore, disabled, mode }: Props) {
   const { t } = useI18n();
   const { register, control, setValue, getValues, formState: { errors, isDirty } } = form;
   const { fields, append, remove, move } = useFieldArray({ control, name: 'images', keyName: 'fieldKey' });
@@ -43,26 +43,38 @@ export function ConfigForm({ form, onSave, onRestore, disabled, mode, published,
           <Button variant="danger" disabled={!config.brand.logo} onClick={() => setImage('brand.logo', '')}>{t('Xóa logo')}</Button>
         </div>
         <div className={styles.brandFields}>
-          <TextField label="Tên công ty" placeholder="Tên công ty của bạn" maxLength={150} error={errors.brand?.companyName?.message} {...register('brand.companyName')} />
+          <TextField label="Tên công ty" readOnly hint="Lấy theo hồ sơ khách hàng tại Việt An, không sửa ở đây. Cần đổi tên vui lòng gửi yêu cầu hỗ trợ."
+            error={errors.brand?.companyName?.message} {...register('brand.companyName')} />
           <TextField label="Số điện thoại" type="tel" placeholder="Số điện thoại liên hệ" maxLength={50} error={errors.brand?.phone?.message} {...register('brand.phone')} />
-        <TextField label="Địa chỉ" placeholder="Địa chỉ công ty" maxLength={500} error={errors.brand?.address?.message} {...register('brand.address')} />
+        <TextField label="Địa chỉ hiển thị trên trang tracking" placeholder="Địa chỉ công ty" maxLength={250} error={errors.brand?.address?.message} {...register('brand.address')} />
+        <TextField label="Website trang home" type="url" placeholder="https://tencongty.vn" hint="Nút Home cạnh nút Track và logo trên trang tracking sẽ mở website này"
+          error={errors.brand?.website?.message} {...register('brand.website')} />
         </div>
         </div>
-        <div className={styles.logoSource}><ImagePicker label="Logo" onAdd={src => setImage('brand.logo', src)} onBusy={onBusy} /></div>
+        <div className={styles.logoSource}><ImagePicker label="Logo" allowUrl={false} onAdd={src => setImage('brand.logo', src)} onBusy={onBusy} /></div>
+      </section>
+      <section className={styles.group}>
+        <h2>{t('Màu thương hiệu')}</h2>
+        <p className={styles.hint}>{t('Màu thương hiệu: các nút (Track, Home, hotline, nút trên ảnh quảng cáo), thanh TRACKING DETAIL, tiêu đề bảng hành trình và khung tiêu đề quảng cáo. Màu phụ: nền các dòng trong nội dung tracking (thông tin vận đơn, dòng ngày). Để trống = màu mặc định.')}</p>
+        <div className={styles.twoColumns}>
+          <ColorField form={form} name="brand.primaryColor" label="Màu thương hiệu" fallback="#111111" />
+          <ColorField form={form} name="brand.secondaryColor" label="Màu phụ thương hiệu" fallback="#f8f3e1" />
+        </div>
       </section>
       <section className={styles.group}>
         <h2>{t('Nội dung hiển thị chính')}</h2>
         <TextField label="Tiêu đề" required maxLength={120} error={errors.title?.message} {...register('title')} />
-        <TextAreaField label="Mô tả" rows={4} maxLength={2000} error={errors.description?.message} {...register('description')} />
+        <TextAreaField label="Mô tả" rows={4} maxLength={250} error={errors.description?.message} {...register('description')} />
       </section>
       <section className={styles.group}>
         <div className={styles.groupHeading}><h2>{t('Hình ảnh quảng cáo')}</h2><span>{t('Số lượng: {n}/5', { n: fields.length })}</span></div>
         <p className={styles.hint}>{t('Nhập link website cho từng ảnh. Khách bấm vào ảnh hoặc nút sẽ mở website trong tab mới. Tối đa 5 ảnh.')}</p>
+        <p className={styles.hint}>{t('Không bắt buộc: không thêm ảnh và để trống mô tả thì cột quảng cáo tự ẩn, khung tra cứu rộng hết trang.')}</p>
         <ImagePicker onAdd={src => {
           if (getValues('images').length < MAX_AD_IMAGES) append({ id: uuid(), src, linkUrl: '', title: '', buttonText: 'Xem thêm' });
         }} disabled={fields.length >= MAX_AD_IMAGES} onBusy={onBusy} />
         <p className={styles.hint}>{t('Kéo tay cầm để đổi thứ tự ảnh hoặc dùng nút lên / xuống.')}</p>
-        {fields.length === 0 && <div className={styles.emptyImages}><Icon name="image" size={24} /><span>{t('Chưa có ảnh quảng cáo. Thêm ảnh để xem trước.')}</span></div>}
+        {fields.length === 0 && <div className={styles.emptyImages}><Icon name="image" size={24} /><span>{t('Chưa có ảnh quảng cáo.')}</span></div>}
         {fields.map((field, index) => <div className={styles.imageRow} key={field.fieldKey} onDragOver={e => e.preventDefault()} onDrop={e => {
           e.preventDefault();
           const from = fields.findIndex(item => item.id === dragId.current);
@@ -98,27 +110,39 @@ export function ConfigForm({ form, onSave, onRestore, disabled, mode, published,
         <div className={styles.removeBackground}><Button variant="danger" disabled={!config.background} onClick={() => setImage('background', '')}>{t('Xóa ảnh nền')}</Button></div>
       </section>
       <section className={styles.group}>
-        <h2>{t('Liên hệ và mạng xã hội')}</h2>
-        <p className={styles.hint}>{t('Ô nào để trống thì nút tương ứng sẽ ẩn trên trang tracking.')}</p>
-        <div className={styles.twoColumns}>
-          <TextField label="Zalo" placeholder="Link hoặc số Zalo" error={errors.brand?.zalo?.message} {...register('brand.zalo')} />
-          <TextField label="WhatsApp" placeholder="Số WhatsApp (kèm mã quốc gia)" error={errors.brand?.whatsapp?.message} {...register('brand.whatsapp')} />
-        </div>
-        <div className={styles.socialForm}>{(['facebook', 'instagram', 'x'] as const).map(key => <TextField key={key} label={{ facebook: 'Facebook', instagram: 'Instagram', x: 'X' }[key]} placeholder="https://" error={errors.brand?.[key]?.message} {...register(`brand.${key}`)} />)}</div>
+        <div className={styles.groupHeading}><h2>{t('Cổng liên lạc')}</h2><span>{t('Chọn tối đa {n} mục', { n: MAX_CHANNELS })}</span></div>
+        <p className={styles.hint}>{t('Hiện thành các nút liên hệ nổi bên trái trang tracking. Nhập số điện thoại, tên tài khoản hoặc link.')}</p>
+        <ChannelListEditor form={form} name="brand.contacts" types={CONTACT_TYPES} />
+      </section>
+      <section className={styles.group}>
+        <div className={styles.groupHeading}><h2>{t('Mạng xã hội')}</h2><span>{t('Chọn tối đa {n} mục', { n: MAX_CHANNELS })}</span></div>
+        <p className={styles.hint}>{t('Hiện ở cuối trang tracking (Connect with us). Nhập link trang hoặc tên tài khoản.')}</p>
+        <ChannelListEditor form={form} name="brand.socials" types={SOCIAL_TYPES} />
       </section>
       <div className={styles.actions}>
-        {mode === 'local'
-          ? <Button type="submit" variant="primary">{t('Lưu bản thử nghiệm')}</Button>
-          : <>
-            <Button type="submit" variant={published ? 'primary' : undefined}>{t('Lưu')}</Button>
-            {!published && <Button variant="primary" onClick={() => onPublish(true)}>{t('Lưu & xuất bản')}</Button>}
-          </>}
+        <Button type="submit" variant="primary">{t(mode === 'local' ? 'Lưu bản thử nghiệm' : 'Lưu')}</Button>
         <Button onClick={onRestore}>{t('Khôi phục mặc định')}</Button>
         <span className={styles.saveStatus} role="status">{t(isDirty ? 'Có thay đổi chưa lưu' : 'Không có thay đổi chưa lưu')}</span>
-        {mode === 'local'
-          ? <Button disabled>{t('Xuất bản (sắp ra mắt)')}</Button>
-          : published && <Button variant="danger" onClick={() => onPublish(false)}>{t('Ngừng xuất bản')}</Button>}
       </div>
     </fieldset>
   </form>;
+}
+
+/** Ô chọn màu: bảng màu của trình duyệt + ô nhập mã #rrggbb; để trống = màu mặc định của trang tracking. */
+function ColorField({ form, name, label, fallback }: {
+  form: UseFormReturn<MyTrackingConfig>;
+  name: 'brand.primaryColor' | 'brand.secondaryColor';
+  label: string;
+  fallback: string;
+}) {
+  const { t } = useI18n();
+  const value = form.watch(name);
+  const set = (next: string) => form.setValue(name, next, { shouldDirty: true, shouldValidate: true });
+  const error = name === 'brand.primaryColor' ? form.formState.errors.brand?.primaryColor : form.formState.errors.brand?.secondaryColor;
+  return <div className={styles.colorField}>
+    <input type="color" className={styles.colorSwatch} value={isHexColor(value) ? value : fallback} aria-label={t(label)}
+      onChange={e => set(e.target.value)} />
+    <TextField label={label} placeholder={t('Mặc định')} maxLength={7} error={error?.message} {...form.register(name)} />
+    <Button size="sm" disabled={!value} onClick={() => set('')}>{t('Mặc định')}</Button>
+  </div>;
 }

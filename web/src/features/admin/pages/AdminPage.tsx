@@ -6,10 +6,9 @@ import { Button, Card, Icon, Notice, Tabs, TextField } from '@/shared/ui';
 import { adminLogout, getAdminToken, useAdminTroubles, useAdminLogin } from '../api';
 import { AdminNotifications } from '../components/AdminNotifications';
 import { AdminTroubles } from '../components/AdminTroubles';
-import { AdminUsage } from '../components/AdminUsage';
 import styles from './AdminPage.module.css';
 
-type Section = 'troubles' | 'notifications' | 'analytics';
+type Section = 'troubles' | 'notifications';
 
 /**
  * Trang quản trị Việt An (/admin) — chỉ tài khoản quản trị cố định trong code đăng nhập được.
@@ -45,19 +44,12 @@ export default function AdminPage() {
           ariaLabel="Chức năng quản trị"
           items={[
             { key: 'troubles', label: 'Hỗ trợ & sự cố', count: troubles.data?.filter(x => x.ticket.status === 'new').length || undefined },
-            { key: 'notifications', label: 'Thông báo' },
-            { key: 'analytics', label: 'Thống kê sử dụng' }
+            { key: 'notifications', label: 'Thông báo' }
           ]}
           value={section}
           onChange={setSection}
         />
-        {section === 'troubles' ? (
-          <AdminTroubles />
-        ) : section === 'analytics' ? (
-          <AdminUsage />
-        ) : (
-          <AdminNotifications />
-        )}
+        {section === 'troubles' ? <AdminTroubles /> : <AdminNotifications />}
       </div>
     </main>
   );

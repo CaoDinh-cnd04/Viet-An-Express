@@ -20,8 +20,11 @@ internal sealed record EmailCompany(string Name, string? Address, string? Hotlin
 
 internal sealed record EmailField(string Label, string Value);
 
-/// <summary>1 khối nội dung: tiêu đề nhỏ (không bắt buộc), đoạn chữ nhiều dòng và / hoặc bảng nhãn – giá trị.</summary>
-internal sealed record EmailSection(string? Heading, string? Text = null, IReadOnlyList<EmailField>? Fields = null);
+/// <summary>1 khối nội dung: tiêu đề nhỏ (không bắt buộc), đoạn chữ nhiều dòng và / hoặc bảng nhãn – giá trị, ảnh (link tuyệt đối) và link riêng của khối.</summary>
+/// <see cref="Html"/>: nội dung có định dạng đã lọc (<see cref="Domain.RichText.Sanitize"/>) — có thì hiện thay cho <see cref="Text"/> ở bản HTML.
+internal sealed record EmailSection(
+    string? Heading, string? Text = null, IReadOnlyList<EmailField>? Fields = null, IReadOnlyList<string>? Images = null, EmailLink? Link = null,
+    string? Html = null);
 
 internal sealed record EmailLink(string Label, string Url);
 
@@ -89,7 +92,9 @@ internal static class EmailTemplate
             h.Append("""<tr><td style="padding:16px 28px 0;">""");
             if (s.Heading is { Length: > 0 } heading)
                 h.Append($"""<h2 style="margin:0 0 8px;font-size:14px;font-weight:700;color:{BrandStrong};">{E(heading)}</h2>""");
-            if (s.Text is { Length: > 0 } text) h.Append(Paragraphs(text));
+            if (s.Html is { Length: > 0 } html)
+                h.Append($"""<div style="margin:0 0 14px;font-size:15px;line-height:1.65;color:{Text};">{Domain.RichText.Sanitize(html)}</div>""");
+            else if (s.Text is { Length: > 0 } text) h.Append(Paragraphs(text));
             if (s.Fields is { Count: > 0 } fields)
             {
                 h.Append($"""<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="border-collapse:collapse;font-size:14px;">""");
@@ -97,6 +102,10 @@ internal static class EmailTemplate
                     h.Append($"""<tr><td valign="top" style="width:38%;padding:7px 12px 7px 0;border-bottom:1px solid {Border};color:{Muted};">{E(f.Label)}</td><td valign="top" style="padding:7px 0;border-bottom:1px solid {Border};color:{Text};">{Lines(f.Value)}</td></tr>""");
                 h.Append("</table>");
             }
+            foreach (var image in (s.Images ?? []).Select(i => i.StartsWith("cid:", StringComparison.Ordinal) ? i : WebUrl(i)).OfType<string>())
+                h.Append($"""<img src="{E(image)}" alt="" width="544" style="display:block;width:100%;max-width:544px;height:auto;margin:4px 0 12px;border:1px solid {Border};border-radius:8px;">""");
+            if (WebUrl(s.Link?.Url) is { } sectionUrl)
+                h.Append($"""<p style="margin:0 0 6px;font-size:14px;"><a href="{E(sectionUrl)}" target="_blank" style="color:{BrandStrong};font-weight:600;">{E(s.Link!.Label)} &rarr;</a></p>""");
             h.Append("</td></tr>");
         }
 
@@ -145,6 +154,7 @@ internal static class EmailTemplate
             if (s.Heading is { Length: > 0 } heading) t.Append(heading).Append('\n');
             if (s.Text is { Length: > 0 } text) t.Append(text.Trim()).Append('\n');
             foreach (var f in s.Fields ?? []) t.Append("- ").Append(f.Label).Append(": ").Append(f.Value).Append('\n');
+            if (WebUrl(s.Link?.Url) is { } sectionUrl) t.Append(s.Link!.Label).Append(": ").Append(sectionUrl).Append('\n');
         }
         if (WebUrl(c.Button?.Url) is { } buttonUrl) t.Append('\n').Append(c.Button!.Label).Append(": ").Append(buttonUrl).Append('\n');
         if (WebUrl(c.SecondaryLink?.Url) is { } secondaryUrl) t.Append(c.SecondaryLink!.Label).Append(": ").Append(secondaryUrl).Append('\n');

@@ -1,11 +1,12 @@
 import { useCallback } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { ApiError } from '@/shared/api/http';
-import { useI18n } from '@/shared/i18n';
 import { downloadBlob, fileNameFromDisposition } from '@/shared/lib/files';
+import { uuid } from '@/shared/lib/uuid';
 import { useToast } from '@/shared/ui';
-import { fetchOrdersExport, fetchPrintHtml } from './api';
+import { fetchOrdersExport } from './api';
 import { PRINT_DOCUMENTS } from './constants';
+import { writePrintJob } from './lib/print-job';
 import type { OrderFilters } from './types';
 
 export type PrintDoc = (typeof PRINT_DOCUMENTS)[number]['key'];
@@ -14,40 +15,23 @@ const errorMessage = (e: unknown) => (e instanceof ApiError ? e.message : 'Có l
 
 /**
  * In chứng từ cho 1 hoặc nhiều đơn, 1 hoặc nhiều loại (nhiều loại → backend trả trang gộp, in lần lượt từng loại):
- * mở tab mới NGAY khi bấm (trình duyệt không chặn pop-up),
- * tải trang in từ backend rồi đổ vào tab — trang tự mở hộp thoại in.
- * `bills` có thể là hàm async (vd cấp mã bill rồi mới in); trả mảng rỗng = hủy, tự đóng tab (lỗi đã báo ở nơi gọi).
+ * mở tab /print/:job NGAY khi bấm (trình duyệt không chặn pop-up), rồi chuyển lệnh in qua localStorage — tab tự tải và mở hộp thoại in.
+ * Tab mở bằng noopener (tiến trình riêng): hộp thoại in đang mở không khóa trang portal, khách bấm in tiếp được ngay.
+ * `bills` có thể là hàm async (vd cấp mã bill rồi mới in); trả mảng rỗng = hủy, tab tự đóng (lỗi đã báo ở nơi gọi).
  */
 export function usePrintDocuments() {
-  const toast = useToast();
-  const { t } = useI18n();
   return useCallback(
     async (bills: readonly string[] | (() => Promise<readonly string[]>), doc: PrintDoc | readonly PrintDoc[]) => {
       if (Array.isArray(bills) && bills.length === 0) return;
-      const win = window.open('', '_blank');
-      if (!win) {
-        toast.show('Trình duyệt đang chặn cửa sổ in — hãy cho phép pop-up cho trang này', 'error');
-        return;
-      }
-      const preparing = t('Đang chuẩn bị bản in…');
-      win.document.title = preparing;
-      win.document.body.innerHTML = `<p style="font:14px system-ui,sans-serif;padding:24px;color:#4d6456">${preparing}</p>`;
-      try {
-        const list = typeof bills === 'function' ? await bills() : bills;
-        if (list.length === 0) {
-          win.close();
-          return;
-        }
-        const html = await fetchPrintHtml(list, typeof doc === 'string' ? doc : doc.join(','));
-        win.document.open();
-        win.document.write(html);
-        win.document.close();
-      } catch (e) {
-        win.close();
-        toast.show(errorMessage(e), 'error');
-      }
+      const id = uuid();
+      const docs = typeof doc === 'string' ? doc : doc.join(',');
+      if (Array.isArray(bills)) writePrintJob(id, { bills: [...bills], doc: docs });
+      window.open(`${import.meta.env.BASE_URL}print/${id}`, '_blank', 'noopener');
+      if (Array.isArray(bills)) return;
+      const list = await (bills as () => Promise<readonly string[]>)().catch(() => [] as readonly string[]);
+      writePrintJob(id, list.length === 0 ? { cancel: true } : { bills: [...list], doc: docs });
     },
-    [toast, t]
+    []
   );
 }
 

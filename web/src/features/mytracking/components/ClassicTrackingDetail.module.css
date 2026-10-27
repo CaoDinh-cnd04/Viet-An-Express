@@ -1,0 +1,111 @@
+/* Mẫu kết quả tra cứu của mytracking.top cũ: bảng viền xám, nền dòng màu phụ thương hiệu, tiêu đề bảng màu thương hiệu, mã vận đơn đỏ. */
+.detail {
+  --classic-border: var(--color-border-strong);
+  --classic-soft: var(--color-tracking-row);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--color-text);
+}
+
+.info,
+.events {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-lg);
+}
+
+.info th,
+.info td,
+.events th,
+.events td {
+  padding: 8px;
+  border: 1px solid var(--classic-border);
+  text-align: left;
+  vertical-align: middle;
+}
+
+.info {
+  background: var(--classic-soft);
+}
+
+.info th {
+  width: 1%;
+  white-space: nowrap;
+  font-weight: 700;
+}
+
+.bill {
+  font-size: var(--text-xl);
+  font-weight: 700;
+  color: var(--color-tracking-ad-text);
+  overflow-wrap: anywhere;
+}
+
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--color-tracking-ad-text);
+}
+
+.statusIcon {
+  display: inline-grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  flex: none;
+  border: 1px solid var(--classic-border);
+  border-radius: 6px;
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+}
+
+.events thead th {
+  background: var(--color-tracking-bar);
+  color: var(--color-on-hero);
+  font-weight: 700;
+}
+
+.events .time {
+  width: 1%;
+  white-space: nowrap;
+}
+
+.day td {
+  background: var(--classic-soft);
+  font-weight: 700;
+}
+
+.empty {
+  text-align: center;
+  color: var(--color-text-muted);
+}
+
+.toggle {
+  align-self: flex-start;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-text-muted);
+  font: inherit;
+  cursor: pointer;
+}
+
+.toggle span {
+  color: var(--color-tracking-ad-text);
+}
+
+@media (max-width: 600px) {
+  .info,
+  .events {
+    font-size: var(--text-sm);
+  }
+
+  .info th,
+  .info td,
+  .events th,
+  .events td {
+    padding: 6px;
+  }
+}

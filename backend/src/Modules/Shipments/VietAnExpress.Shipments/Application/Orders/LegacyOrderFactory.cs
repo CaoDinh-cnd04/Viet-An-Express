@@ -60,7 +60,7 @@ internal static class LegacyOrderFactory
             CustomerId = customer.LegacyCustomerId,
             CustomerName = Clip(customer.CompanyName, 250),
             OrderNumber = orderNumber,
-            VaBill = VaBillCode.Format(p.Shipper.Branch, orderNumber, p.Receiver.CountryCode),
+            VaBill = null, // như hệ thống cũ (23/10/2026): mã bill = OrderNumber, cột VA_Bill để NULL
             Awb = "",
 
             // Việt An chỉ nhận hàng xuất đi từ Việt Nam: điền ID nước như hệ thống cũ, không để NULL.

@@ -3,10 +3,10 @@ import { FormProvider, useWatch, type FieldErrors } from 'react-hook-form';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { getErrorMessage } from '@/shared/api/http';
 import { useI18n } from '@/shared/i18n';
-import { orderUsage } from '@/shared/lib/usage';
 import { Button, Card, LinkButton, Notice, PageHeader, SegmentedControl, useToast } from '@/shared/ui';
-import { DraftsTable, useSaveDraft, useUpdateDraft } from '@/features/drafts';
-import { useSession } from '@/features/auth';
+import { DraftsTable, useIssueAndPrint, useSaveDraft, useUpdateDraft } from '@/features/drafts';
+import { TermsDialog } from '@/features/terms';
+import { onBeforeIdleLogout, useSession } from '@/features/auth';
 import { useQuote, type ServiceQuote } from '@/features/pricing';
 import { AddonsSection } from '../components/AddonsSection';
 import { HelpLinksMenu } from '../components/HelpLinksMenu';
@@ -110,10 +110,6 @@ export default function CreateOrderPage({ mode }: { mode: CreateMode }) {
   const { t } = useI18n();
   const session = useSession();
   const storageKey = autosaveKey(session.data?.status === 'authenticated' ? session.data.user : null);
-  const editingExisting = useRef(new URLSearchParams(search).has('draft'));
-  const recordUsage = (kind: 'order_start' | 'order_complete') => {
-    if (!editingExisting.current && session.data?.status === 'authenticated') orderUsage(storageKey, mode, kind);
-  };
   const [initial] = useState(() => (search ? undefined : readAutosave(storageKey)));
   const form = useCreateOrderForm(initial);
   const { draftId, finishAutosave, retainDraft, copyLoading, copyError, retryCopy } = useOrderPrefill(form, storageKey);
@@ -124,6 +120,9 @@ export default function CreateOrderPage({ mode }: { mode: CreateMode }) {
   const quote = useQuote();
   const [step, setStep] = useState(0);
   const [confirm, setConfirm] = useState<{ quote: ServiceQuote | null; warnings: PackageWarning[] } | null>(null);
+  // Đơn đang chờ khách đồng ý Điều khoản dịch vụ (Tạo đơn & in bill).
+  const [termsFor, setTermsFor] = useState<CreateOrderValues | null>(null);
+  const issueAndPrint = useIssueAndPrint();
 
   const isWizard = mode === 'wizard';
   // Chứng từ (DOC): chỉ khai nội dung — ẩn bảng kiện và Invoice, wizard còn 2 bước. Hàng hoá (PACK): đủ 3 bước.
@@ -170,10 +169,9 @@ export default function CreateOrderPage({ mode }: { mode: CreateMode }) {
     persisting.current = true;
     const payload = buildDraftPayload(values, status);
     const onSuccess = (saved: { id: string }) => {
-      if (status === 'ready') recordUsage('order_complete');
       finishAutosave(status === 'ready' ? undefined : { keepEditing: values });
       setConfirm(null);
-      toast.show(status === 'ready' ? 'Đã tạo đơn. Bấm "In & cấp bill" để cấp mã bill và in vận đơn A4.' : 'Đã lưu nháp.', 'success');
+      toast.show(status === 'ready' ? 'Đã tạo đơn. Bấm "In & cấp bill" để cấp mã bill và in vận đơn A4, invoice, nhãn A6.' : 'Đã lưu nháp.', 'success');
       if (status === 'ready') navigate('/drafts');
       else {
         retainDraft(saved.id);
@@ -184,6 +182,44 @@ export default function CreateOrderPage({ mode }: { mode: CreateMode }) {
     const onSettled = () => { persisting.current = false; };
     if (draftId) updateDraft.mutate({ id: draftId, draft: payload }, { onSuccess, onError, onSettled });
     else saveDraft.mutate(payload, { onSuccess, onError, onSettled });
+  };
+
+  /**
+   * Khách đồng ý điều khoản: mở tab in ngay (cú bấm còn hiệu lực, không bị chặn pop-up) → lưu đơn → cấp bill → in A4 + invoice + nhãn A6,
+   * rồi sang Đơn hàng của tôi. Lưu được mà cấp bill lỗi thì đơn nằm ở Đơn nháp & chưa in.
+   */
+  const createAndPrint = (values: CreateOrderValues) => {
+    if (persisting.current) return;
+    persisting.current = true;
+    const payload = buildDraftPayload(values, 'ready');
+    let saved = false;
+    issueAndPrint.run(
+      async () => {
+        try {
+          const res = draftId ? await updateDraft.mutateAsync({ id: draftId, draft: payload }) : await saveDraft.mutateAsync(payload);
+          saved = true;
+          finishAutosave(undefined);
+          return res.id;
+        } catch (e) {
+          toast.show(getErrorMessage(e, 'Không lưu được đơn, vui lòng thử lại'), 'error');
+          throw e;
+        }
+      },
+      () => {
+        persisting.current = false;
+        navigate('/orders');
+      },
+      () => {
+        persisting.current = false;
+        if (saved) navigate('/drafts');
+      }
+    );
+  };
+
+  /** Đã qua kiểm tra (và xác nhận phụ phí nếu có): hỏi Điều khoản dịch vụ trước khi tạo & in. */
+  const proceed = (values: CreateOrderValues) => {
+    setConfirm(null);
+    setTermsFor(values);
   };
 
   /** Trước khi tạo: chặn kiện hãng không nhận; hỏi xác nhận nếu có phụ phí / cảnh báo. */
@@ -217,7 +253,7 @@ export default function CreateOrderPage({ mode }: { mode: CreateMode }) {
 
     const notable = warnings.filter(w => w.level === 'warning');
     if (matched?.hasSurcharge || notable.length) setConfirm({ quote: matched, warnings: notable });
-    else persist(values, 'ready');
+    else proceed(values);
   };
 
   const onInvalid = (errors: FieldErrors<CreateOrderValues>) => {
@@ -234,6 +270,18 @@ export default function CreateOrderPage({ mode }: { mode: CreateMode }) {
 
   const submit = form.handleSubmit(onValid, onInvalid);
   const saveAsDraft = () => persist(form.getValues(), 'draft');
+
+  // Tự đăng xuất vì không thao tác: đơn đang làm có thay đổi chưa lưu → lưu vào nháp trước, đăng nhập lại mở trang Đơn nháp.
+  const idleSave = useRef<() => Promise<string | void>>(async () => undefined);
+  idleSave.current = async () => {
+    if (persisting.current || !form.formState.isDirty) return;
+    const draft = buildDraftPayload(form.getValues(), 'draft');
+    if (draftId) await updateDraft.mutateAsync({ id: draftId, draft });
+    else await saveDraft.mutateAsync(draft);
+    finishAutosave(undefined);
+    return '/drafts';
+  };
+  useEffect(() => onBeforeIdleLogout(() => idleSave.current()), []);
   const busy = saving || quote.isPending;
 
   if (copyLoading || copyError) return <>
@@ -271,7 +319,7 @@ export default function CreateOrderPage({ mode }: { mode: CreateMode }) {
         <QuickLookup />
       </aside>
 
-      <form className={styles.form} onChangeCapture={() => recordUsage('order_start')} onSubmit={e => void submit(e)} noValidate>
+      <form className={styles.form} onSubmit={e => void submit(e)} noValidate>
         {/* Giao diện dọc: mỗi khung 1 hàng theo thứ tự khai bill, có id để mục lục nhảy tới */}
         {showStep(0) && (
           <>
@@ -302,8 +350,8 @@ export default function CreateOrderPage({ mode }: { mode: CreateMode }) {
               {t('Tiếp tục: {step}', { step: t(steps[current + 1]!.title) })}
             </Button>
           ) : (
-            <Button variant="primary" type="submit" disabled={busy}>
-              {t(quote.isPending ? 'Đang kiểm tra phụ phí…' : saving ? 'Đang lưu…' : draftId ? 'Lưu & sẵn sàng in' : 'Tạo đơn hàng')}
+            <Button variant="primary" type="submit" disabled={busy || issueAndPrint.isPending}>
+              {t(quote.isPending ? 'Đang kiểm tra phụ phí…' : saving ? 'Đang lưu…' : issueAndPrint.isPending ? 'Đang in…' : 'Tạo đơn & in bill')}
             </Button>
           )}
         </footer>
@@ -322,7 +370,20 @@ export default function CreateOrderPage({ mode }: { mode: CreateMode }) {
         warnings={confirm?.warnings ?? []}
         busy={saving}
         onCancel={() => setConfirm(null)}
-        onConfirm={() => persist(form.getValues(), 'ready')}
+        onConfirm={() => proceed(form.getValues())}
+      />
+
+      {/* Tạo đơn & in bill: đồng ý → lưu + cấp bill + in; không đồng ý (Hủy / đóng) → vẫn lưu, đơn nằm ở Đơn nháp & chưa in. */}
+      <TermsDialog
+        open={!!termsFor}
+        onClose={() => {
+          if (termsFor) persist(termsFor, 'ready');
+          setTermsFor(null);
+        }}
+        onAccept={() => {
+          if (termsFor) createAndPrint(termsFor);
+          setTermsFor(null);
+        }}
       />
     </FormProvider>
   );

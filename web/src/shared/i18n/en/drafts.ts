@@ -15,7 +15,7 @@ export const drafts: Record<string, string> = {
   'Nháp — chưa khai đủ': 'Draft — incomplete',
   'Hoàn thiện đơn trước khi in': 'Complete the order before printing',
   'In & cấp bill': 'Print & issue bill',
-  'Cấp mã bill và in vận đơn khổ A4': 'Issue the bill number and print the A4 waybill',
+  'Cấp mã bill và in vận đơn A4, invoice, nhãn A6': 'Issue the bill number and print the A4 waybill, invoice and A6 label',
   'Đang in…': 'Printing…',
   'Chi tiết đơn — {name}': 'Order details — {name}',
   'chưa có người nhận': 'no receiver yet',
@@ -51,5 +51,9 @@ export const drafts: Record<string, string> = {
   'Số lượng': 'Quantity',
   '{n} kiện · cân thực {gross} kg · quy đổi {vol} kg': '{n} pcs · actual {gross} kg · volumetric {vol} kg',
   'cân tính cước {kg} kg': 'chargeable {kg} kg',
-  'Tổng giá trị invoice: {total} {currency}': 'Invoice total: {total} {currency}'
+  'Tổng giá trị invoice: {total} {currency}': 'Invoice total: {total} {currency}',
+  'Điều khoản dịch vụ': 'Terms of service',
+  'Tôi đã đọc và đồng ý với Điều khoản dịch vụ của Việt An Express': 'I have read and agree to the Viet An Express Terms of service',
+  'Đồng ý & in bill': 'Agree & print bill',
+  'Tạo đơn & in bill': 'Create & print bill'
 };

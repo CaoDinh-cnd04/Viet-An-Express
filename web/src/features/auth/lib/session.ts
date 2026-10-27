@@ -1,6 +1,8 @@
-/** Trang mặc định sau khi đăng nhập. */
-/** Trang mở ra sau khi đăng nhập / bấm "Vào portal" (không còn trang chủ riêng). */
-export const PORTAL_HOME = '/orders';
+/**
+ * Trang mở ra sau khi đăng nhập / bấm "Vào portal" (không còn trang chủ riêng): /home chuyển tiếp theo quyền —
+ * có quyền tạo đơn → Tạo đơn hàng, không có (tài khoản con chỉ xem) → Đơn hàng của tôi.
+ */
+export const PORTAL_HOME = '/home';
 
 /** Các trang ngoài (không cần đăng nhập) — không dùng làm đích quay lại. */
 const PUBLIC_PATHS = new Set(['/', '/login']);

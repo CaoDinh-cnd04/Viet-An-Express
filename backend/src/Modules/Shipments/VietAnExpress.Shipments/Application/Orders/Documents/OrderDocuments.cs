@@ -194,7 +194,7 @@ internal static class OrderDocumentRenderer
 
     private static string Paper(string doc) => doc switch
     {
-        PrintDocs.LabelA6 => "100 × 150 mm (A6)",
+        PrintDocs.LabelA6 => "A6 (105 × 148 mm)",
         PrintDocs.BillA4 => "A4 ngang (landscape)",
         _ => "A4"
     };

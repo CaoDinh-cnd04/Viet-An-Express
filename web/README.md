@@ -50,8 +50,7 @@ src/
 | Feature | Trang | Route |
 |---|---|---|
 | landing | Trang ngoài: giới thiệu, tra cứu vận đơn, liên hệ (không cần phiên) | `/`, `/login?next=`, `/?track=MA1,MA2` |
-| auth | Đăng nhập, phiên, chặn trang portal | — |
-| dashboard | Trang chủ | `/home` |
+| auth | Đăng nhập, phiên, chặn trang portal; `/home` chuyển tới Tạo đơn (không có quyền tạo đơn → Đơn hàng của tôi) | `/home` |
 | create-order | Tạo đơn từng bước / 1 trang | `/orders/new`, `/orders/new/quick` |
 | order-import | Tạo đơn từ Excel | `/orders/import` |
 | orders | Đơn hàng của tôi | `/orders` |

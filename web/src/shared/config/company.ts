@@ -18,6 +18,8 @@ export const CONTACTS = {
   phone: { label: '028 3948 3949', href: 'tel:+842839483949' },
   hotline: { label: '0909 805 845', href: 'tel:+84909805845' },
   email: { label: 'phuc.vo@vietanexpress.com', href: 'mailto:phuc.vo@vietanexpress.com' },
+  /** Đầu mối khiếu nại / hỗ trợ khách theo Điều khoản dịch vụ (mục 13.5). */
+  supportEmail: { label: 'cskh@vietanexpress.com.vn', href: 'mailto:cskh@vietanexpress.com.vn' },
   zalo: { label: 'Zalo 0909 805 845', href: 'https://zalo.me/0909805845' }
 } as const satisfies Record<string, ContactLink>;
 

@@ -30,7 +30,7 @@ internal static class LegacyOrderProjections
 
     public static readonly Expression<Func<LegacyOrder, LegacyOrder>> Events = o => new LegacyOrder
     {
-        Id = o.Id, Pod = o.Pod, SentDate = o.SentDate, CreateDate = o.CreateDate
+        Id = o.Id, Pod = o.Pod, SentDate = o.SentDate, CreateDate = o.CreateDate, ServiceName = o.ServiceName, BillConnect = o.BillConnect
     };
 
     public static readonly Expression<Func<LegacyOrder, LegacyOrder>> InvoiceHeader = o => new LegacyOrder

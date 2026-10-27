@@ -26,7 +26,7 @@ export const createOrder: Record<string, string> = {
   'Lưu & sẵn sàng in': 'Save & ready to print',
   '· bấm In để cấp mã bill': '· click Print to get a bill number',
   'Mở trang đầy đủ': 'Open full page',
-  'Đã tạo đơn. Bấm "In & cấp bill" để cấp mã bill và in vận đơn A4.': 'Order created. Click "Print & issue bill" to get a bill number and print the A4 waybill.',
+  'Đã tạo đơn. Bấm "In & cấp bill" để cấp mã bill và in vận đơn A4, invoice, nhãn A6.': 'Order created. Click "Print & issue bill" to get a bill number and print the A4 waybill, invoice and A6 label.',
   'Đã lưu nháp.': 'Draft saved.',
   'Không lưu được đơn, vui lòng thử lại': 'Could not save the order, please try again',
   'Có kiện vượt giới hạn nhận của hãng — vui lòng chia nhỏ kiện hoặc đổi dịch vụ.':
@@ -385,6 +385,5 @@ export const createOrder: Record<string, string> = {
   'tên hàng (VN)': 'item name (VN)',
   'đơn vị tính': 'unit',
   'đơn giá': 'unit price',
-  'Tự cộng theo SL các dòng kiện': 'Sum of package row quantities',
   'Phân loại nhóm hàng': 'Goods group breakdown'
 };

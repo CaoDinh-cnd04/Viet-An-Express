@@ -7,6 +7,7 @@ using VietAnExpress.SharedKernel.Persistence;
 using VietAnExpress.SharedKernel.Results;
 using VietAnExpress.Shipments.Application.Dtos;
 using VietAnExpress.Shipments.Infrastructure;
+using VietAnExpress.Shipments.Infrastructure.Carriers.HubEz;
 using VietAnExpress.Shipments.Infrastructure.Legacy;
 
 namespace VietAnExpress.Shipments.Application.Orders;
@@ -232,7 +233,7 @@ internal sealed record GetOrderQuery(string Bill) : IRequest<Result<OrderDto>>;
 
 internal sealed record GetOrderEventsQuery(string Bill) : IRequest<Result<IReadOnlyList<OrderEventDto>>>;
 
-internal sealed class GetOrderHandlers(ShipmentsDbContext db, OrderAccess access, TimeProvider clock) :
+internal sealed class GetOrderHandlers(ShipmentsDbContext db, OrderAccess access, TimeProvider clock, IHubEzTracking hubEz) :
     IRequestHandler<GetOrderQuery, Result<OrderDto>>,
     IRequestHandler<GetOrderEventsQuery, Result<IReadOnlyList<OrderEventDto>>>
 {
@@ -251,9 +252,12 @@ internal sealed class GetOrderHandlers(ShipmentsDbContext db, OrderAccess access
     public async Task<Result<IReadOnlyList<OrderEventDto>>> Handle(GetOrderEventsQuery q, CancellationToken ct)
     {
         var order = await FindAsync(q.Bill, ct, eventsOnly: true);
-        return order is null
-            ? Result.Failure<IReadOnlyList<OrderEventDto>>(OrderErrors.NotFound(q.Bill))
-            : Result.Success(LegacyOrderView.Events(order, hideSigner: false));
+        if (order is null) return Result.Failure<IReadOnlyList<OrderEventDto>>(OrderErrors.NotFound(q.Bill));
+        var events = LegacyOrderView.Events(order, hideSigner: false);
+        if (!hubEz.Handles(order.ServiceName, order.BillConnect)) return Result.Success(events);
+        // Đơn đi HUB-EZ: thêm hành trình của HUB-EZ theo mã hãng (HUB-EZ lỗi → giữ hành trình cũ).
+        var tracks = await hubEz.TrackAsync([order.BillConnect!], ct);
+        return Result.Success(HubEzEvents.Merge(events, tracks.GetValueOrDefault(order.BillConnect!.Trim()), !string.IsNullOrWhiteSpace(order.Pod)));
     }
 
     /// <summary>Tìm theo số VA hoặc mã hãng, trong phạm vi khách của người dùng.</summary>

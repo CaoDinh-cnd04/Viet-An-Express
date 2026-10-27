@@ -13,19 +13,25 @@ internal sealed record IssuedToken(string Token, DateTimeOffset ExpiresAt);
 
 /// <summary>Nội dung 1 refresh token hợp lệ.</summary>
 /// <param name="StaffId">Có khi là tài khoản con (nhân viên); null = tài khoản chính của khách.</param>
-internal sealed record RefreshClaims(long CustomerId, long? StaffId, string PasswordStamp, bool IsPersistent);
+/// <param name="Id">Mã token (jti) — dùng để thu hồi khi đăng xuất.</param>
+/// <param name="AuthTime">Lần nhập mật khẩu gốc của phiên; null với token cấp trước khi có giới hạn phiên.</param>
+internal sealed record RefreshClaims(long CustomerId, long? StaffId, string PasswordStamp, bool IsPersistent,
+    string Id = "", DateTimeOffset ExpiresAt = default, DateTimeOffset? AuthTime = null);
 
 internal interface ITokenService
 {
-    IssuedToken CreateAccessToken(long customerId, long? staffId, string userName, IReadOnlyCollection<string> roles, IReadOnlyCollection<string> permissions);
+    /// <param name="lifetime">Null = Jwt:AccessTokenMinutes.</param>
+    IssuedToken CreateAccessToken(long customerId, long? staffId, string userName, IReadOnlyCollection<string> roles, IReadOnlyCollection<string> permissions,
+        TimeSpan? lifetime = null);
 
     /// <summary>
     /// Refresh token tự chứa (JWT ký, không lưu DB) mang "dấu" của mật khẩu hiện tại:
     /// đổi mật khẩu (trên portal hay hệ thống cũ) thì mọi refresh token cũ hết hiệu lực.
     /// </summary>
-    IssuedToken CreateRefreshToken(long customerId, long? staffId, string passwordStamp, bool persistent);
+    /// <param name="authTime">Lần nhập mật khẩu gốc (gia hạn phiên thì giữ nguyên); null = đăng nhập mới. Hạn token không vượt quá authTime + Jwt:MaxSessionDays.</param>
+    IssuedToken CreateRefreshToken(long customerId, long? staffId, string passwordStamp, bool persistent, DateTimeOffset? authTime = null);
 
-    /// <summary>Null nếu token sai chữ ký, hết hạn, hoặc không phải refresh token.</summary>
+    /// <summary>Null nếu token sai chữ ký, hết hạn, quá giới hạn phiên, hoặc không phải refresh token.</summary>
     Task<RefreshClaims?> ReadRefreshTokenAsync(string token);
 
     /// <summary>
@@ -39,11 +45,13 @@ internal sealed class JwtTokenService(IOptions<JwtOptions> options, TimeProvider
 {
     private const string StampClaim = "pst";
     private const string PersistentClaim = "rem";
+    private const string AuthTimeClaim = "auth_time";
 
     private readonly JwtOptions _jwt = options.Value;
     private readonly JsonWebTokenHandler _handler = new();
 
-    public IssuedToken CreateAccessToken(long customerId, long? staffId, string userName, IReadOnlyCollection<string> roles, IReadOnlyCollection<string> permissions)
+    public IssuedToken CreateAccessToken(long customerId, long? staffId, string userName, IReadOnlyCollection<string> roles, IReadOnlyCollection<string> permissions,
+        TimeSpan? lifetime = null)
     {
         var id = customerId.ToString(CultureInfo.InvariantCulture);
         var claims = new List<Claim>
@@ -56,18 +64,22 @@ internal sealed class JwtTokenService(IOptions<JwtOptions> options, TimeProvider
         if (staffId is { } sid) claims.Add(new Claim(VaClaimTypes.StaffId, sid.ToString(CultureInfo.InvariantCulture)));
         claims.AddRange(roles.Select(r => new Claim(VaClaimTypes.Role, r)));
         claims.AddRange(permissions.Select(p => new Claim(VaClaimTypes.Permission, p)));
-        return Create(claims, _jwt.Audience, clock.GetUtcNow().AddMinutes(_jwt.AccessTokenMinutes));
+        return Create(claims, _jwt.Audience, clock.GetUtcNow() + (lifetime ?? TimeSpan.FromMinutes(_jwt.AccessTokenMinutes)));
     }
 
-    public IssuedToken CreateRefreshToken(long customerId, long? staffId, string passwordStamp, bool persistent)
+    public IssuedToken CreateRefreshToken(long customerId, long? staffId, string passwordStamp, bool persistent, DateTimeOffset? authTime = null)
     {
         var now = clock.GetUtcNow();
+        var since = authTime ?? now;
         var expires = persistent ? now.AddDays(_jwt.RefreshTokenDays) : now.AddHours(_jwt.SessionRefreshTokenHours);
+        var limit = since.AddDays(_jwt.MaxSessionDays);
+        if (expires > limit) expires = limit;
         var claims = new List<Claim>
         {
             new(VaClaimTypes.Subject, customerId.ToString(CultureInfo.InvariantCulture)),
             new(StampClaim, passwordStamp),
             new(PersistentClaim, persistent ? "1" : "0"),
+            new(AuthTimeClaim, since.ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture), ClaimValueTypes.Integer64),
             new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
         };
         if (staffId is { } sid) claims.Add(new Claim(VaClaimTypes.StaffId, sid.ToString(CultureInfo.InvariantCulture)));
@@ -96,7 +108,16 @@ internal sealed class JwtTokenService(IOptions<JwtOptions> options, TimeProvider
             if (!long.TryParse(staffClaim, NumberStyles.None, CultureInfo.InvariantCulture, out var sid)) return null;
             staffId = sid;
         }
-        return new RefreshClaims(id, staffId, stamp, claims.FindFirst(PersistentClaim)?.Value == "1");
+        DateTimeOffset? authTime = null;
+        if (claims.FindFirst(AuthTimeClaim)?.Value is { } at)
+        {
+            if (!long.TryParse(at, NumberStyles.None, CultureInfo.InvariantCulture, out var seconds)) return null;
+            authTime = DateTimeOffset.FromUnixTimeSeconds(seconds);
+            if (authTime.Value.AddDays(_jwt.MaxSessionDays) <= clock.GetUtcNow()) return null;
+        }
+        var jwt = (JsonWebToken)result.SecurityToken;
+        return new RefreshClaims(id, staffId, stamp, claims.FindFirst(PersistentClaim)?.Value == "1",
+            jwt.Id, new DateTimeOffset(jwt.ValidTo, TimeSpan.Zero), authTime);
     }
 
     public string PasswordStamp(long customerId, string password, long? staffId = null)

@@ -16,6 +16,8 @@ internal static class OrderErrors
         "Đơn này vừa được in hoặc xóa ở nơi khác — vui lòng tải lại danh sách");
     public static readonly Error DraftNotReady =
         Error.BusinessRule("DRAFT_NOT_READY", "Đơn chưa khai đủ thông tin — mở đơn, hoàn tất rồi bấm In");
+    public static readonly Error TermsNotAccepted =
+        Error.BusinessRule("TERMS_NOT_ACCEPTED", "Vui lòng đọc và đồng ý Điều khoản dịch vụ trước khi in bill");
     public static readonly Error InvalidPayload =
         Error.BusinessRule("DRAFT_INVALID_PAYLOAD", "Dữ liệu đơn nháp không đọc được — vui lòng mở đơn và lưu lại");
     public static readonly Error CustomerNotFound = Error.BusinessRule("CUSTOMER_NOT_FOUND",

@@ -44,21 +44,23 @@ export function useLogin() {
 }
 
 /**
- * Đăng xuất: đợi lần làm mới phiên đang chạy xong (tránh response về muộn ghi lại cookie), máy chủ xoá cookie;
+ * Đăng xuất: đợi lần làm mới phiên đang chạy xong (tránh response về muộn ghi lại cookie), máy chủ thu hồi token và xoá cookie;
  * sau đó tải lại hẳn trang /login để xoá mọi dữ liệu còn trong bộ nhớ — bấm Back không hiện lại danh sách đơn cũ.
+ * `idle` = tự đăng xuất vì không thao tác → trang đăng nhập báo lý do; đăng nhập lại mở `next` (mặc định trang đang xem).
  */
 export function useLogout() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async () => {
+    mutationFn: async (_?: { idle?: boolean; next?: string }) => {
       await waitForPendingRefresh();
       return http.post<{ message: string }>('/auth/logout').catch(() => undefined);
     },
-    onSettled: () => {
+    onSettled: (_data, _error, options) => {
       qc.clear();
       const session: Session = { status: 'anonymous' };
       qc.setQueryData(sessionKey, session);
-      window.location.replace('/login');
+      const back = options?.next ?? `${window.location.pathname}${window.location.search}`;
+      window.location.replace(options?.idle ? `/login?idle=1&next=${encodeURIComponent(back)}` : '/login');
     }
   });
 }

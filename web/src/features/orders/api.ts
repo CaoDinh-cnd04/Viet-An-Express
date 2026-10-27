@@ -54,7 +54,7 @@ export function useOrderCopy(bill: string | null) {
   });
 }
 
-/** Ảnh kiện hàng. Endpoint mới — xem API_CONTRACT.md. */
+/** Ảnh kiện hàng — chưa dùng: backend chưa làm (API_CONTRACT.md "Chưa làm"), hộp Ảnh kiện đang báo "đang phát triển". */
 export function useOrderPhotos(bill: string | null) {
   return useQuery({
     queryKey: [...orderKeys.detail(bill ?? ''), 'photos'],

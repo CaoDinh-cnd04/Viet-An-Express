@@ -65,6 +65,8 @@ export const staff: Readonly<Record<string, string>> = {
   'Kết nối / ngắt kết nối cửa hàng': 'Connect / disconnect stores',
   // MyTracking công khai
   'Trang tra cứu công khai': 'Public tracking page',
+  'Đang tải mã khách…': 'Loading customer code…',
+  'Thêm số bill Việt An sau dấu "/" cuối, mã REF sau "?ref=". Ví dụ:': 'Add the Viet An bill number after the last "/" and the REF code after "?ref=". Example:',
   'Gửi link này cho người nhận hàng để họ tra cứu vận đơn trên trang mang thương hiệu của bạn. Thay đổi chỉ hiện trên link sau khi bấm Lưu.': 'Send this link to recipients so they can track shipments on your branded page. Changes appear on the link only after you click Save.',
   'Đường dẫn': 'Path',
   'Mở trang': 'Open page',

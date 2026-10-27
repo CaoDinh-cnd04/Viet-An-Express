@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useI18n } from '@/shared/i18n';
 import { Icon, SegmentedControl } from '@/shared/ui';
 import type { MyTrackingConfig } from '../schema';
-import { TrackingLayout } from './TrackingLayout';
+import { HomeButton, TrackingLayout } from './TrackingLayout';
 import styles from '../pages/MyTrackingPage.module.css';
 
 /** Bản xem trước bố cục; không tạo sự kiện vận chuyển giả. */
@@ -21,6 +21,7 @@ export function TrackingPreview({ config }: { config: MyTrackingConfig }) {
         <div className={styles.trackingSearch}>
           <input aria-label="Tracking number" placeholder="Tracking number" readOnly />
           <button type="button" disabled>Track</button>
+          <HomeButton website={config.brand.website} preview />
         </div>
         <h3 className={styles.blackBar}>TRACKING DETAIL</h3>
         <div className={styles.trackingPlaceholder}>

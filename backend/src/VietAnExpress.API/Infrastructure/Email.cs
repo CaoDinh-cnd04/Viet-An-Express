@@ -55,10 +55,16 @@ internal sealed class SmtpEmailSender(IOptions<EmailOptions> options, ILogger<Sm
         foreach (var address in message.Bcc ?? []) mail.Bcc.Add(address.Trim());
         if (!string.IsNullOrWhiteSpace(message.ReplyTo)) mail.ReplyToList.Add(message.ReplyTo.Trim());
         // Bản HTML đi kèm bản chữ thuần: trình đọc thư chọn bản hiển thị được.
-        if (!string.IsNullOrEmpty(message.HtmlBody))
-            mail.AlternateViews.Add(AlternateView.CreateAlternateViewFromString(message.HtmlBody, Encoding.UTF8, "text/html"));
+        // Ảnh nhúng (ContentId) đi cùng bản HTML (multipart/related); không có bản HTML thì gửi như tệp đính kèm thường.
+        var html = string.IsNullOrEmpty(message.HtmlBody) ? null : AlternateView.CreateAlternateViewFromString(message.HtmlBody, Encoding.UTF8, "text/html");
+        if (html is not null) mail.AlternateViews.Add(html);
         foreach (var a in message.Attachments ?? [])
-            mail.Attachments.Add(new Attachment(new MemoryStream(a.Data), a.FileName, a.ContentType));
+        {
+            if (html is not null && !string.IsNullOrEmpty(a.ContentId))
+                html.LinkedResources.Add(new LinkedResource(new MemoryStream(a.Data), a.ContentType) { ContentId = a.ContentId });
+            else
+                mail.Attachments.Add(new Attachment(new MemoryStream(a.Data), a.FileName, a.ContentType));
+        }
 
         using var smtp = new SmtpClient(O.Host, O.Port)
         {

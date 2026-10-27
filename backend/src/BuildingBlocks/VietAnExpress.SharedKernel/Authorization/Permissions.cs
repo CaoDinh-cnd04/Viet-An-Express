@@ -10,6 +10,10 @@ public static class VaClaimTypes
     public const string CustomerId = "customer_id";
     /// <summary>Có khi người đăng nhập là tài khoản con (nhân viên) của khách — dbo.TaiKhoanNhanVien.ID.</summary>
     public const string StaffId = "staff_id";
+    /// <summary>Mã riêng của token (jti) — thu hồi khi đăng xuất.</summary>
+    public const string TokenId = "jti";
+    /// <summary>Hạn token, giây Unix.</summary>
+    public const string Expires = "exp";
 }
 
 /// <summary>

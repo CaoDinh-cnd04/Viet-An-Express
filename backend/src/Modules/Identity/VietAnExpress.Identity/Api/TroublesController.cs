@@ -26,7 +26,7 @@ internal sealed class TroublesController : ApiControllerBase
     public async Task<IActionResult> List(CancellationToken ct) => FromResult(await Sender.Send(new GetTroublesQuery(), ct));
 
     /// <summary>
-    /// multipart/form-data: <c>kind</c> (su_co / ho_tro / gop_y), <c>bill</c>, <c>cnee</c>, <c>ct</c>, <c>type</c>, <c>subject</c>, <c>lv</c>,
+    /// multipart/form-data: <c>kind</c> (ho_tro = hỗ trợ &amp; sự cố / gop_y), <c>bill</c>, <c>cnee</c>, <c>ct</c>, <c>type</c>, <c>subject</c>, <c>lv</c>,
     /// <c>desc</c>, <c>req</c>, <c>contact</c>, <c>file?</c> (≤ 10 MB: ảnh, PDF, Excel, CSV, Word — chỉ gửi kèm email, không lưu database).
     /// </summary>
     [HttpPost]

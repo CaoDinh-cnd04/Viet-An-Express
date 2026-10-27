@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { useSession } from '@/features/auth';
+import { customerTrackingUrl, MYTRACKING_URL } from '@/features/mytracking';
 import { TRACKING_URL, trackingLink } from '@/shared/config/domain';
 import { useI18n } from '@/shared/i18n';
 import { useCopyToClipboard } from '@/shared/lib/useCopyToClipboard';
@@ -21,7 +23,12 @@ export default function ApiTrackingPage() {
   const copy = useCopyToClipboard();
   const [bill, setBill] = useState('');
   const [brand, setBrand] = useState(false);
-  const link = trackingLink(bill.trim() || '{MA_BILL}', brand);
+  const session = useSession();
+  const customerCode = session.data?.status === 'authenticated' ? session.data.user.customerCode : '';
+  // Your Track = trang MyTracking của khách theo mã khách; chưa có mã khách thì dùng link thương hiệu đại lý cũ.
+  const link = brand && customerCode
+    ? bill.trim() ? customerTrackingUrl(MYTRACKING_URL, customerCode, bill) : `${customerTrackingUrl(MYTRACKING_URL, customerCode)}{MA_BILL}`
+    : trackingLink(bill.trim() || '{MA_BILL}', brand);
   const code = embedCode(brand, t('Nhập mã vận đơn'), t('Tra cứu'));
 
   return (

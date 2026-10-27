@@ -45,24 +45,38 @@ internal static class TroubleStatus
 /// </summary>
 internal static class TroubleKind
 {
-    /// <summary>Sự cố của 1 vận đơn — bắt buộc mã bill.</summary>
+    /// <summary>Sự cố vận đơn — loại cũ (FormType "Portal - Sự cố"), chỉ còn để đọc yêu cầu đã gửi; từ 27/10/2026 gộp vào <see cref="Support"/>.</summary>
     public const string Incident = "su_co";
-    /// <summary>Yêu cầu hỗ trợ chung (tạo đơn, cước, tracking, sửa thông tin người gửi…).</summary>
+    /// <summary>Hỗ trợ &amp; sự cố (gộp 1): vận đơn có / không, tạo đơn, cước, tracking, sửa thông tin người gửi…</summary>
     public const string Support = "ho_tro";
     /// <summary>Góp ý cho Việt An / phần mềm.</summary>
     public const string Feedback = "gop_y";
+    /// <summary>Khách vãng lai gửi lời nhắn ở trang chủ (chưa đăng nhập, CustID = 0) — không nằm trong <see cref="All"/> (khách không tạo được qua /troubles).</summary>
+    public const string Contact = "lien_he";
 
     public const string IncidentFormType = "Portal - Sự cố";
     public const string SupportFormType = "Portal - Hỗ trợ";
     public const string FeedbackFormType = "Portal - Góp ý";
+    public const string ContactFormType = "Portal - Liên hệ";
+
+    /// <summary>
+    /// TContact.KeyWord của form hệ thống cũ (xem dữ liệu thật 27/10/2026): form "Yêu cầu" Bill Online ghi "Feedback" (loại góp ý ở Title),
+    /// form liên hệ trang chủ website ghi "ContactHome" (Title NULL). Portal ghi giống hệt để CS thấy chung chỗ ở phần mềm cũ.
+    /// </summary>
+    public const string FeedbackKeyWord = "Feedback";
+    public const string ContactKeyWord = "ContactHome";
+
+    /// <summary>Tên hiển thị của lời nhắn trang chủ (KeyWord là mã "ContactHome").</summary>
+    public const string ContactTopic = "Liên hệ từ trang chủ";
 
     public static readonly IReadOnlySet<string> All = new HashSet<string>(StringComparer.Ordinal) { Incident, Support, Feedback };
 
     public static string Label(string kind) => kind switch
     {
         Incident => "Sự cố",
-        Support => "Yêu cầu hỗ trợ",
+        Support => "Hỗ trợ & sự cố",
         Feedback => "Góp ý",
+        Contact => "Liên hệ",
         _ => kind
     };
 
@@ -70,6 +84,7 @@ internal static class TroubleKind
     {
         Support => SupportFormType,
         Feedback => FeedbackFormType,
+        Contact => ContactFormType,
         _ => IncidentFormType
     };
 
@@ -77,6 +92,7 @@ internal static class TroubleKind
     {
         SupportFormType => Support,
         FeedbackFormType => Feedback,
+        ContactFormType => Contact,
         _ => Incident
     };
 }
@@ -123,9 +139,11 @@ internal sealed class Trouble
         ConsigneeName = consignee,
         Country = country,
         Type = type,
-        // Phần mềm cũ đọc cột Title: yêu cầu hỗ trợ là tiêu đề khách nhập, loại khác là loại sự cố / chủ đề.
-        Title = string.IsNullOrWhiteSpace(subject) ? type : subject,
-        Priority = priority,
+        // Phần mềm cũ đọc cột Title: tiêu đề khách nhập, không có thì vấn đề; góp ý = loại góp ý (KeyWord "Feedback");
+        // lời nhắn trang chủ để trống như form website cũ.
+        Title = kind == TroubleKind.Contact ? "" : string.IsNullOrWhiteSpace(subject) ? type : subject,
+        // Góp ý / lời nhắn trang chủ không có mức độ — Des02 để NULL như form "Yêu cầu" / form liên hệ website cũ.
+        Priority = kind is TroubleKind.Feedback or TroubleKind.Contact ? null : priority,
         Description = description,
         Requester = requester,
         Contact = contact,
@@ -150,7 +168,11 @@ internal sealed class Trouble
     public string Type { get; private set; } = "";
     /// <summary>Cột Title: tiêu đề yêu cầu hỗ trợ, hoặc bằng <see cref="Type"/>.</summary>
     public string Title { get; private set; } = "";
-    public string Priority { get; private set; } = "mid";
+    /// <summary>Mức độ (Des02) — chỉ Hỗ trợ &amp; sự cố; góp ý / lời nhắn trang chủ để NULL.</summary>
+    public string? Priority { get; private set; }
+
+    /// <summary>Cột Gender của TContact — form cũ (Bill Online, website) luôn ghi 1; portal ghi giống.</summary>
+    public int? Gender { get; private set; } = 1;
     public string Description { get; private set; } = "";
     public string Requester { get; private set; } = "";
     /// <summary>SĐT / email khách nhập để CS liên hệ lại.</summary>
@@ -164,6 +186,17 @@ internal sealed class Trouble
 
     /// <summary>Tiêu đề yêu cầu hỗ trợ (null với loại khác).</summary>
     public string? Subject => Kind == TroubleKind.Support ? Title : null;
+
+    /// <summary>
+    /// Vấn đề / loại hiển thị: góp ý → Title (loại góp ý, vì KeyWord là "Feedback"), lời nhắn trang chủ → "Liên hệ từ trang chủ",
+    /// còn lại → KeyWord. Dòng portal ghi trước 27/10/2026 (KeyWord = loại góp ý, Title = KeyWord) vẫn ra đúng.
+    /// </summary>
+    public string Topic => Kind switch
+    {
+        TroubleKind.Feedback => string.IsNullOrWhiteSpace(Title) ? Type : Title,
+        TroubleKind.Contact => TroubleKind.ContactTopic,
+        _ => Type
+    };
 
     /// <summary>Mã hiển thị (vd TRB-1024).</summary>
     public string Code => FormatCode(Id);

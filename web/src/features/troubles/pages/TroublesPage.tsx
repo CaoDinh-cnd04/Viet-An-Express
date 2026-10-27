@@ -1,47 +1,87 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { useMarkRead, useNotifications } from '@/features/notifications';
 import { isNotImplemented } from '@/shared/api/http';
 import { useI18n } from '@/shared/i18n';
 import { cx } from '@/shared/lib/cx';
-import { PageHeader } from '@/shared/ui';
+import { downloadTextFile } from '@/shared/lib/files';
+import { Icon } from '@/shared/ui';
 import { useTroubles } from '../api';
-import { TroubleForm } from '../components/TroubleForm';
-import { CONTACTS, SENDER_INFO_TOPIC, TROUBLE_KIND_ORDER, TROUBLE_KINDS, TROUBLE_PRIORITY, TROUBLE_STATUS } from '../constants';
-import { filterTickets, kindOf, ticketSubline, ticketTitle, type TroubleFilter } from '../lib/chat';
+import { KIND_BADGE, NewConversationDialog } from '../components/NewConversationDialog';
+import { CONTACTS, SENDER_INFO_TOPIC, TROUBLE_KINDS } from '../constants';
+import { kindOf, ticketTitle } from '../lib/chat';
+import {
+  CHAT_STATUS, defaultFilter, filterConversations, filterCounts, isOpen, messagesOf, noticesByTicket, previewOf, transcriptOf, unreadOf,
+  type ConversationFilter
+} from '../lib/conversation';
 import type { TroubleKind, TroubleTicket } from '../types';
-import ws from '@/shared/ui/Workspace.module.css';
 import styles from './TroublesPage.module.css';
 
-const FILTERS: ReadonlyArray<{ key: TroubleFilter; label: string }> = [
-  { key: 'all', label: 'Tất cả' },
-  { key: 'open', label: 'Đang xử lý' },
-  { key: 'done', label: 'Đã xử lý' }
+const FILTERS: ReadonlyArray<{ key: ConversationFilter; label: string }> = [
+  { key: 'unread', label: 'Chưa đọc' },
+  { key: 'open', label: 'Đang mở' },
+  { key: 'closed', label: 'Đã đóng' },
+  { key: 'all', label: 'Tất cả' }
 ];
 
-/** Nhãn menu gửi yêu cầu — lời khách hay dùng. */
-const SEND_LABELS: Record<TroubleKind, string> = {
-  su_co: 'Báo sự cố đơn hàng',
-  ho_tro: 'Yêu cầu hỗ trợ',
-  gop_y: 'Góp ý'
-};
+type Preset = { kind?: TroubleKind; bill?: string; topic?: string };
 
-type View =
-  | { kind: 'list' }
-  | { kind: 'detail'; id: string }
-  | { kind: 'form'; type: TroubleKind; bill?: string; topic?: string };
+/** Date → 'dd/MM/yyyy' (cùng dạng ngày của API). */
+const dayKey = (d: Date) => `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+
+/** "dd/MM/yyyy" → "Hôm nay" / "Hôm qua" / ngày. */
+function dayLabel(day: string, today: Date): string {
+  const yesterday = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1);
+  return day === dayKey(today) ? 'Hôm nay' : day === dayKey(yesterday) ? 'Hôm qua' : day;
+}
 
 /**
- * Hỗ trợ & sự cố kiểu phần mềm nghiệp vụ: hàng trên có tab lọc (Tất cả / Đang xử lý / Đã xử lý) và nút gửi 3 loại yêu cầu,
- * khung dưới hiển thị bảng, chi tiết hoặc form gửi; liên hệ ở footer. CS xử lý ở phần mềm cũ, báo kết quả qua Thông báo.
- * /troubles?bill=… mở form báo sự cố cho đơn đó; ?new=sender-info mở form hỗ trợ "Sửa thông tin người gửi"; ?id=TRB-… mở chi tiết.
+ * Hỗ trợ & góp ý dạng trò chuyện (như Zalo): trái danh sách cuộc trò chuyện (Chưa đọc / Đang mở / Đã đóng / Tất cả, tìm kiếm),
+ * phải khung chat của cuộc đang chọn. Mục mở đầu: Chưa đọc nếu CS vừa trả lời, không thì Đang mở.
+ * Yêu cầu TRB-… (dbo.TContact): tin CS = thông báo riêng CS gửi khách, khách không nhắn tiếp được.
+ * Sự cố SC-… (dbo.Order_Trouble, đơn chưa giao): khách và CS nhắn qua lại ở ô cuối khung chat.
+ * /troubles?bill=… mở hộp thoại báo sự cố cho đơn đó; ?new=sender-info mở hỗ trợ "Sửa thông tin người gửi"; ?id=TRB-… / SC-… mở cuộc đó.
  */
 export default function TroublesPage() {
   const { t } = useI18n();
-  const { data = [], isLoading, isError, error } = useTroubles();
+  const { data: tickets = [], isLoading, isError, error } = useTroubles();
+  const notices = useNotifications();
+  const markRead = useMarkRead();
   const [params, setParams] = useSearchParams();
-  const [filter, setFilter] = useState<TroubleFilter>('all');
+  const [filter, setFilter] = useState<ConversationFilter | null>(null);
   const [query, setQuery] = useState('');
-  const [view, setView] = useState<View>({ kind: 'list' });
+  const [currentId, setCurrentId] = useState<string | null>(null);
+  const [keep, setKeep] = useState<string | null>(null);
+  const [preset, setPreset] = useState<Preset | null>(null);
+  const [chatting, setChatting] = useState(false);
+  const msgsRef = useRef<HTMLDivElement>(null);
+  const today = new Date();
+
+  const byTicket = useMemo(() => noticesByTicket(notices.data?.data ?? []), [notices.data]);
+  const ready = !isLoading && !notices.isLoading;
+  const active = filter ?? (ready ? defaultFilter(tickets, byTicket) : 'open');
+  const rows = useMemo(() => filterConversations(tickets, byTicket, active, query, keep), [tickets, byTicket, active, query, keep]);
+  const counts = useMemo(() => filterCounts(tickets, byTicket), [tickets, byTicket]);
+  const current = tickets.find(x => x.id === currentId) ?? null;
+  const currentNotices = current ? byTicket.get(current.id) ?? [] : [];
+  const messages = useMemo(() => (current ? messagesOf(current, currentNotices) : []), [current, currentNotices]);
+
+  const open = (ticket: TroubleTicket) => {
+    if (unreadOf(ticket.id, byTicket) > 0) setKeep(ticket.id);
+    for (const n of byTicket.get(ticket.id) ?? []) if (n.unread) markRead.mutate(n.id);
+    setCurrentId(ticket.id);
+    setChatting(true);
+  };
+
+  // Lần đầu có dữ liệu: chốt mục mở đầu và mở sẵn cuộc đầu tiên (màn rộng).
+  useEffect(() => {
+    if (!ready || filter) return;
+    const start = defaultFilter(tickets, byTicket);
+    setFilter(start);
+    const first = filterConversations(tickets, byTicket, start, '')[0];
+    if (first && !currentId && window.matchMedia('(min-width: 861px)').matches) open(first);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready]);
 
   // Link từ đơn hàng / form tạo đơn / thông báo
   useEffect(() => {
@@ -49,160 +89,171 @@ export default function TroublesPage() {
     const id = params.get('id');
     const isNew = params.get('new') === 'sender-info';
     if (!bill && !id && !isNew) return;
-    if (bill) setView({ kind: 'form', type: 'su_co', bill });
-    else if (isNew) setView({ kind: 'form', type: 'ho_tro', topic: SENDER_INFO_TOPIC });
-    else if (id) setView({ kind: 'detail', id: id.toUpperCase() });
+    if (bill) setPreset({ kind: 'su_co', bill });
+    else if (isNew) setPreset({ kind: 'ho_tro', topic: SENDER_INFO_TOPIC });
+    else if (id) {
+      setFilter('all');
+      setCurrentId(id.toUpperCase());
+      setChatting(true);
+    }
     setParams({}, { replace: true });
   }, [params, setParams]);
 
-  const rows = useMemo(() => filterTickets(data, filter, query), [data, filter, query]);
-  const counts = useMemo(() => Object.fromEntries(FILTERS.map(f => [f.key, filterTickets(data, f.key, '').length])), [data]);
-  const current = view.kind === 'detail' ? data.find(x => x.id === view.id) ?? null : null;
-  const showList = (f: TroubleFilter = filter) => {
+  // Cuộn xuống tin mới nhất khi đổi cuộc / có tin mới.
+  useEffect(() => {
+    const el = msgsRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [currentId, messages.length]);
+
+  const changeFilter = (f: ConversationFilter) => {
     setFilter(f);
-    setView({ kind: 'list' });
+    setKeep(null);
   };
 
-  const isList = view.kind === 'list';
-
   return (
-    <>
-      <PageHeader title="Hỗ trợ & sự cố" description="Gửi yêu cầu cho CS Việt An và theo dõi kết quả." />
+    <div className={styles.page}>
+      <header className={styles.head}>
+        <div>
+          <h1>{t('Hỗ trợ & góp ý')}</h1>
+          <p>{t('Nhắn cho CS Việt An — mỗi vấn đề là 1 cuộc trò chuyện.')}</p>
+        </div>
+        <span className={styles.hotline}>
+          {t('Cần gấp? Gọi')} <a href={CONTACTS[0]!.href}>{CONTACTS[0]!.value}</a>
+        </span>
+      </header>
 
-      {/* Chức năng (tab lọc) bên trái · nút thao tác bên phải */}
-      <div className={ws.toolbar}>
-        <div className={ws.tabs} role="tablist" aria-label={t('Yêu cầu đã gửi')}>
-          {FILTERS.map(f => (
-            <button
-              key={f.key}
-              type="button"
-              role="tab"
-              aria-selected={isList && filter === f.key}
-              className={cx(ws.tab, isList && filter === f.key && ws.tabOn)}
-              onClick={() => showList(f.key)}
-            >
-              {t(f.label)} <span className={ws.count}>{counts[f.key] ?? 0}</span>
+      <div className={cx(styles.shell, chatting && styles.chatting)}>
+        <section className={styles.list}>
+          <div className={styles.listHead}>
+            <button type="button" className={styles.newBtn} onClick={() => setPreset({})}>
+              <Icon name="plus" size={15} /> {t('Cuộc trò chuyện mới')}
             </button>
-          ))}
-        </div>
-        <div className={ws.tools}>
-          {isList && (
-            <input className={ws.search} value={query} onChange={e => setQuery(e.target.value)} placeholder={t('Tìm mã yêu cầu, vận đơn, tiêu đề…')} aria-label={t('Tìm yêu cầu')} />
+            <label className={styles.search}>
+              <Icon name="search" size={14} />
+              <input value={query} onChange={e => setQuery(e.target.value)} placeholder={t('Tìm mã, vận đơn, nội dung…')} aria-label={t('Tìm cuộc trò chuyện')} />
+            </label>
+            <div className={styles.seg} role="tablist" aria-label={t('Lọc cuộc trò chuyện')}>
+              {FILTERS.map(f => (
+                <button key={f.key} type="button" role="tab" aria-selected={active === f.key} className={cx(active === f.key && styles.on)} onClick={() => changeFilter(f.key)}>
+                  {t(f.label)} <span className={cx(styles.n, f.key === 'unread' && counts.unread > 0 && styles.hot)}>{counts[f.key]}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className={styles.items}>
+            {isLoading && <p className={styles.note}>{t('Đang tải…')}</p>}
+            {isError && (
+              <p className={styles.note}>
+                {t(isNotImplemented(error) ? 'Chức năng hỗ trợ đang được kết nối máy chủ. Cần gấp, vui lòng gọi hotline Việt An.' : 'Không tải được danh sách yêu cầu')}
+              </p>
+            )}
+            {!isLoading && !isError && !rows.length && (
+              <p className={styles.note}>
+                {t(tickets.length ? 'Không có cuộc trò chuyện nào ở mục này.' : 'Chưa có cuộc trò chuyện nào. Bấm "Cuộc trò chuyện mới" khi cần CS hỗ trợ.')}
+              </p>
+            )}
+            {rows.map(x => {
+              const kind = kindOf(x);
+              const ns = byTicket.get(x.id) ?? [];
+              const unread = unreadOf(x.id, byTicket);
+              const preview = previewOf(x, ns);
+              const last = ns.at(-1)?.date ?? x.updatedAt ?? x.date;
+              const st = CHAT_STATUS[x.status];
+              return (
+                <button key={x.id} type="button" className={cx(styles.item, currentId === x.id && styles.itemOn, unread > 0 && styles.unread)} onClick={() => open(x)}>
+                  <span className={cx(styles.badge, styles[kind])}>{KIND_BADGE[kind]}</span>
+                  <span className={styles.itemText}>
+                    <span className={styles.itemTitle}>
+                      {t(ticketTitle(x))}{kind === 'su_co' && <> · <span className="mono">{x.bill}</span></>}
+                    </span>
+                    <span className={styles.preview}>{t(preview.from === 'cs' ? 'CS: {text}' : 'Bạn: {text}', { text: preview.text })}</span>
+                  </span>
+                  <span className={styles.itemSide}>
+                    {last.slice(0, 10) === dayKey(today) ? last.slice(11, 16) : last.slice(0, 5)}
+                    {unread > 0 ? <span className={styles.count}>{unread}</span> : <span className={cx(styles.chip, styles[st.tone])}>{t(st.label)}</span>}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </section>
+
+        <section className={styles.chat}>
+          {!current ? (
+            <div className={styles.welcome}>
+              <b>{t('Chọn 1 cuộc trò chuyện')}</b>
+              {t('hoặc bấm "Cuộc trò chuyện mới" để nhắn CS Việt An.')}
+            </div>
+          ) : (
+            <>
+              <div className={styles.chatHead}>
+                <button type="button" className={styles.backBtn} onClick={() => setChatting(false)} aria-label={t('Quay lại danh sách')}>‹</button>
+                <span className={styles.chatInfo}>
+                  <b>{t(ticketTitle(current))}</b>
+                  <span>
+                    {current.id} · {t(TROUBLE_KINDS[kindOf(current)].label)}
+                    {current.bill && <> · <span className="mono">{current.bill}</span>{current.cnee && ` · ${current.cnee}`}</>}
+                  </span>
+                </span>
+                <span className={cx(styles.chip, styles[CHAT_STATUS[current.status].tone])}>{t(CHAT_STATUS[current.status].label)}</span>
+                <button type="button" className={styles.headBtn} title={t('Tải đoạn chat (.txt)')} aria-label={t('Tải đoạn chat (.txt)')}
+                  onClick={() => downloadTextFile(`${current.id}.txt`, transcriptOf(current, messages, t), 'text/plain;charset=utf-8')}>
+                  <Icon name="download" size={14} />
+                </button>
+              </div>
+
+              <div className={styles.msgs} ref={msgsRef}>
+                {messages.map((m, i) =>
+                  m.type === 'day' ? (
+                    <div key={i} className={styles.day}>{t(dayLabel(m.day, today))}</div>
+                  ) : m.type === 'system' ? (
+                    <div key={i} className={styles.sys}>{t(m.text, m.params)} · {m.at.slice(11, 16)}</div>
+                  ) : (
+                    <div key={i} className={cx(styles.msg, m.type === 'me' ? styles.me : styles.cs)}>
+                      {m.type === 'cs' && <span className={styles.who}>{t('CS Việt An')}</span>}
+                      {m.text}
+                      <small>{m.at.slice(11, 16)}</small>
+                    </div>
+                  )
+                )}
+              </div>
+
+              {isOpen(current) ? (
+                <div className={styles.pending}>
+                  <Icon name="message" size={15} />
+                  <span>
+                    {t('CS trả lời ngay tại đây và trong Thông báo. Cần bổ sung ảnh / thông tin: gọi')}{' '}
+                    <a href={CONTACTS[0]!.href}>{CONTACTS[0]!.value}</a> {t('hoặc email')} <a href={CONTACTS[1]!.href}>{CONTACTS[1]!.value}</a>.
+                  </span>
+                </div>
+              ) : (
+                <div className={cx(styles.pending, styles.closed)}>
+                  <span>{t('Cuộc trò chuyện đã xong. Cần thêm hỗ trợ cho việc này?')}</span>
+                  <button type="button" className={styles.linkBtn}
+                    onClick={() => setPreset({ kind: kindOf(current), bill: current.bill || undefined })}>
+                    {t('Tạo cuộc trò chuyện mới')}
+                  </button>
+                </div>
+              )}
+            </>
           )}
-          {/* Nút đang mở form được tô màu để khách thấy rõ mình đang gửi loại nào */}
-          {TROUBLE_KIND_ORDER.map(k => {
-            const on = view.kind === 'form' && view.type === k;
-            return (
-              <button key={k} type="button" aria-pressed={on} className={on ? ws.btn : ws.btnSecondary} onClick={() => setView({ kind: 'form', type: k })}>
-                {t(SEND_LABELS[k])}
-              </button>
-            );
-          })}
-        </div>
+        </section>
       </div>
 
-      {/* Hiển thị: bảng / chi tiết / form */}
-      <section className={ws.box}>
-        {view.kind === 'form' ? (
-          <>
-            <div className={ws.boxHead}><b>{t(SEND_LABELS[view.type])}</b></div>
-            <TroubleForm
-              key={`${view.type}-${view.bill ?? ''}-${view.topic ?? ''}`}
-              kind={view.type}
-              bill={view.bill}
-              topic={view.topic}
-              onSent={ticket => setView({ kind: 'detail', id: ticket.id })}
-              onCancel={() => showList()}
-            />
-          </>
-        ) : view.kind === 'detail' ? (
-          <>
-            <div className={ws.boxHead}>
-              <b>{current ? `${current.id} · ${t(ticketTitle(current))}` : view.id}</b>
-              <button type="button" className={ws.btnSecondary} onClick={() => showList()}>← {t('Quay lại danh sách')}</button>
-            </div>
-            {current ? <Detail ticket={current} /> : <p className={ws.note}>{t(isLoading ? 'Đang tải…' : 'Không tìm thấy yêu cầu')}</p>}
-          </>
-        ) : isLoading ? (
-          <p className={ws.note}>{t('Đang tải…')}</p>
-        ) : isError ? (
-          <p className={ws.note}>
-            {t(isNotImplemented(error)
-              ? 'Chức năng hỗ trợ & sự cố đang được kết nối máy chủ. Cần báo gấp, vui lòng gọi hotline Việt An.'
-              : 'Không tải được danh sách yêu cầu')}
-          </p>
-        ) : !rows.length ? (
-          <p className={ws.note}>
-            {t(data.length ? 'Không có yêu cầu nào khớp.' : 'Chưa có yêu cầu nào. Bấm "Báo sự cố đơn hàng", "Yêu cầu hỗ trợ" hoặc "Góp ý" phía trên khi cần.')}
-          </p>
-        ) : (
-          <div className={ws.tableWrap}>
-            <table className={ws.table}>
-              <thead>
-                <tr>
-                  <th style={{ width: 80 }}>{t('Mã')}</th>
-                  <th style={{ width: 120 }}>{t('Loại')}</th>
-                  <th>{t('Nội dung')}</th>
-                  <th style={{ width: 160 }}>{t('Vận đơn / chủ đề')}</th>
-                  <th style={{ width: 140 }}>{t('Trạng thái')}</th>
-                  <th style={{ width: 100 }}>{t('Cập nhật')}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map(x => (
-                  <tr key={x.id} className={ws.rowLink} tabIndex={0} onClick={() => setView({ kind: 'detail', id: x.id })} onKeyDown={e => e.key === 'Enter' && setView({ kind: 'detail', id: x.id })}>
-                    <td className="mono">{x.id}</td>
-                    <td>{t(TROUBLE_KINDS[kindOf(x)].label)}</td>
-                    <td>{t(ticketTitle(x))}</td>
-                    <td className={kindOf(x) === 'su_co' ? 'mono' : undefined}>{kindOf(x) === 'su_co' ? ticketSubline(x) : t(ticketSubline(x))}</td>
-                    <td className={cx(styles.status, styles[`st_${x.status}`])}>{t(TROUBLE_STATUS[x.status].label)}</td>
-                    <td>{(x.updatedAt ?? x.date).split(' ')[0]}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
-
-      {/* Liên hệ */}
-      <footer className={ws.footer}>
-        {CONTACTS.map(c => (
-          <span key={c.label}>{t(c.label)}: <b>{c.value}</b></span>
-        ))}
-        <span>{t('CS báo kết quả qua mục Thông báo, điện thoại hoặc email.')}</span>
-      </footer>
-    </>
-  );
-}
-
-/** Chi tiết 1 yêu cầu: bảng thông tin + nội dung khách gửi. */
-function Detail({ ticket: x }: { ticket: TroubleTicket }) {
-  const { t } = useI18n();
-  const kind = kindOf(x);
-  const rows: Array<[string, string]> = [
-    ['Trạng thái', `${t(TROUBLE_STATUS[x.status].label)}${x.updatedAt ? ` (${x.updatedAt})` : ''}`],
-    ['Loại', t(TROUBLE_KINDS[kind].label) + (kind === 'su_co' ? ` · ${t('Mức độ')}: ${t(TROUBLE_PRIORITY[x.lv].label)}` : '')]
-  ];
-  if (kind === 'su_co') {
-    rows.push(['Vận đơn', x.bill], ['Vấn đề', t(x.type)]);
-    if (x.cnee || x.ct) rows.push(['Người nhận', [x.cnee, x.ct].filter(Boolean).join(' · ')]);
-  } else if (kind === 'ho_tro') {
-    rows.push(['Chủ đề', t(x.type)], ['Tiêu đề', x.subject ?? '']);
-  }
-  rows.push(['Người yêu cầu', [x.req, x.contact].filter(Boolean).join(' · ')], ['Ngày gửi', x.date]);
-
-  return (
-    <div className={styles.detail}>
-      <dl>
-        {rows.map(([label, value]) => (
-          <div key={label}>
-            <dt>{t(label)}</dt>
-            <dd className={cx(label === 'Trạng thái' && styles.status, label === 'Trạng thái' && styles[`st_${x.status}`], label === 'Vận đơn' && 'mono')}>{value}</dd>
-          </div>
-        ))}
-      </dl>
-      <p className={styles.content}>{x.desc}</p>
+      {preset && (
+        <NewConversationDialog
+          open
+          preset={preset}
+          onClose={() => setPreset(null)}
+          onSent={ticket => {
+            setPreset(null);
+            changeFilter('open');
+            setCurrentId(ticket.id);
+            setChatting(true);
+          }}
+        />
+      )}
     </div>
   );
 }

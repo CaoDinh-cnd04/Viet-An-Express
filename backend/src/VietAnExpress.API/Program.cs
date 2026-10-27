@@ -141,7 +141,7 @@ try
         };
         o.AddPolicy(RateLimitPolicies.Login, http => FixedWindowByIp(http, permitLimit: 10));
         o.AddPolicy(RateLimitPolicies.PublicTracking, http => FixedWindowByIp(http, permitLimit: 30));
-        o.AddPolicy("usage", http => FixedWindowByIp(http, permitLimit: 120));
+        o.AddPolicy(RateLimitPolicies.PublicContact, http => FixedWindowByIp(http, permitLimit: 3));
     });
 
     var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
@@ -201,6 +201,7 @@ try
             ctx.Context.Response.Headers.CacheControl = ctx.Context.Request.Path.StartsWithSegments("/assets")
                 ? "public, max-age=31536000, immutable"
                 : "no-cache";
+            DenyFraming(ctx.Context.Response.Headers);
         }
     };
     var hasWebUi = app.Environment.WebRootPath is { } webRoot && File.Exists(Path.Combine(webRoot, "index.html"));
@@ -223,6 +224,7 @@ try
             if (!headers.ContainsKey("Cache-Control")) headers.CacheControl = "no-store";
             headers["X-Content-Type-Options"] = "nosniff";
             headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
+            DenyFraming(headers);
             return Task.CompletedTask;
         });
         return next(context);
@@ -257,6 +259,13 @@ static RateLimitPartition<string> FixedWindowByIp(HttpContext http, int permitLi
     RateLimitPartition.GetFixedWindowLimiter(
         http.Connection.RemoteIpAddress?.ToString() ?? "unknown",
         _ => new FixedWindowRateLimiterOptions { PermitLimit = permitLimit, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 });
+
+// Chặn trang khác nhúng portal vào iframe (lừa khách bấm) — chỉ cho chính portal nhúng (in đơn).
+static void DenyFraming(IHeaderDictionary headers)
+{
+    headers["X-Frame-Options"] = "SAMEORIGIN";
+    headers.ContentSecurityPolicy = "frame-ancestors 'self'";
+}
 
 // Migrate (nếu bật) rồi seed — chạy theo thứ tự Order của từng module.
 static async Task RunStartupTasksAsync(IServiceProvider services, CancellationToken ct)

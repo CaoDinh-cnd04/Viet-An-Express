@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Controller, get, useFieldArray, useFormContext, useWatch } from 'react-hook-form';
 import { Button, Card, Icon, Notice, useToast } from '@/shared/ui';
 import { useI18n } from '@/shared/i18n';
@@ -28,7 +28,7 @@ const NUM_COLS = [
  */
 export function PackagesTable({ onPackagesInput }: { onPackagesInput: () => void }) {
   const { t } = useI18n();
-  const { control, register, setValue, getValues, formState } = useFormContext<CreateOrderValues>();
+  const { control, register, setValue, formState } = useFormContext<CreateOrderValues>();
   const { fields, append, remove } = useFieldArray({ control, name: 'packages' });
   const packages = useWatch({ control, name: 'packages' }) ?? [];
   const carrier = useWatch({ control, name: 'service.carrier' });
@@ -41,12 +41,6 @@ export function PackagesTable({ onPackagesInput }: { onPackagesInput: () => void
   // Tổng SL các dòng kiện ≠ số kiện dự kiến (báo khi bấm Tạo đơn / Tiếp tục)
   const qtyMismatch = err('packages.root');
   const piecesDiffer = String(summary.pieces) !== String(Number(declaredPieces) || '');
-  // Tổng số kiện tự cộng theo SL các dòng (thêm / xóa / sửa SL đều cập nhật) — ô tổng chỉ đọc.
-  useEffect(() => {
-    const total = summary.pieces > 0 ? String(summary.pieces) : '';
-    if (getValues('shipment.pieces') !== total)
-      setValue('shipment.pieces', total, { shouldDirty: true, shouldValidate: formState.isSubmitted });
-  }, [summary.pieces, getValues, setValue, formState.isSubmitted]);
   const reg = (path: `packages.${number}.${'qty' | 'packaging' | 'length' | 'width' | 'height' | 'weight'}`) =>
     register(path, { onChange: onPackagesInput });
   const { data: categories = [] } = useCategories();
@@ -68,10 +62,8 @@ export function PackagesTable({ onPackagesInput }: { onPackagesInput: () => void
               type="number"
               min={1}
               step={1}
-              readOnly
-              tabIndex={-1}
               aria-invalid={err('shipment.pieces') ? true : undefined}
-              title={err('shipment.pieces') ? t(err('shipment.pieces')!) : t('Tự cộng theo SL các dòng kiện')}
+              title={err('shipment.pieces') ? t(err('shipment.pieces')!) : undefined}
               className={cx(styles.cell, err('shipment.pieces') && styles.cellInvalid)}
               {...register('shipment.pieces')}
             />

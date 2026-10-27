@@ -1,16 +1,23 @@
-import { trackingLink, vaTrackingLink } from '@/shared/config/domain';
+import { useSession } from '@/features/auth';
+import { customerTrackingUrl, MYTRACKING_URL } from '@/features/mytracking';
+import { vaTrackingLink } from '@/shared/config/domain';
 import { useI18n } from '@/shared/i18n';
 import { useCopyToClipboard } from '@/shared/lib/useCopyToClipboard';
 import { Icon } from '@/shared/ui';
 import styles from './TrackingLinks.module.css';
 
-/** VA Track (thương hiệu Việt An) & Your Track (thương hiệu đại lý) — mở link hoặc sao chép. */
-export function TrackingLinks({ bill }: { bill: string }) {
+/**
+ * VA Track (thương hiệu Việt An) & Your Track (trang MyTracking của khách:
+ * {MyTracking}/tracking/{mã khách}/{số bill}?ref={mã REF}) — mở link hoặc sao chép.
+ */
+export function TrackingLinks({ bill, refNo }: { bill: string; refNo?: string | null }) {
   const { t } = useI18n();
   const copy = useCopyToClipboard();
+  const session = useSession();
+  const customerCode = session.data?.status === 'authenticated' ? session.data.user.customerCode : '';
   const links = [
     { label: 'VA Track', url: vaTrackingLink(bill) },
-    { label: 'Your Track', url: trackingLink(bill, true) }
+    ...(customerCode ? [{ label: 'Your Track', url: customerTrackingUrl(MYTRACKING_URL, customerCode, bill, refNo ?? '') }] : [])
   ];
 
   return (

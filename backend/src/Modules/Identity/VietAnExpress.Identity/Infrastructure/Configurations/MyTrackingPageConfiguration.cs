@@ -5,7 +5,7 @@ using VietAnExpress.SharedKernel.Persistence;
 
 namespace VietAnExpress.Identity.Infrastructure.Configurations;
 
-/// <summary>Hai bảng MyTracking có sẵn của hệ thống cũ; các cột portal bổ sung do migration chuyển dữ liệu quản lý.</summary>
+/// <summary>Giữ cấu trúc bảng gốc: chuỗi tối đa 250 ký tự, ảnh lưu đường dẫn.</summary>
 internal sealed class MyTrackingPageConfiguration : IEntityTypeConfiguration<MyTrackingPage>
 {
     public void Configure(EntityTypeBuilder<MyTrackingPage> b)
@@ -14,28 +14,25 @@ internal sealed class MyTrackingPageConfiguration : IEntityTypeConfiguration<MyT
         b.HasKey(x => x.Id);
         b.Property(x => x.Id).HasColumnName("ID").UseIdentityColumn();
         b.Property(x => x.CustomerId).HasColumnName("CustomerID");
-        b.Property(x => x.Slug).HasColumnName("Duong_Dan").HasMaxLength(MyTrackingPage.SlugMaxLength).IsUnicode(false);
-        b.Property(x => x.Title).HasColumnName("UuDai_TieuDe");
-        b.Property(x => x.Description).HasColumnName("UuDai_NoiDung");
-        b.Property(x => x.CompanyName).HasColumnName("CompanyName");
-        b.Property(x => x.Address).HasColumnName("Address");
-        b.Property(x => x.Phone).HasColumnName("Tel");
-        b.Property(x => x.Logo).HasColumnName("Logo");
-        b.Property(x => x.Facebook).HasColumnName("CongTruyenThong_01");
-        b.Property(x => x.Instagram).HasColumnName("CongTruyenThong_02");
-        b.Property(x => x.X).HasColumnName("CongTruyenThong_03");
-        b.Property(x => x.Zalo).HasColumnName("CongTinNhan_01");
-        b.Property(x => x.WhatsApp).HasColumnName("CongTinNhan_02");
-        b.Property(x => x.Background).HasColumnName("Hinh_Nen");
-        b.Property(x => x.ExtraConfigJson).HasColumnName("Cau_Hinh_Bo_Sung");
-        b.Property(x => x.IsPublished).HasColumnName("Da_Xuat_Ban");
-        b.Property(x => x.CreateDate).HasColumnType("datetime").HasDefaultValueSql("GETDATE()");
-        b.Property(x => x.ModifyDate).HasColumnType("datetime");
-        b.Ignore(x => x.UpdatedAt);
+        b.Property(x => x.Title).HasColumnName("UuDai_TieuDe").HasMaxLength(MyTrackingChannels.ValueMaxLength);
+        b.Property(x => x.Description).HasColumnName("UuDai_NoiDung").HasMaxLength(MyTrackingChannels.ValueMaxLength);
+        b.Property(x => x.CompanyName).HasColumnName("CompanyName").HasMaxLength(MyTrackingChannels.ValueMaxLength);
+        b.Property(x => x.Address).HasColumnName("Address").HasMaxLength(MyTrackingChannels.ValueMaxLength);
+        b.Property(x => x.Phone).HasColumnName("Tel").HasMaxLength(MyTrackingChannels.ValueMaxLength);
+        b.Property(x => x.Logo).HasColumnName("Logo").HasMaxLength(MyTrackingChannels.ValueMaxLength);
+        // Cổng liên lạc / mạng xã hội: 15 + 15 ô có sẵn, ứng dụng nào ở ô nào xem MyTrackingChannels.
+        for (var i = 1; i <= MyTrackingChannels.SlotCount; i++)
+        {
+            b.Property<string?>($"CongTinNhan{i:00}").HasColumnName($"CongTinNhan_{i:00}").HasMaxLength(MyTrackingChannels.ValueMaxLength);
+            b.Property<string?>($"CongTruyenThong{i:00}").HasColumnName($"CongTruyenThong_{i:00}").HasMaxLength(MyTrackingChannels.ValueMaxLength);
+        }
+        b.Property(x => x.Email).HasColumnName("Email").HasMaxLength(MyTrackingChannels.ValueMaxLength);
+        b.Property(x => x.Website).HasColumnName("Website").HasMaxLength(MyTrackingChannels.ValueMaxLength);
+        b.Property(x => x.Color01).HasColumnName("Color_01").HasMaxLength(MyTrackingChannels.ValueMaxLength);
+        b.Property(x => x.Color02).HasColumnName("Color_02").HasMaxLength(MyTrackingChannels.ValueMaxLength);
+        b.Property(x => x.Background).HasColumnName("Str1").HasMaxLength(MyTrackingChannels.ValueMaxLength);
         b.Ignore(x => x.ConfigJson);
 
-        b.HasIndex(x => x.CustomerId).IsUnique().HasDatabaseName("UX_TCustomer_MyTracking_CustomerID");
-        b.HasIndex(x => x.Slug).IsUnique().HasFilter("[Duong_Dan] IS NOT NULL").HasDatabaseName("UX_TCustomer_MyTracking_Duong_Dan");
         b.HasMany(x => x.Banners).WithOne().HasForeignKey(x => x.MyTrackingId).OnDelete(DeleteBehavior.ClientCascade);
     }
 }
@@ -49,12 +46,11 @@ internal sealed class MyTrackingBannerConfiguration : IEntityTypeConfiguration<M
         b.Property(x => x.Id).HasColumnName("ID").UseIdentityColumn();
         b.Property(x => x.MyTrackingId).HasColumnName("MyTrackingID");
         b.Property(x => x.CustomerId).HasColumnName("CustomerID");
-        b.Property(x => x.ImageKey).HasColumnName("Str1");
-        b.Property(x => x.Source).HasColumnName("Url_Hinh");
-        b.Property(x => x.Link).HasColumnName("Link");
-        b.Property(x => x.Title).HasColumnName("Str2");
-        b.Property(x => x.ButtonText).HasColumnName("Str3");
-        b.Property(x => x.ExtraConfigJson).HasColumnName("Cau_Hinh_Bo_Sung");
-        b.HasIndex(x => new { x.MyTrackingId, x.SortOrder }).HasDatabaseName("IX_TCustomer_MyTracking_Banner_MyTrackingID_SortOrder");
+        b.Property(x => x.ImageKey).HasColumnName("Str1").HasMaxLength(MyTrackingChannels.ValueMaxLength);
+        b.Property(x => x.Source).HasColumnName("Url_Hinh").HasMaxLength(MyTrackingChannels.ValueMaxLength);
+        b.Property(x => x.Link).HasColumnName("Link").HasMaxLength(MyTrackingChannels.ValueMaxLength);
+        b.Property(x => x.Title).HasColumnName("Str2").HasMaxLength(MyTrackingChannels.ValueMaxLength);
+        b.Property(x => x.ButtonText).HasColumnName("Str3").HasMaxLength(MyTrackingChannels.ValueMaxLength);
+        foreach (var index in b.Metadata.GetIndexes().ToArray()) b.Metadata.RemoveIndex(index);
     }
 }

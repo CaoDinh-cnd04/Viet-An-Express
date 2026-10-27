@@ -21,6 +21,12 @@ internal sealed class PublicTrackingController : ApiControllerBase
     [ProducesResponseType<ApiResponse<IReadOnlyList<PublicTrackResultDto>>>(StatusCodes.Status200OK)]
     public async Task<IActionResult> Track(PublicTrackingRequest body, CancellationToken ct) =>
         OkData(await Sender.Send(new TrackShipmentsQuery(body.Bills ?? []), ct));
+
+    /// <summary>Trang MyTracking của khách (/tracking/{mã khách}/...): chỉ tìm trong đơn của khách có mã này.</summary>
+    [HttpPost("customers/{code}")]
+    [ProducesResponseType<ApiResponse<IReadOnlyList<PublicTrackResultDto>>>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> TrackForCustomer(string code, PublicTrackingRequest body, CancellationToken ct) =>
+        OkData(await Sender.Send(new TrackShipmentsQuery(body.Bills ?? [], code), ct));
 }
 
 internal sealed record PublicTrackingRequest(IReadOnlyList<string>? Bills);

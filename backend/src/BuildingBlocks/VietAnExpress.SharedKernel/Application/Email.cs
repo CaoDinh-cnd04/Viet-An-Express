@@ -1,7 +1,10 @@
 namespace VietAnExpress.SharedKernel.Application;
 
-/// <summary>Tệp đính kèm email (đã đọc vào bộ nhớ).</summary>
-public sealed record EmailAttachment(string FileName, string ContentType, byte[] Data);
+/// <summary>
+/// Tệp đính kèm email (đã đọc vào bộ nhớ). Có <see cref="ContentId"/> → ảnh nhúng trong bản HTML (tham chiếu <c>&lt;img src="cid:…"&gt;</c>),
+/// không hiện thành tệp đính kèm — trình đọc thư hiện ảnh mà không cần tải từ máy chủ.
+/// </summary>
+public sealed record EmailAttachment(string FileName, string ContentType, byte[] Data, string? ContentId = null);
 
 /// <summary>
 /// 1 email: <see cref="Body"/> chữ thuần, <see cref="HtmlBody"/> (nếu có) là bản trình bày — gửi cả 2 (multipart/alternative).

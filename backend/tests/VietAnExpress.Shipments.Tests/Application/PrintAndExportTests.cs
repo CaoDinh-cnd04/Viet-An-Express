@@ -8,6 +8,46 @@ namespace VietAnExpress.Shipments.Tests.Application;
 
 public class OrderDocumentRendererTests
 {
+    [Fact]
+    public void CMS_QR_uses_a_numeric_bill_and_keeps_the_full_quiet_zone()
+    {
+        var company = new CompanyInfo();
+        const string bill = "6179767";
+        var svg = BillA4.Qr(bill);
+        var element = System.Xml.Linq.XElement.Parse(svg);
+        using var data = QRCoder.QRCodeGenerator.GenerateQrCode(bill, QRCoder.QRCodeGenerator.ECCLevel.H);
+        var fullSize = data.ModuleMatrix.Count;
+        Assert.Equal($"0 0 {fullSize} {fullSize}", element.Attribute("viewBox")!.Value);
+        Assert.Equal("crispEdges", element.Attribute("shape-rendering")!.Value);
+        Assert.Equal(29, fullSize); // Version 1: 21 module dữ liệu + vùng trắng 4 module mỗi bên.
+        Assert.All(data.ModuleMatrix.Take(4), row => Assert.All(row.Cast<bool>(), cell => Assert.False(cell)));
+        Assert.Throws<ArgumentException>(() => BillA4.Qr(BillA4.TrackingUrl(company, bill)));
+        Assert.Throws<ArgumentException>(() => BillA4.Qr("6179767/1"));
+        var output = Environment.GetEnvironmentVariable("VIETAN_PRINT_PREVIEW_DIR");
+        if (!string.IsNullOrWhiteSpace(output))
+        {
+            Directory.CreateDirectory(output);
+            var model = new OrderPrintModel(Order(), [new PrintItem("METAL SIGN LOGO", 1, "PCS", 8, null, "Vietnam")], [new PrintPackage(1, 32, 54, 23, 8)]);
+            File.WriteAllText(Path.Combine(output, "bill-a4.html"), Render(PrintDocs.BillA4, model));
+            File.WriteAllText(Path.Combine(output, "label-a6.html"), Render(PrintDocs.LabelA6, model));
+            File.WriteAllText(Path.Combine(output, "qr.svg"), BillA4.Qr(model.Bill));
+            File.WriteAllText(Path.Combine(output, "qr-expected.txt"), model.Bill);
+        }
+    }
+
+    [Theory]
+    [InlineData(PrintDocs.BillA4)]
+    [InlineData(PrintDocs.LabelA6)]
+    public void All_printed_QRs_encode_the_same_bill_as_the_main_barcode(string doc)
+    {
+        var order = Order(pieces: 2);
+        var html = Render(doc, new OrderPrintModel(order, []));
+        var expected = BillA4.Qr(order.OrderNumber!.Value.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        var groups = System.Text.RegularExpressions.Regex.Matches(html, "<div class=\"qr-frame\">(.*?)</div>", System.Text.RegularExpressions.RegexOptions.Singleline);
+        Assert.NotEmpty(groups);
+        foreach (System.Text.RegularExpressions.Match group in groups) Assert.Equal(expected, group.Groups[1].Value);
+    }
+
     private static readonly CompanyInfo Company = new();
     private static readonly DateTime Now = new(2026, 9, 29, 14, 30, 0);
 
@@ -22,6 +62,14 @@ public class OrderDocumentRendererTests
 
     private static string Render(string doc, OrderPrintModel model) =>
         OrderDocumentRenderer.Render(doc, [model], Company, Now);
+
+    [Fact]
+    public void Ngay_gio_nguoi_gui_lay_gio_in_bill()
+    {
+        Assert.Equal("29/09/2026 14:30", BillA4.SenderDateTime(new DateTime(2026, 9, 29), Now));
+        Assert.Equal("29/09/2026 14:30", BillA4.SenderDateTime(null, Now));
+        Assert.Equal("25/09/2026 14:30", BillA4.SenderDateTime(new DateTime(2026, 9, 25), Now)); // in lại khác ngày: ngày tạo đơn + giờ in
+    }
 
     [Theory]
     [InlineData(PrintDocs.BillA4)]
@@ -62,7 +110,7 @@ public class OrderDocumentRendererTests
         Assert.Contains("SHIPPING MARK", html);
         Assert.Contains("90000001/2", html);
         Assert.Contains(">GB<", html);
-        Assert.Contains("29/09/2026", html);
+        Assert.Contains("29/09/2026 14:30", html); // ô chữ ký người gửi: ngày + giờ in
         Assert.Contains("Liên 1: người gửi lưu", html);
         Assert.Contains("Liên 2: lưu bưu cục gốc", html);
         Assert.Contains("Liên 3: lưu bưu cục Phát", html);
@@ -70,11 +118,26 @@ public class OrderDocumentRendererTests
         Assert.Contains("DHL-Sin", html);
         Assert.Contains("+44 20 7946 0000", html);
         Assert.Contains("40.00 USD", html);
-        Assert.Contains("2 × 50 × 40 × 30 cm", html);
-        Assert.Contains(">10<", html);  // G.W = 2 × 5
-        Assert.Contains(">24<", html);  // Vol.W = 2 × 50×40×30 / 5000
+        Assert.Contains("10.0 | 2*(50*40*30)=<b>24.0</b>", html); // TL thực | SL*(D*R*C)=TL quy đổi như hệ thống cũ
+        Assert.Contains(">10.0<", html);  // G.W = 2 × 5
+        Assert.Contains(">24.0<", html);  // Vol.W = 2 × 50×40×30 / 5000
         Assert.Contains("data:image/webp;base64,", html);
         Assert.Contains("viewBox", html); // QR tracking
+    }
+
+    [Fact]
+    public void Bill_A4_kich_thuoc_lam_tron_len_nua_kg_nhu_he_thong_cu()
+    {
+        // Mẫu hệ thống cũ: 19.5 | 1*(47*37*32)=11.5 · 13.5 | 1*(46*37*32)=11.0 → G.W 33.0, Vol.W 22.5.
+        var html = Render(PrintDocs.BillA4, new OrderPrintModel(Order(), [],
+            [new PrintPackage(1, 47, 37, 32, 19.5m), new PrintPackage(1, 46, 37, 32, 13.5m)]));
+
+        Assert.Contains("19.5 | 1*(47*37*32)=<b>11.5</b>", html);
+        Assert.Contains("13.5 | 1*(46*37*32)=<b>11.0</b>", html);
+        Assert.Contains(">33.0<", html);
+        Assert.Contains(">22.5<", html);
+        Assert.Equal(11.5m, BillA4.BillVolumeKg(new PrintPackage(1, 47, 37, 32, 0)));
+        Assert.Equal(19.5m, BillA4.BillVolumeKg(new PrintPackage(1, 60, 43, 37, 0))); // 19.09 → 19.5
     }
 
     [Theory]
@@ -132,7 +195,7 @@ public class OrderDocumentRendererTests
         Assert.Contains("3 / 3", html);
         Assert.Contains("90000001/3", html);
         Assert.Contains("DHL-Singapore", html);
-        Assert.Contains("size: 100mm 150mm", html);
+        Assert.Contains("size: 105mm 148mm", html);
     }
 
     [Fact]

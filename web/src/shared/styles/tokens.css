@@ -89,10 +89,26 @@
   --color-tracking-ad-caption: #d8c94a;
   --color-tracking-ad-text: #b3261e;
   --color-tracking-ad-button: #e0412f;
+  /* Nền dòng thông tin vận đơn / dòng ngày trên trang MyTracking (màu phụ thương hiệu của khách thay thế). */
+  --color-tracking-row: #f8f3e1;
   --color-social-facebook: #4a67ad;
   --color-social-instagram: #c13584;
   --color-social-zalo: #0068ff;
   --color-social-whatsapp: #25d366; /* màu thương hiệu WhatsApp */
+  /* Màu thương hiệu các cổng liên lạc / mạng xã hội trên trang MyTracking (Simple Icons). */
+  --color-social-messenger: #0866ff;
+  --color-social-wechat: #07c160;
+  --color-social-telegram: #26a5e4;
+  --color-social-viber: #7360f2;
+  --color-social-line: #00c300;
+  --color-social-snapchat: #fffc00;
+  --color-social-kakaotalk: #ffcd00;
+  --color-social-email: #5f6368;
+  --color-social-youtube: #ff0000;
+  --color-social-tiktok: #000000;
+  --color-social-x: #000000;
+  --color-social-googlemaps: #4285f4;
+  --color-social-pinterest: #bd081c;
   --color-info-soft: #e9f1fb;
   --color-warning: #9a6200;
   --color-rating: #f5a623;

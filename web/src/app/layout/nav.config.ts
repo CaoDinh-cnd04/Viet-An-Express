@@ -51,18 +51,19 @@ export const NAV: ReadonlyArray<NavEntry> = [
       { to: '/orders', label: 'Đơn hàng của tôi', permission: PERMISSIONS.shipmentsView }
     ]
   },
-  {
-    kind: 'group',
-    id: 'sales',
-    label: 'Dịch vụ & Bán hàng',
-    short: 'Bán hàng',
-    icon: 'bag',
-    children: [
-      { to: '/pricing', label: 'Giá & gợi ý dịch vụ' },
-      { to: '/ecommerce', label: 'E-commerce', permission: PERMISSIONS.ecommerceView },
-      { to: '/ecommerce/orders', label: 'Đơn hàng E-com', permission: PERMISSIONS.ecommerceView }
-    ]
-  },
+  // Tạm ẩn nhóm "Dịch vụ & Bán hàng" khỏi menu (route /pricing, /ecommerce vẫn giữ) — bỏ comment để hiện lại.
+  // {
+  //   kind: 'group',
+  //   id: 'sales',
+  //   label: 'Dịch vụ & Bán hàng',
+  //   short: 'Bán hàng',
+  //   icon: 'bag',
+  //   children: [
+  //     { to: '/pricing', label: 'Giá & gợi ý dịch vụ' },
+  //     { to: '/ecommerce', label: 'E-commerce', permission: PERMISSIONS.ecommerceView },
+  //     { to: '/ecommerce/orders', label: 'Đơn hàng E-com', permission: PERMISSIONS.ecommerceView }
+  //   ]
+  // },
   {
     kind: 'group',
     id: 'support',
@@ -70,7 +71,7 @@ export const NAV: ReadonlyArray<NavEntry> = [
     short: 'Hỗ trợ',
     icon: 'help',
     children: [
-      { to: '/troubles', label: 'Hỗ trợ & sự cố', badge: 'troubles' },
+      { to: '/troubles', label: 'Hỗ trợ & góp ý', badge: 'troubles' },
       { to: '/notifications', label: 'Thông báo', badge: 'notifications' }
     ]
   },

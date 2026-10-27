@@ -1,5 +1,6 @@
 import { useI18n } from '@/shared/i18n';
 import { Card, LinkButton, PageHeader } from '@/shared/ui';
+import { TermsButton } from '@/features/terms';
 import { useDrafts } from '../api';
 import { DraftsTable } from '../components/DraftsTable';
 import styles from './DraftsPage.module.css';
@@ -13,7 +14,12 @@ export default function DraftsPage() {
       <PageHeader
         title="Đơn nháp & chưa in"
         description="Đơn chỉ được cấp mã bill Việt An khi bấm In. Sau khi in, đơn được khóa và chuyển sang Đơn hàng của tôi."
-        actions={<LinkButton to="/orders/new" variant="primary" size="sm">{t('Tạo đơn mới')}</LinkButton>}
+        actions={
+          <>
+            <TermsButton />
+            <LinkButton to="/orders/new" variant="primary" size="sm">{t('Tạo đơn mới')}</LinkButton>
+          </>
+        }
       />
       <Card flush>
         <DraftsTable />

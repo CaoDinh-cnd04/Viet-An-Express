@@ -1,134 +1,111 @@
 using System.Text.Json.Nodes;
-using System.Text.RegularExpressions;
 
 namespace VietAnExpress.Identity.Domain;
 
 /// <summary>
-/// Trang MyTracking dùng dbo.TCustomer_MyTracking và các ảnh trong dbo.TCustomer_MyTracking_Banner.
-/// Các trường có sẵn lưu vào cột tương ứng; phần JSON bổ sung giữ những thuộc tính chưa có cột.
-/// Đã xuất bản thì ai có link <c>/t/{slug}</c> cũng xem và tra cứu vận đơn được.
+/// Trang MyTracking dùng dbo.TCustomer_MyTracking và các ảnh trong dbo.TCustomer_MyTracking_Banner — mọi thông tin
+/// ghi vào cột có sẵn của bảng cũ (cổng liên lạc / mạng xã hội: xem <see cref="MyTrackingChannels"/>).
+/// Không còn cột portal tự thêm. Khách có dòng cấu hình thì ai có link <c>/tracking/{mã khách}/{số bill}</c>
+/// cũng xem và tra cứu vận đơn được (bảng cũ không có trạng thái xuất bản).
 /// </summary>
 internal sealed partial class MyTrackingPage
 {
-    public const int SlugMinLength = 3;
-    public const int SlugMaxLength = 60;
     /// <summary>Tối đa 5 ảnh quảng cáo + logo + nền, mỗi ảnh ≤ 200 KB (base64 ~ 270 KB) → giới hạn 2 MB.</summary>
     public const int ConfigMaxBytes = 2 * 1024 * 1024;
 
     private MyTrackingPage() { } // EF Core
 
-    public MyTrackingPage(long customerId, string slug, string configJson, bool isPublished, DateTime now)
+    public MyTrackingPage(long customerId, string configJson)
     {
         CustomerId = customerId;
-        CreateDate = now;
-        Update(slug, configJson, isPublished, now);
-        ModifyDate = null;
+        Update(configJson);
     }
 
     public int Id { get; private set; }
     /// <summary>dbo.TCustomer.CustomerID — mỗi khách có một trang.</summary>
     public long CustomerId { get; private set; }
-    /// <summary>Đường dẫn công khai /t/{slug}: chữ thường, số, gạch ngang.</summary>
-    public string? Slug { get; private set; }
     public string? Title { get; private set; }
     public string? Description { get; private set; }
     public string? CompanyName { get; private set; }
     public string? Address { get; private set; }
     public string? Phone { get; private set; }
     public string? Logo { get; private set; }
-    public string? Facebook { get; private set; }
-    public string? Instagram { get; private set; }
-    public string? X { get; private set; }
-    public string? Zalo { get; private set; }
-    public string? WhatsApp { get; private set; }
+    /// <summary>Website trang home (cột Website) — nút Home và logo trên trang tracking.</summary>
+    public string? Website { get; private set; }
+    /// <summary>Màu thương hiệu / màu phụ (Color_01 / Color_02), dạng #rrggbb.</summary>
+    public string? Color01 { get; private set; }
+    public string? Color02 { get; private set; }
+    /// <summary>Cổng liên lạc Email (cột Email).</summary>
+    public string? Email { get; private set; }
+    /// <summary>Đường dẫn ảnh nền/banner, tối đa 250 ký tự (Str1, vd "/Upload/Banner/…jpg").</summary>
     public string? Background { get; private set; }
-    public string? ExtraConfigJson { get; private set; }
-    public bool IsPublished { get; private set; }
-    public DateTime? CreateDate { get; private set; }
-    public DateTime? ModifyDate { get; private set; }
     public List<MyTrackingBanner> Banners { get; private set; } = [];
 
-    public DateTime? UpdatedAt => ModifyDate ?? CreateDate;
-
-    public string ConfigJson
+    /// <summary>Cấu hình dạng JSON như frontend dùng (features/mytracking/schema.ts), dựng từ các cột.</summary>
+    public string ConfigJson => new JsonObject
     {
-        get
+        ["title"] = Title ?? "",
+        ["description"] = Description ?? "",
+        ["background"] = Background ?? "",
+        ["brand"] = new JsonObject
         {
-            var root = MyTrackingJson.Object(ExtraConfigJson);
-            MyTrackingJson.Put(root, "title", Title);
-            MyTrackingJson.Put(root, "description", Description);
-            MyTrackingJson.Put(root, "background", Background);
-            if (root["brand"] is JsonObject || new[] { CompanyName, Address, Phone, Logo, Facebook, Instagram, X, Zalo, WhatsApp }.Any(v => v is not null))
-            {
-                var brand = root["brand"] as JsonObject ?? new JsonObject();
-                MyTrackingJson.Put(brand, "companyName", CompanyName);
-                MyTrackingJson.Put(brand, "address", Address);
-                MyTrackingJson.Put(brand, "phone", Phone);
-                MyTrackingJson.Put(brand, "logo", Logo);
-                MyTrackingJson.Put(brand, "facebook", Facebook);
-                MyTrackingJson.Put(brand, "instagram", Instagram);
-                MyTrackingJson.Put(brand, "x", X);
-                MyTrackingJson.Put(brand, "zalo", Zalo);
-                MyTrackingJson.Put(brand, "whatsapp", WhatsApp);
-                // Bản ghi do phần mềm cũ tạo có thể chỉ có một vài trường thương hiệu.
-                foreach (var key in new[] { "companyName", "address", "phone", "logo", "facebook", "instagram", "x", "zalo", "whatsapp" })
-                    if (!brand.ContainsKey(key)) brand[key] = "";
-                if (root["brand"] is not JsonObject) root["brand"] = brand;
-            }
-            if (Banners.Count > 0 || root["images"] is JsonArray { Count: 0 })
-                root["images"] = new JsonArray(Banners.OrderBy(b => b.SortOrder).ThenBy(b => b.Id)
-                    .Select(b => (JsonNode)b.Config()).ToArray());
-            return root.ToJsonString();
-        }
-    }
+            ["companyName"] = CompanyName ?? "",
+            ["address"] = Address ?? "",
+            ["phone"] = Phone ?? "",
+            ["logo"] = Logo ?? "",
+            ["website"] = Website ?? "",
+            ["primaryColor"] = Color01 ?? "",
+            ["secondaryColor"] = Color02 ?? "",
+            ["contacts"] = MyTrackingChannels.Build(
+                MyTrackingChannels.ContactSlots.Select((type, i) => (type, Slot(false, i + 1))).Append((MyTrackingChannels.Email, Email))),
+            ["socials"] = MyTrackingChannels.Build(MyTrackingChannels.SocialSlots.Select((type, i) => (type, Slot(true, i + 1))))
+        },
+        ["images"] = new JsonArray(Banners.Where(b => !string.IsNullOrWhiteSpace(b.Source))
+            .OrderBy(b => b.SortOrder).ThenBy(b => b.Id).Select(b => (JsonNode)b.Config()).ToArray())
+    }.ToJsonString();
 
-    public void Update(string slug, string configJson, bool isPublished, DateTime now)
+    public void Update(string configJson)
     {
-        Slug = slug;
         var root = MyTrackingJson.Object(configJson);
-        Title = MyTrackingJson.Take(root, "title");
-        Description = MyTrackingJson.Take(root, "description");
-        Background = MyTrackingJson.Take(root, "background");
+        Title = MyTrackingJson.Text(root, "title");
+        Description = MyTrackingJson.Text(root, "description");
+        Background = MyTrackingJson.Text(root, "background");
         var brand = root["brand"] as JsonObject;
-        CompanyName = MyTrackingJson.Take(brand, "companyName");
-        Address = MyTrackingJson.Take(brand, "address");
-        Phone = MyTrackingJson.Take(brand, "phone");
-        Logo = MyTrackingJson.Take(brand, "logo");
-        Facebook = MyTrackingJson.Take(brand, "facebook");
-        Instagram = MyTrackingJson.Take(brand, "instagram");
-        X = MyTrackingJson.Take(brand, "x");
-        Zalo = MyTrackingJson.Take(brand, "zalo");
-        WhatsApp = MyTrackingJson.Take(brand, "whatsapp");
-        Banners.Clear();
-        if (root["images"] is JsonArray images && images.All(i => i is JsonObject))
+        CompanyName = MyTrackingJson.Text(brand, "companyName");
+        Address = MyTrackingJson.Text(brand, "address");
+        Phone = MyTrackingJson.Text(brand, "phone");
+        Logo = MyTrackingJson.Text(brand, "logo");
+        Website = Blank(MyTrackingJson.Text(brand, "website"));
+        Color01 = Blank(MyTrackingJson.Text(brand, "primaryColor"));
+        Color02 = Blank(MyTrackingJson.Text(brand, "secondaryColor"));
+        if (brand?["contacts"] is JsonArray contacts)
         {
-            foreach (var image in images.Cast<JsonObject>())
-                Banners.Add(new MyTrackingBanner(CustomerId, Banners.Count, image));
-            root["images"] = new JsonArray();
+            Email = null;
+            for (var slot = 1; slot <= MyTrackingChannels.SlotCount; slot++) SetSlot(false, slot, null);
+            foreach (var item in contacts.OfType<JsonObject>())
+            {
+                var (type, value) = (MyTrackingChannels.Type(item), Blank(MyTrackingChannels.Value(item)));
+                if (type == MyTrackingChannels.Email) Email = value;
+                else if (Array.IndexOf(MyTrackingChannels.ContactSlots, type) is var i and >= 0) SetSlot(false, i + 1, value);
+            }
         }
-        ExtraConfigJson = root.ToJsonString();
-        IsPublished = isPublished;
-        ModifyDate = now;
+        if (brand?["socials"] is JsonArray socials)
+        {
+            for (var slot = 1; slot <= MyTrackingChannels.SlotCount; slot++) SetSlot(true, slot, null);
+            foreach (var item in socials.OfType<JsonObject>())
+                if (Array.IndexOf(MyTrackingChannels.SocialSlots, MyTrackingChannels.Type(item)) is var i and >= 0)
+                    SetSlot(true, i + 1, Blank(MyTrackingChannels.Value(item)));
+        }
+        Banners.Clear();
+        if (root["images"] is JsonArray images)
+            foreach (var image in images.OfType<JsonObject>())
+                Banners.Add(new MyTrackingBanner(CustomerId, Banners.Count, image));
     }
 
-    public static bool IsValidSlug(string slug) =>
-        slug.Length is >= SlugMinLength and <= SlugMaxLength && SlugRegex().IsMatch(slug);
-
-    /// <summary>Gợi ý đường dẫn từ mã khách: "SaigonbayHN" → "saigonbayhn"; ký tự khác chữ / số thành "-".</summary>
-    public static string SuggestSlug(string customerCode)
-    {
-        var slug = NonSlugChars().Replace(customerCode.Trim().ToLowerInvariant(), "-").Trim('-');
-        if (slug.Length > SlugMaxLength) slug = slug[..SlugMaxLength].TrimEnd('-');
-        return slug.Length >= SlugMinLength ? slug : $"shop-{slug}".TrimEnd('-');
-    }
-
-    [GeneratedRegex("^[a-z0-9]+(-[a-z0-9]+)*$")]
-    private static partial Regex SlugRegex();
-
-    [GeneratedRegex("[^a-z0-9]+")]
-    private static partial Regex NonSlugChars();
+    private static string? Blank(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }
 
+/// <summary>1 ảnh quảng cáo: Str1 = mã ảnh, Url_Hinh = ảnh, Link = link đích, Str2 = tiêu đề, Str3 = chữ trên nút.</summary>
 internal sealed class MyTrackingBanner
 {
     private MyTrackingBanner() { }
@@ -137,13 +114,11 @@ internal sealed class MyTrackingBanner
     {
         CustomerId = customerId;
         SortOrder = sortOrder;
-        var root = (JsonObject)image.DeepClone();
-        ImageKey = MyTrackingJson.Take(root, "id");
-        Source = MyTrackingJson.Take(root, "src");
-        Link = MyTrackingJson.Take(root, "linkUrl");
-        Title = MyTrackingJson.Take(root, "title");
-        ButtonText = MyTrackingJson.Take(root, "buttonText");
-        ExtraConfigJson = root.ToJsonString();
+        ImageKey = MyTrackingJson.Text(image, "id");
+        Source = MyTrackingJson.Text(image, "src");
+        Link = MyTrackingJson.Text(image, "linkUrl");
+        Title = MyTrackingJson.Text(image, "title");
+        ButtonText = MyTrackingJson.Text(image, "buttonText");
     }
 
     public int Id { get; private set; }
@@ -155,33 +130,38 @@ internal sealed class MyTrackingBanner
     public string? Link { get; private set; }
     public string? Title { get; private set; }
     public string? ButtonText { get; private set; }
-    public string? ExtraConfigJson { get; private set; }
 
-    public JsonObject Config()
+    public JsonObject Config() => new()
     {
-        var root = MyTrackingJson.Object(ExtraConfigJson);
-        MyTrackingJson.Put(root, "id", ImageKey ?? (ExtraConfigJson is null ? Id.ToString(System.Globalization.CultureInfo.InvariantCulture) : null));
-        MyTrackingJson.Put(root, "src", Source);
-        MyTrackingJson.Put(root, "linkUrl", Link);
-        MyTrackingJson.Put(root, "title", Title);
-        MyTrackingJson.Put(root, "buttonText", ButtonText);
-        return root;
-    }
+        ["id"] = ImageKey ?? Id.ToString(System.Globalization.CultureInfo.InvariantCulture),
+        ["src"] = Source ?? "",
+        ["linkUrl"] = Link ?? "",
+        ["title"] = Title ?? "",
+        ["buttonText"] = ButtonText ?? ""
+    };
 }
 
 internal static class MyTrackingJson
 {
     public static JsonObject Object(string? json) => string.IsNullOrWhiteSpace(json) ? new() : JsonNode.Parse(json) as JsonObject ?? new();
 
-    public static string? Take(JsonObject? root, string key)
-    {
-        if (root?[key] is not JsonValue value || !value.TryGetValue<string>(out var text)) return null;
-        root.Remove(key);
-        return text;
-    }
+    /// <summary>Giá trị chuỗi của khóa; không có / không phải chuỗi → null.</summary>
+    public static string? Text(JsonObject? root, string key) =>
+        root?[key] is JsonValue value && value.TryGetValue<string>(out var text) ? text : null;
 
-    public static void Put(JsonObject root, string key, string? value)
+    /// <summary>
+    /// Tên công ty trên trang MyTracking luôn theo hồ sơ khách (TCustomer.InvoiceCustomerName, trống thì CustomerName), khách không tự sửa:
+    /// ghi đè <c>brand.companyName</c>; tên rỗng thì giữ nguyên JSON.
+    /// </summary>
+    public static string WithCompanyName(string json, string? companyName)
     {
-        if (value is not null) root[key] = value;
+        var name = companyName?.Trim();
+        if (string.IsNullOrEmpty(name)) return json;
+        // Cột CompanyName của bảng cũ chỉ 250 ký tự; InvoiceCustomerName có thể dài tới 500.
+        if (name.Length > MyTrackingChannels.ValueMaxLength) name = name[..MyTrackingChannels.ValueMaxLength].TrimEnd();
+        var root = Object(json);
+        if (root["brand"] is not JsonObject brand) root["brand"] = brand = new JsonObject();
+        brand["companyName"] = name;
+        return root.ToJsonString();
     }
 }

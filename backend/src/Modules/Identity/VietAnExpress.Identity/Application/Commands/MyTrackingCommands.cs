@@ -12,76 +12,102 @@ using VietAnExpress.SharedKernel.Results;
 
 namespace VietAnExpress.Identity.Application.Commands;
 
-// Trang MyTracking của khách — admin cấu hình & xuất bản; ai có link /t/{slug} cũng xem được khi đã xuất bản.
+// Trang MyTracking của khách — admin cấu hình; khách có dòng cấu hình thì ai có link /tracking/{mã khách}/{số bill}?ref=... cũng xem được.
 
 internal sealed record GetMyTrackingQuery : IRequest<Result<MyTrackingDto>>;
 
 /// <param name="Config">Cấu hình dạng JSON object như frontend gửi (backend chỉ kiểm tra là object và ≤ 2 MB).</param>
-internal sealed record SaveMyTrackingCommand(string Slug, bool Published, JsonElement Config) : IRequest<Result<MyTrackingDto>>;
+internal sealed record SaveMyTrackingCommand(JsonElement Config) : IRequest<Result<MyTrackingDto>>;
 
-internal sealed record GetPublicMyTrackingQuery(string Slug) : IRequest<Result<PublicMyTrackingDto>>;
+/// <summary>Trang theo mã khách (TCustomer.CustomerCode) — link /tracking/{mã khách}/....</summary>
+internal sealed record GetCustomerMyTrackingQuery(string CustomerCode) : IRequest<Result<PublicMyTrackingDto>>;
 
-internal sealed class MyTrackingHandlers(IdentityDbContext db, ICustomersApi customers, ICurrentUser user, TimeProvider clock) :
+internal sealed class MyTrackingHandlers(IdentityDbContext db, ICustomersApi customers, ICurrentUser user, MyTrackingImageStore images) :
     IRequestHandler<GetMyTrackingQuery, Result<MyTrackingDto>>,
     IRequestHandler<SaveMyTrackingCommand, Result<MyTrackingDto>>,
-    IRequestHandler<GetPublicMyTrackingQuery, Result<PublicMyTrackingDto>>
+    IRequestHandler<GetCustomerMyTrackingQuery, Result<PublicMyTrackingDto>>
 {
+    /// <summary>CMS cho phép (TCustomer.ViewLinkTracking = 1) — kiểm tra lại ở đây để CMS tắt là chặn ngay, không đợi token hết hạn.</summary>
+    private Task<bool> AllowedAsync(long customerId, CancellationToken ct) =>
+        db.Logins.AsNoTracking().AnyAsync(l => l.CustomerId == customerId && l.ViewLinkTracking == 1, ct);
+
     public async Task<Result<MyTrackingDto>> Handle(GetMyTrackingQuery q, CancellationToken ct)
     {
         if (user.MainAccountCustomerId() is not { } customerId) return IdentityErrors.AdminOnly;
+        if (!await AllowedAsync(customerId, ct)) return IdentityErrors.MyTrackingNotAllowed;
         var page = await db.MyTrackingPages.AsNoTracking().Include(p => p.Banners).FirstOrDefaultAsync(p => p.CustomerId == customerId, ct);
-        if (!string.IsNullOrEmpty(page?.Slug)) return ToDto(page);
-
-        // Chưa cấu hình: gợi ý đường dẫn theo mã khách, frontend dùng cấu hình mặc định.
         var customer = await customers.GetByIdAsync(customerId, ct);
-        var slug = MyTrackingPage.SuggestSlug(customer?.Code ?? customerId.ToString(System.Globalization.CultureInfo.InvariantCulture));
-        return new MyTrackingDto(slug, false, page is null ? null : new RawJson(page.ConfigJson), page?.UpdatedAt);
+        // Chưa cấu hình: config null — frontend dùng cấu hình mặc định.
+        return page is null
+            ? new MyTrackingDto(null, CustomerCode(customerId, customer), customer?.TrackingName ?? "")
+            : ToDto(page, customerId, customer);
     }
 
     public async Task<Result<MyTrackingDto>> Handle(SaveMyTrackingCommand cmd, CancellationToken ct)
     {
         if (user.MainAccountCustomerId() is not { } customerId) return IdentityErrors.AdminOnly;
+        if (!await AllowedAsync(customerId, ct)) return IdentityErrors.MyTrackingNotAllowed;
         if (cmd.Config.ValueKind != JsonValueKind.Object) return IdentityErrors.InvalidTrackingConfig;
         var json = cmd.Config.GetRawText();
         if (Encoding.UTF8.GetByteCount(json) > MyTrackingPage.ConfigMaxBytes) return IdentityErrors.InvalidTrackingConfig;
+        // Tên công ty không do khách sửa: luôn lưu theo hồ sơ khách.
+        var customer = await customers.GetByIdAsync(customerId, ct);
+        json = MyTrackingJson.WithCompanyName(json, customer?.TrackingName);
+        try { json = await images.PrepareAsync(json, ct); }
+        catch (FormatException) { return IdentityErrors.InvalidTrackingConfig; }
+        if (MyTrackingChannels.HasTooLongValue(json)) return IdentityErrors.InvalidTrackingConfig;
+        return await db.Database.CreateExecutionStrategy().ExecuteAsync(() => SaveAsync(customerId, customer, json, ct));
+    }
 
-        var slug = cmd.Slug.Trim().ToLowerInvariant();
-        // 1 truy vấn: trang của khách này + trang (nếu có) đang giữ đường dẫn muốn dùng — tối đa 2 dòng.
-        var rows = await db.MyTrackingPages.Include(p => p.Banners).Where(p => p.CustomerId == customerId || p.Slug == slug).ToListAsync(ct);
-        if (rows.Any(p => p.Slug == slug && p.CustomerId != customerId)) return IdentityErrors.SlugTaken;
-
-        var now = VietnamTime.Now(clock);
-        var page = rows.FirstOrDefault(p => p.CustomerId == customerId);
+    private async Task<Result<MyTrackingDto>> SaveAsync(long customerId, CustomerSummary? customer, string json, CancellationToken ct)
+    {
+        // Bảng gốc chỉ có khóa chính. Khóa trong transaction để hai tab không tạo trùng cấu hình của một khách.
+        db.ChangeTracker.Clear();
+        await using var transaction = db.Database.IsSqlServer() ? await db.Database.BeginTransactionAsync(ct) : null;
+        var pages = db.Database.IsSqlServer()
+            ? db.MyTrackingPages.FromSqlInterpolated($"SELECT * FROM dbo.TCustomer_MyTracking WITH (UPDLOCK, HOLDLOCK) WHERE CustomerID = {customerId}")
+            : db.MyTrackingPages.Where(p => p.CustomerId == customerId);
+        var page = await pages.Include(p => p.Banners).FirstOrDefaultAsync(ct);
         if (page is null)
-            db.MyTrackingPages.Add(page = new MyTrackingPage(customerId, slug, json, cmd.Published, now));
+            db.MyTrackingPages.Add(page = new MyTrackingPage(customerId, json));
         else
         {
             // Khóa ngoại cũ cho NULL: xóa rõ các ảnh bị thay thế, tránh để lại dòng mồ côi.
             db.MyTrackingBanners.RemoveRange(page.Banners);
-            page.Update(slug, json, cmd.Published, now);
+            page.Update(json);
         }
         try
         {
             await db.SaveChangesAsync(ct);
+            if (transaction is not null) await transaction.CommitAsync(ct);
         }
         catch (DbUpdateException ex) when (DbConcurrency.IsUniqueViolation(ex))
         {
-            // Khách khác vừa lấy cùng đường dẫn, hoặc chính khách này lưu lần đầu ở 2 tab cùng lúc.
+            // Tương thích database vẫn còn ràng buộc unique từ phiên bản portal trước.
             db.ChangeTracker.Clear();
-            return await db.MyTrackingPages.AnyAsync(p => p.Slug == slug && p.CustomerId != customerId, ct)
-                ? IdentityErrors.SlugTaken
-                : IdentityErrors.MyTrackingChanged;
+            return IdentityErrors.MyTrackingChanged;
         }
-        return ToDto(page);
+        return ToDto(page, customerId, customer);
     }
 
-    public async Task<Result<PublicMyTrackingDto>> Handle(GetPublicMyTrackingQuery q, CancellationToken ct)
+    public async Task<Result<PublicMyTrackingDto>> Handle(GetCustomerMyTrackingQuery q, CancellationToken ct)
     {
-        var slug = q.Slug.Trim().ToLowerInvariant();
-        if (!MyTrackingPage.IsValidSlug(slug)) return IdentityErrors.MyTrackingNotFound;
-        var page = await db.MyTrackingPages.AsNoTracking().Include(p => p.Banners).FirstOrDefaultAsync(p => p.Slug == slug && p.IsPublished, ct);
-        return page is null ? IdentityErrors.MyTrackingNotFound : new PublicMyTrackingDto(page.Slug!, new RawJson(page.ConfigJson));
+        if (await customers.GetByCodeAsync(q.CustomerCode, ct) is not { } customer) return IdentityErrors.MyTrackingNotFound;
+        var page = await db.MyTrackingPages.AsNoTracking().Include(p => p.Banners)
+            .FirstOrDefaultAsync(p => p.CustomerId == customer.Id, ct);
+        return page is null
+            ? IdentityErrors.MyTrackingNotFound
+            : new PublicMyTrackingDto(new RawJson(images.ForDisplay(MyTrackingJson.WithCompanyName(page.ConfigJson, customer.TrackingName))), customer.Code);
     }
 
-    private static MyTrackingDto ToDto(MyTrackingPage p) => new(p.Slug!, p.IsPublished, new RawJson(p.ConfigJson), p.UpdatedAt);
+    /// <summary>Mã khách dùng trong link /tracking/{mã khách}/...; khách thiếu mã thì dùng CustomerID.</summary>
+    private static string CustomerCode(long customerId, CustomerSummary? customer)
+    {
+        var code = customer?.Code?.Trim();
+        return string.IsNullOrEmpty(code) ? customerId.ToString(System.Globalization.CultureInfo.InvariantCulture) : code;
+    }
+
+    private MyTrackingDto ToDto(MyTrackingPage p, long customerId, CustomerSummary? customer) =>
+        new(new RawJson(images.ForDisplay(MyTrackingJson.WithCompanyName(p.ConfigJson, customer?.TrackingName))),
+            CustomerCode(customerId, customer), customer?.TrackingName ?? "");
 }

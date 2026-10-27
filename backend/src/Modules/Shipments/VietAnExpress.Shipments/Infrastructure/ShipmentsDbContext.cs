@@ -14,8 +14,6 @@ internal sealed class ShipmentsDbContext(DbContextOptions<ShipmentsDbContext> op
     /// <summary>Đánh dấu yêu thích / đã xóa của khách trên thư viện mặt hàng và nhóm chung (dbo.MatHangKhachHang).</summary>
     public DbSet<CatalogMark> CatalogMarks => Set<CatalogMark>();
 
-    /// <summary>Nhân viên (tài khoản con) đã tạo vận đơn (dbo.VanDonNguoiTao) — bảng phụ mới, người dùng đã đồng ý.</summary>
-
     /// <summary>Bảng vận đơn hệ thống cũ dbo.MaVanDon — không thuộc migration của module.</summary>
     public DbSet<Legacy.LegacyOrder> LegacyOrders => Set<Legacy.LegacyOrder>();
 

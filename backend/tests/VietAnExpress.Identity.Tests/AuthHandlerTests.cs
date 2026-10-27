@@ -1,6 +1,9 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Hosting;
 using Moq;
 using VietAnExpress.Customers.Contracts;
 using VietAnExpress.Identity.Application;
@@ -29,26 +32,54 @@ internal sealed class IdentityFixture : IAsyncDisposable
     public Mock<ICurrentUser> CurrentUser { get; } = new();
     public RecordingJobQueue Jobs { get; } = new();
     public FakeEmailSender Email { get; } = new();
+    private readonly string imageDirectory = Path.Combine(Path.GetTempPath(), "vietan_mytracking_" + Guid.NewGuid().ToString("N"));
+    public MyTrackingImageStore Images { get; }
+    public NotificationImageStore NotificationImages { get; }
+    public Mock<IHostEnvironment> Environment { get; } = new();
+    public RevokedTokenStore RevokedTokens { get; }
     public EmailCompany Company { get; } = new("Việt An Express", "14 Sâm Sơn, Tân Bình", "+84 909 805 845", "www.vietanexpress.com.vn", "https://portal.test");
 
     public IdentityFixture()
     {
+        var environment = Environment;
+        environment.SetupGet(e => e.ContentRootPath).Returns(imageDirectory);
+        var context = new DefaultHttpContext();
+        context.Request.Scheme = "https";
+        context.Request.Host = new HostString("portal.test");
+        Images = new MyTrackingImageStore(environment.Object, new ConfigurationBuilder().Build(), new HttpContextAccessor { HttpContext = context });
+        NotificationImages = new NotificationImageStore(environment.Object, new ConfigurationBuilder().Build());
         Tokens = new JwtTokenService(Microsoft.Extensions.Options.Options.Create(Jwt), Clock);
+        RevokedTokens = NewRevokedTokenStore();
+        LoginGuard = new LoginAttemptGuard(Clock);
         Customers.Setup(c => c.GetByIdAsync(CustomerId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new CustomerSummary(CustomerId, "SaigonbayHN", "SGB EXPRESS HN", "Đức Anh", "ops@sgb.vn", "0977714964", null, null));
+        Customers.Setup(c => c.GetByCodeAsync(It.Is<string>(code => string.Equals(code, "SaigonbayHN", StringComparison.OrdinalIgnoreCase)), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CustomerSummary(CustomerId, "SaigonbayHN", "SGB EXPRESS HN", "Đức Anh", "ops@sgb.vn", "0977714964", null, null));
+        Customers.Setup(c => c.GetAccountManagersAsync(It.IsAny<IReadOnlyCollection<long>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<long, AccountManager>()); // khách chưa phân công nhân viên
         CurrentUser.SetupGet(u => u.CustomerId).Returns(CustomerId);
         CurrentUser.Setup(u => u.HasPermission(It.IsAny<string>())).Returns(true); // tài khoản chính
-        Db.Logins.Add(new CustomerLogin(CustomerId, UserName, Password));
+        Db.Logins.Add(new CustomerLogin(CustomerId, UserName, Password, viewLinkTracking: 1)); // CMS đã mở MyTracking
         Db.Logins.Add(new CustomerLogin(200877, "chua-co-mat-khau", ""));
         Db.SaveChanges();
     }
 
     public SessionService Sessions => new(Tokens, Customers.Object, [new FakePermissions()]);
-    public LoginHandler Login => new(Db, Sessions);
-    public RefreshSessionHandler Refresh => new(Db, Tokens, Sessions, Microsoft.Extensions.Logging.Abstractions.NullLogger<RefreshSessionHandler>.Instance);
+    public LoginAttemptGuard LoginGuard { get; }
+    public LoginHandler Login => new(Db, Sessions, LoginGuard);
+    public RefreshSessionHandler Refresh => new(Db, Tokens, Sessions, RevokedTokens, Clock, Microsoft.Extensions.Logging.Abstractions.NullLogger<RefreshSessionHandler>.Instance);
+    public LogoutHandler Logout => new(Tokens, RevokedTokens);
+
+    /// <summary>Kho thu hồi mới đọc lại file App_Data — giả lập ứng dụng khởi động lại.</summary>
+    public RevokedTokenStore NewRevokedTokenStore() =>
+        new(Environment.Object, Clock, Microsoft.Extensions.Logging.Abstractions.NullLogger<RevokedTokenStore>.Instance);
     public ChangePasswordHandler ChangePassword => new(Db, Tokens, Sessions, CurrentUser.Object);
     public StaffHandlers Staff => new(Db, Sessions, CurrentUser.Object, Clock);
-    public MyTrackingHandlers MyTracking => new(Db, Customers.Object, CurrentUser.Object, Clock);
+    public MyTrackingHandlers MyTracking => new(Db, Customers.Object, CurrentUser.Object, Images);
+    public AdminNotificationHandlers AdminNotifications => new(Db, CurrentUser.Object, Customers.Object, Email, Jobs, NotificationImages, Clock, PortalConfig);
+    public IConfiguration PortalConfig { get; } = new ConfigurationBuilder()
+        .AddInMemoryCollection(new Dictionary<string, string?> { ["Company:PortalUrl"] = "https://portal.test/" }).Build();
+    public CustomerNotificationHandlers CustomerNotifications => new(Db, CurrentUser.Object, Clock);
 
     /// <summary>Giả lập request của tài khoản con (null = tài khoản chính / admin).</summary>
     public void SignInAs(long? staffId)
@@ -61,7 +92,11 @@ internal sealed class IdentityFixture : IAsyncDisposable
 
     public string StoredPassword() => Db.Logins.AsNoTracking().Single(l => l.CustomerId == CustomerId).Password!;
 
-    public ValueTask DisposeAsync() => Db.DisposeAsync();
+    public async ValueTask DisposeAsync()
+    {
+        await Db.DisposeAsync();
+        if (Directory.Exists(imageDirectory)) Directory.Delete(imageDirectory, recursive: true);
+    }
 
     private sealed class FakePermissions : IPermissionProvider
     {
@@ -142,6 +177,84 @@ public class AuthHandlerTests
 
         f.Clock.Now = f.Clock.Now.AddHours(f.Jwt.SessionRefreshTokenHours + 1);
         Assert.Equal(IdentityErrors.SessionExpired, (await f.Refresh.Handle(new RefreshSessionCommand(login.RefreshToken), Ct)).Error);
+    }
+
+    [Fact]
+    public async Task Sai_mat_khau_5_lan_thi_khoa_tam_15_phut_ke_ca_mat_khau_dung()
+    {
+        await using var f = new IdentityFixture();
+        for (var i = 0; i < LoginAttemptGuard.MaxFailures; i++)
+            Assert.Equal(IdentityErrors.InvalidCredentials, (await f.Login.Handle(new LoginCommand(IdentityFixture.UserName, "sai", false), Ct)).Error);
+
+        var locked = await f.Login.Handle(new LoginCommand(" " + IdentityFixture.UserName.ToUpperInvariant(), IdentityFixture.Password, false), Ct);
+        Assert.Equal("LOGIN_LOCKED", locked.Error.Code);
+        Assert.Contains("15 phút", locked.Error.Message);
+
+        f.Clock.Now = f.Clock.Now + LoginAttemptGuard.Lockout;
+        Assert.True((await f.Login.Handle(new LoginCommand(IdentityFixture.UserName, IdentityFixture.Password, false), Ct)).IsSuccess);
+    }
+
+    [Fact]
+    public async Task Dang_nhap_dung_thi_xoa_bo_dem_sai()
+    {
+        await using var f = new IdentityFixture();
+        for (var i = 0; i < LoginAttemptGuard.MaxFailures - 1; i++)
+            await f.Login.Handle(new LoginCommand(IdentityFixture.UserName, "sai", false), Ct);
+        Assert.True((await f.Login.Handle(new LoginCommand(IdentityFixture.UserName, IdentityFixture.Password, false), Ct)).IsSuccess);
+        Assert.Equal(IdentityErrors.InvalidCredentials, (await f.Login.Handle(new LoginCommand(IdentityFixture.UserName, "sai", false), Ct)).Error);
+        Assert.Null(f.LoginGuard.LockedFor(IdentityFixture.UserName));
+    }
+
+    [Fact]
+    public async Task Dang_xuat_thu_hoi_refresh_token_ke_ca_sau_khi_khoi_dong_lai()
+    {
+        await using var f = new IdentityFixture();
+        var login = (await f.Login.Handle(new LoginCommand(IdentityFixture.UserName, IdentityFixture.Password, true), Ct)).Value;
+        var other = (await f.Login.Handle(new LoginCommand(IdentityFixture.UserName, IdentityFixture.Password, true), Ct)).Value;
+
+        Assert.True((await f.Logout.Handle(new LogoutCommand(login.RefreshToken, null, null), Ct)).IsSuccess);
+
+        Assert.Equal(IdentityErrors.SessionExpired, (await f.Refresh.Handle(new RefreshSessionCommand(login.RefreshToken), Ct)).Error);
+        Assert.True((await f.Refresh.Handle(new RefreshSessionCommand(other.RefreshToken), Ct)).IsSuccess); // thiết bị khác không ảnh hưởng
+        Assert.True(f.NewRevokedTokenStore().IsRevoked((await f.Tokens.ReadRefreshTokenAsync(login.RefreshToken))!.Id)); // đọc lại từ file
+        // Token rác / hết hạn: đăng xuất vẫn thành công, không ghi gì.
+        Assert.True((await f.Logout.Handle(new LogoutCommand("khong-phai-token", null, null), Ct)).IsSuccess);
+    }
+
+    [Fact]
+    public async Task Dang_xuat_thu_hoi_access_token_toi_khi_het_han()
+    {
+        await using var f = new IdentityFixture();
+        var expires = f.Clock.Now.AddMinutes(5);
+        await f.Logout.Handle(new LogoutCommand(null, "jti-1", expires), Ct);
+
+        Assert.True(f.RevokedTokens.IsRevoked("jti-1"));
+        Assert.False(f.RevokedTokens.IsRevoked("jti-2"));
+        f.Clock.Now = expires.AddSeconds(1);
+        Assert.False(f.RevokedTokens.IsRevoked("jti-1")); // token đã hết hạn — tự bị từ chối, không cần nhớ
+    }
+
+    [Fact]
+    public async Task Phien_tu_gia_han_khong_vuot_qua_gioi_han_tu_lan_nhap_mat_khau()
+    {
+        await using var f = new IdentityFixture();
+        var session = (await f.Login.Handle(new LoginCommand(IdentityFixture.UserName, IdentityFixture.Password, true), Ct)).Value;
+        var loginAt = f.Clock.Now;
+
+        // Vào portal mỗi 10 ngày: vẫn gia hạn được cho tới mốc 30 ngày, hạn token không vượt mốc.
+        for (var day = 10; day < f.Jwt.MaxSessionDays; day += 10)
+        {
+            f.Clock.Now = loginAt.AddDays(day);
+            var renewed = await f.Refresh.Handle(new RefreshSessionCommand(session.RefreshToken), Ct);
+            Assert.True(renewed.IsSuccess, $"ngày {day}");
+            session = renewed.Value;
+            Assert.True(session.RefreshTokenExpiresAt <= loginAt.AddDays(f.Jwt.MaxSessionDays));
+        }
+
+        f.Clock.Now = loginAt.AddDays(f.Jwt.MaxSessionDays).AddMinutes(1);
+        Assert.Equal(IdentityErrors.SessionExpired, (await f.Refresh.Handle(new RefreshSessionCommand(session.RefreshToken), Ct)).Error);
+        // Đăng nhập lại bằng mật khẩu → mốc mới.
+        Assert.True((await f.Login.Handle(new LoginCommand(IdentityFixture.UserName, IdentityFixture.Password, true), Ct)).IsSuccess);
     }
 
     [Fact]

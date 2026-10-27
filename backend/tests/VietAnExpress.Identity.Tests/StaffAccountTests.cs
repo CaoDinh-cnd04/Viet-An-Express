@@ -1,6 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
 using Microsoft.IdentityModel.JsonWebTokens;
+using Moq;
+using VietAnExpress.Customers.Contracts;
 using VietAnExpress.Identity.Application;
 using VietAnExpress.Identity.Application.Commands;
 using VietAnExpress.Identity.Contracts;
@@ -268,36 +270,26 @@ public class MyTrackingTests
     private static JsonElement Config(string title) => JsonDocument.Parse($$"""{"title":"{{title}}","images":[]}""").RootElement.Clone();
 
     [Fact]
-    public async Task Chua_cau_hinh_thi_goi_y_duong_dan_theo_ma_khach()
+    public async Task Chua_cau_hinh_thi_tra_ma_khach_va_cau_hinh_trong()
     {
         await using var f = new IdentityFixture();
         var page = await f.MyTracking.Handle(new GetMyTrackingQuery(), Ct);
-        Assert.Equal(("saigonbayhn", false), (page.Value.Slug, page.Value.Published));
+        Assert.Equal("SaigonbayHN", page.Value.CustomerCode);
         Assert.Null(page.Value.Config);
     }
 
     [Fact]
-    public async Task Luu_va_xuat_ban_thi_trang_cong_khai_xem_duoc()
+    public async Task Luu_xong_thi_trang_cong_khai_theo_ma_khach_xem_duoc()
     {
         await using var f = new IdentityFixture();
+        // Chưa có dòng cấu hình → không có trang.
+        Assert.Equal(IdentityErrors.MyTrackingNotFound, (await f.MyTracking.Handle(new GetCustomerMyTrackingQuery("saigonbayhn"), Ct)).Error);
 
-        var draft = await f.MyTracking.Handle(new SaveMyTrackingCommand("SGB-Express", false, Config("Ban nhap")), Ct);
-        Assert.Equal("sgb-express", draft.Value.Slug);
-        Assert.Equal(IdentityErrors.MyTrackingNotFound, (await f.MyTracking.Handle(new GetPublicMyTrackingQuery("sgb-express"), Ct)).Error);
-
-        await f.MyTracking.Handle(new SaveMyTrackingCommand("sgb-express", true, Config("Xuat ban")), Ct);
-        var page = await f.MyTracking.Handle(new GetPublicMyTrackingQuery("sgb-express"), Ct);
-        Assert.Equal("Xuat ban", JsonDocument.Parse(page.Value.Config.Json).RootElement.GetProperty("title").GetString());
-    }
-
-    [Fact]
-    public async Task Duong_dan_da_co_khach_khac_dung_thi_tu_choi()
-    {
-        await using var f = new IdentityFixture();
-        f.Db.MyTrackingPages.Add(new MyTrackingPage(999, "sgb", "{}", true, DateTime.Now));
-        await f.Db.SaveChangesAsync(Ct);
-
-        Assert.Equal(IdentityErrors.SlugTaken, (await f.MyTracking.Handle(new SaveMyTrackingCommand("sgb", true, Config("x")), Ct)).Error);
+        await f.MyTracking.Handle(new SaveMyTrackingCommand(Config("Trang cua toi")), Ct);
+        var page = await f.MyTracking.Handle(new GetCustomerMyTrackingQuery("saigonbayhn"), Ct);
+        Assert.Equal("Trang cua toi", JsonDocument.Parse(page.Value.Config.Json).RootElement.GetProperty("title").GetString());
+        Assert.Equal("SaigonbayHN", page.Value.CustomerCode);
+        Assert.Equal(IdentityErrors.MyTrackingNotFound, (await f.MyTracking.Handle(new GetCustomerMyTrackingQuery("khong-co"), Ct)).Error);
     }
 
     [Fact]
@@ -306,7 +298,7 @@ public class MyTrackingTests
         await using var f = new IdentityFixture();
         f.SignInAs(5);
         Assert.Equal(IdentityErrors.AdminOnly, (await f.MyTracking.Handle(new GetMyTrackingQuery(), Ct)).Error);
-        Assert.Equal(IdentityErrors.AdminOnly, (await f.MyTracking.Handle(new SaveMyTrackingCommand("abc", true, Config("x")), Ct)).Error);
+        Assert.Equal(IdentityErrors.AdminOnly, (await f.MyTracking.Handle(new SaveMyTrackingCommand(Config("x")), Ct)).Error);
     }
 
     [Fact]
@@ -314,17 +306,25 @@ public class MyTrackingTests
     {
         await using var f = new IdentityFixture();
         var array = JsonDocument.Parse("[]").RootElement.Clone();
-        Assert.Equal(IdentityErrors.InvalidTrackingConfig, (await f.MyTracking.Handle(new SaveMyTrackingCommand("abc", true, array), Ct)).Error);
+        Assert.Equal(IdentityErrors.InvalidTrackingConfig, (await f.MyTracking.Handle(new SaveMyTrackingCommand(array), Ct)).Error);
     }
 
-    [Theory]
-    [InlineData("SaigonbayHN", "saigonbayhn")]
-    [InlineData("SGB EXPRESS / HN", "sgb-express-hn")]
-    [InlineData("A1", "shop-a1")]
-    public void Goi_y_duong_dan_hop_le(string code, string expected)
+    [Fact]
+    public async Task Gia_tri_dai_hon_cot_bang_cu_bi_tu_choi()
     {
-        var slug = MyTrackingPage.SuggestSlug(code);
-        Assert.Equal(expected, slug);
-        Assert.True(MyTrackingPage.IsValidSlug(slug));
+        await using var f = new IdentityFixture();
+        var config = JsonDocument.Parse("{\"brand\":{\"website\":\"https://" + new string('a', 260) + ".vn\"}}").RootElement.Clone();
+        Assert.Equal(IdentityErrors.InvalidTrackingConfig, (await f.MyTracking.Handle(new SaveMyTrackingCommand(config), Ct)).Error);
+    }
+
+    [Fact]
+    public async Task Ten_cong_ty_dai_hon_cot_bang_cu_thi_cat_con_250_van_luu_duoc()
+    {
+        await using var f = new IdentityFixture();
+        f.Customers.Setup(c => c.GetByIdAsync(IdentityFixture.CustomerId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CustomerSummary(IdentityFixture.CustomerId, "SaigonbayHN", "SGB", null, null, null, null, null, new string('A', 300)));
+        var saved = await f.MyTracking.Handle(new SaveMyTrackingCommand(Config("x")), Ct);
+        Assert.True(saved.IsSuccess);
+        Assert.Equal(250, (await f.Db.MyTrackingPages.SingleAsync(Ct)).CompanyName!.Length);
     }
 }

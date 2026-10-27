@@ -13,6 +13,9 @@ internal static class IdentityErrors
     public static readonly Error NotLoggedIn = Error.Unauthorized("NOT_LOGGED_IN", "Vui lòng đăng nhập");
     public static readonly Error InvalidCredentials =
         Error.Unauthorized("INVALID_CREDENTIALS", "Sai tên đăng nhập hoặc mật khẩu");
+    /// <summary>Tên đăng nhập bị khóa tạm do nhập sai mật khẩu nhiều lần (<see cref="Infrastructure.LoginAttemptGuard"/>).</summary>
+    public static Error LoginLocked(TimeSpan remaining) =>
+        Error.Unauthorized("LOGIN_LOCKED", $"Nhập sai mật khẩu nhiều lần — tài khoản tạm khóa, vui lòng thử lại sau {Math.Max(1, (int)Math.Ceiling(remaining.TotalMinutes))} phút");
     public static readonly Error SessionExpired =
         Error.Unauthorized("SESSION_EXPIRED", "Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại");
     public static readonly Error WrongCurrentPassword =
@@ -29,16 +32,16 @@ internal static class IdentityErrors
         Error.NotFound("STAFF_NOT_FOUND", "Không tìm thấy tài khoản nhân viên");
     public static readonly Error UserNameTaken =
         Error.Conflict("USERNAME_TAKEN", "Tên đăng nhập đã được sử dụng, vui lòng chọn tên khác");
+    public static readonly Error MyTrackingNotAllowed =
+        Error.Forbidden("MYTRACKING_NOT_ALLOWED", "Tài khoản chưa được mở chức năng MyTracking — vui lòng liên hệ Việt An");
     public static readonly Error UnknownPermission =
         Error.Validation("UNKNOWN_PERMISSION", "Có quyền không hợp lệ hoặc không được cấp cho nhân viên");
-    public static readonly Error SlugTaken =
-        Error.Conflict("SLUG_TAKEN", "Đường dẫn MyTracking đã có người dùng, vui lòng chọn đường dẫn khác");
     public static readonly Error MyTrackingChanged =
         Error.Conflict("MYTRACKING_CHANGED", "Trang MyTracking vừa được lưu ở nơi khác — vui lòng tải lại trang rồi lưu lại");
     public static readonly Error InvalidTrackingConfig =
-        Error.Validation("INVALID_MYTRACKING_CONFIG", "Cấu hình MyTracking không hợp lệ hoặc quá lớn (tối đa 2 MB)");
+        Error.Validation("INVALID_MYTRACKING_CONFIG", "Cấu hình MyTracking không hợp lệ: mỗi giá trị tối đa 250 ký tự, ảnh tối đa 200 KB, tổng cấu hình tối đa 2 MB");
     public static readonly Error MyTrackingNotFound =
-        Error.NotFound("MYTRACKING_NOT_FOUND", "Trang tra cứu không tồn tại hoặc chưa được xuất bản");
+        Error.NotFound("MYTRACKING_NOT_FOUND", "Trang tra cứu không tồn tại");
 }
 
 /// <summary>
@@ -66,6 +69,10 @@ internal sealed class SessionService(ITokenService tokens, ICustomersApi custome
     /// <summary>Quyền của tài khoản chính (admin).</summary>
     public IReadOnlyList<string> Permissions => _permissions ??= _customerPermissions.Select(p => p.Code).ToList();
 
+    /// <summary>Quyền của tài khoản chính: mọi quyền của khách, trừ MyTracking khi CMS chưa cho phép (TCustomer.ViewLinkTracking ≠ 1).</summary>
+    public IReadOnlyList<string> MainPermissions(CustomerLogin login) =>
+        login.MyTrackingAllowed ? Permissions : Permissions.Where(p => p != IdentityPermissions.MyTracking).ToList();
+
     /// <summary>Quyền admin chọn được cho tài khoản con — mọi quyền của khách trừ <see cref="IdentityPermissions.AdminOnly"/> và quyền tài khoản con luôn có.</summary>
     public IReadOnlyList<PermissionDefinition> AssignablePermissions =>
         _assignable ??= _customerPermissions
@@ -88,26 +95,27 @@ internal sealed class SessionService(ITokenService tokens, ICustomersApi custome
             .ToList();
 
     /// <summary>Null nếu tài khoản không còn đăng nhập được (hồ sơ khách không còn / chưa có mật khẩu).</summary>
-    public async Task<AuthSession?> StartAsync(CustomerLogin login, bool persistent, CancellationToken ct)
+    /// <param name="authTime">Gia hạn phiên: lần nhập mật khẩu gốc (giữ giới hạn Jwt:MaxSessionDays); null = vừa nhập mật khẩu.</param>
+    public async Task<AuthSession?> StartAsync(CustomerLogin login, bool persistent, CancellationToken ct, DateTimeOffset? authTime = null)
     {
         if (!login.HasPassword) return null;
         var user = await BuildUserAsync(login, ct);
         if (user is null) return null;
 
         var access = tokens.CreateAccessToken(login.CustomerId, null, user.UserName, AdminRoles, user.Permissions);
-        var refresh = tokens.CreateRefreshToken(login.CustomerId, null, tokens.PasswordStamp(login.CustomerId, login.Password!), persistent);
+        var refresh = tokens.CreateRefreshToken(login.CustomerId, null, tokens.PasswordStamp(login.CustomerId, login.Password!), persistent, authTime);
         return new AuthSession(user, access.Token, access.ExpiresAt, refresh.Token, refresh.ExpiresAt, persistent);
     }
 
     /// <summary>Null nếu tài khoản con đã bị khóa hoặc hồ sơ khách cha không còn.</summary>
-    public async Task<AuthSession?> StartAsync(StaffAccount staff, bool persistent, CancellationToken ct)
+    public async Task<AuthSession?> StartAsync(StaffAccount staff, bool persistent, CancellationToken ct, DateTimeOffset? authTime = null)
     {
         var user = await BuildUserAsync(staff, ct);
         if (user is null) return null;
 
         var access = tokens.CreateAccessToken(staff.CustomerId, staff.Id, user.UserName, StaffRoles, user.Permissions);
         var refresh = tokens.CreateRefreshToken(staff.CustomerId, staff.Id,
-            tokens.PasswordStamp(staff.CustomerId, staff.Password, staff.Id), persistent);
+            tokens.PasswordStamp(staff.CustomerId, staff.Password, staff.Id), persistent, authTime);
         return new AuthSession(user, access.Token, access.ExpiresAt, refresh.Token, refresh.ExpiresAt, persistent);
     }
 
@@ -120,7 +128,7 @@ internal sealed class SessionService(ITokenService tokens, ICustomersApi custome
         return new SessionUserDto(
             login.CustomerId, userName, customer.ContactName ?? customer.CompanyName, AccountTypes.Customer,
             customer.Code, customer.CompanyName, customer.ContactName, customer.Email,
-            AvatarUrl: null, DefaultBranch: null, AdminRoles, Permissions,
+            AvatarUrl: null, DefaultBranch: null, AdminRoles, MainPermissions(login),
             Phone: customer.Phone, Address: customer.Address, TaxCode: customer.TaxCode, IsAdmin: true);
     }
 

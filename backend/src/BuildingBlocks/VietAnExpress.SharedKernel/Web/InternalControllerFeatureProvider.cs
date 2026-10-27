@@ -22,4 +22,6 @@ public static class RateLimitPolicies
 {
     public const string Login = "login";
     public const string PublicTracking = "public-tracking";
+    /// <summary>Form "Gửi lời nhắn" ở trang chủ (không cần đăng nhập) — chống spam.</summary>
+    public const string PublicContact = "public-contact";
 }

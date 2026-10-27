@@ -86,5 +86,7 @@ export const common: Record<string, string> = {
   'Không có thông báo nào khớp.': 'No matching notifications.',
   'Nội dung thông báo': 'Notification content',
   'Chọn 1 thông báo để xem nội dung.': 'Select a notification to read it.',
-  'Mở sự cố {id}': 'Open issue {id}'
+  'Mở sự cố {id}': 'Open issue {id}',
+  'Bạn đã được tự đăng xuất do không thao tác trong {n} phút. Vui lòng đăng nhập lại.': 'You were signed out after {n} minutes of inactivity. Please sign in again.',
+  'Đơn đang tạo dở đã được lưu vào Đơn nháp & chưa in.': 'The order you were creating has been saved to Drafts & unprinted.'
 };

@@ -8,6 +8,7 @@ using VietAnExpress.Identity.Application.Commands;
 using VietAnExpress.Identity.Application.Dtos;
 using VietAnExpress.Identity.Contracts;
 using VietAnExpress.Identity.Domain;
+using VietAnExpress.Identity.Infrastructure;
 using VietAnExpress.SharedKernel.Authorization;
 using VietAnExpress.SharedKernel.Web;
 
@@ -29,12 +30,14 @@ internal sealed class MyTrackingController : ApiControllerBase
     [ProducesResponseType<ApiResponse<MyTrackingDto>>(StatusCodes.Status200OK)]
     public async Task<IActionResult> Save(SaveMyTrackingRequest body, CancellationToken ct)
     {
-        var result = await Sender.Send(new SaveMyTrackingCommand(body.Slug, body.Published, body.Config), ct);
-        return FromResult(result, result.IsSuccess && result.Value.Published ? "Đã lưu và xuất bản trang MyTracking" : "Đã lưu cấu hình MyTracking");
+        var result = await Sender.Send(new SaveMyTrackingCommand(body.Config), ct);
+        return FromResult(result, "Đã lưu cấu hình MyTracking");
     }
 }
 
-/// <summary>Trang MyTracking công khai /t/{slug} — không cần đăng nhập; tra cứu vận đơn dùng POST /public/tracking.</summary>
+/// <summary>
+/// Trang MyTracking công khai /tracking/{mã khách}/... — không cần đăng nhập; tra cứu dùng POST /public/tracking/customers/{mã khách}.
+/// </summary>
 [ApiVersion(1)]
 [Route("api/v{version:apiVersion}/public/mytracking")]
 [Tags("Công khai")]
@@ -42,9 +45,20 @@ internal sealed class MyTrackingController : ApiControllerBase
 [EnableRateLimiting(RateLimitPolicies.PublicTracking)]
 internal sealed class PublicMyTrackingController : ApiControllerBase
 {
-    [HttpGet("{slug}")]
+    [HttpGet("images/{folder}/{name}")]
+    [DisableRateLimiting]
+    public IActionResult Image(string folder, string name, [FromServices] MyTrackingImageStore images)
+    {
+        if (images.Find(folder, name) is not { } image) return NotFound();
+        Response.Headers.CacheControl = "public, max-age=31536000, immutable";
+        return PhysicalFile(image.Path, image.ContentType);
+    }
+
+    /// <summary>Trang đã xuất bản theo mã khách — link /tracking/{mã khách}/{số bill}?ref=...</summary>
+    [HttpGet("customers/{code}")]
     [ProducesResponseType<ApiResponse<PublicMyTrackingDto>>(StatusCodes.Status200OK)]
-    public async Task<IActionResult> Get(string slug, CancellationToken ct) => FromResult(await Sender.Send(new GetPublicMyTrackingQuery(slug), ct));
+    public async Task<IActionResult> GetByCustomer(string code, CancellationToken ct) =>
+        FromResult(await Sender.Send(new GetCustomerMyTrackingQuery(code), ct));
 }
 
-internal sealed record SaveMyTrackingRequest(string Slug, bool Published, JsonElement Config);
+internal sealed record SaveMyTrackingRequest(JsonElement Config);

@@ -1,177 +1,188 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useMemo, useState } from 'react';
 import { getErrorMessage } from '@/shared/api/http';
 import { useI18n } from '@/shared/i18n';
-import { Button, Card, EmptyState, KeyValueList, Modal, Notice, SelectField, StatusPill, Tabs, TextAreaField } from '@/shared/ui';
-import { kindOf, ticketSubline, ticketTitle, TROUBLE_KINDS, TROUBLE_PRIORITY, TROUBLE_STATUS, type TroubleKind, type TroubleStatus } from '@/features/troubles';
+import { cx } from '@/shared/lib/cx';
+import { Button, DataTable, Drawer, Notice, StatusPill, TextAreaField, useToast, type Column } from '@/shared/ui';
+import { FilterBar, type FilterOption } from '@/features/notifications';
+import { kindOf, ticketTitle, TROUBLE_PRIORITY, TROUBLE_STATUS, type TroubleStatus } from '@/features/troubles';
 import { useAdminTroubles, useReplyAdminTrouble, type AdminTrouble } from '../api';
+import { adminKindLabel, filterTroubles, isContactMessage, matchesFilter, matchesStaff, staffOptions, TROUBLE_FILTERS, troubleActions, UNASSIGNED, type TroubleFilter } from '../lib/troubles';
 import styles from './AdminTroubles.module.css';
 
-type Filter = 'open' | 'all' | TroubleStatus;
-type KindFilter = 'all' | TroubleKind;
-
-const KIND_FILTERS: ReadonlyArray<{ value: KindFilter; label: string }> = [
-  { value: 'all', label: 'Mọi loại' },
-  ...(Object.keys(TROUBLE_KINDS) as TroubleKind[]).map(k => ({ value: k, label: TROUBLE_KINDS[k].label }))
-];
-
-const FILTERS: ReadonlyArray<{ key: Filter; label: string }> = [
-  { key: 'open', label: 'Chưa xong' },
-  { key: 'all', label: 'Tất cả' },
-  ...(Object.keys(TROUBLE_STATUS) as TroubleStatus[]).map(key => ({ key, label: TROUBLE_STATUS[key].label }))
-];
-
-const matches = (x: AdminTrouble, f: Filter) => (f === 'all' ? true : f === 'open' ? x.ticket.status !== 'done' : x.ticket.status === f);
-
-/** Tab "Hỗ trợ & sự cố" của trang quản trị: sự cố, yêu cầu hỗ trợ, góp ý của mọi khách — trả lời / đổi trạng thái, khách nhận thông báo riêng. */
+/**
+ * Tab "Hỗ trợ & sự cố" của trang quản trị: lọc theo trạng thái + nhân viên phụ trách + tìm, bảng mỗi yêu cầu 1 dòng,
+ * bấm 1 dòng → khung chi tiết; mỗi nút ở chân khung đổi trạng thái (kèm ghi chú nếu có), khách nhận thông báo riêng.
+ */
 export function AdminTroubles() {
   const { t } = useI18n();
   const list = useAdminTroubles(true);
-  const [filter, setFilter] = useState<Filter>('open');
-  const [kind, setKind] = useState<KindFilter>('all');
+  const [filter, setFilter] = useState<TroubleFilter>('open');
+  const [staff, setStaff] = useState('');
+  const [query, setQuery] = useState('');
   const [openId, setOpenId] = useState<string | null>(null);
-  const items = (list.data ?? []).filter(x => kind === 'all' || kindOf(x.ticket) === kind);
-  const counts = useMemo(() => Object.fromEntries(FILTERS.map(f => [f.key, items.filter(x => matches(x, f.key)).length])), [items]);
-  const rows = items.filter(x => matches(x, filter));
-  const current = items.find(x => x.ticket.id === openId) ?? null;
+
+  const rows = useMemo(() => list.data ?? [], [list.data]);
+  const staffList = useMemo(() => staffOptions(rows), [rows]);
+  const ofStaff = useMemo(() => rows.filter(x => matchesStaff(x, staff)), [rows, staff]);
+  const shown = useMemo(() => filterTroubles(ofStaff, filter, query), [ofStaff, filter, query]);
+  const current = rows.find(x => x.ticket.id === openId) ?? null;
+  const options: ReadonlyArray<FilterOption<TroubleFilter>> = TROUBLE_FILTERS.map(f => ({
+    ...f,
+    count: ofStaff.filter(x => matchesFilter(x, f.key)).length,
+    hot: f.key === 'new'
+  }));
+
+  const columns: ReadonlyArray<Column<AdminTrouble>> = [
+    { key: 'id', header: 'Mã', width: 90, render: x => <span className={cx('mono', x.ticket.status === 'new' && styles.strong)}>{x.ticket.id}</span> },
+    { key: 'date', header: 'Gửi lúc', width: 130, render: x => <span className={styles.nowrap}>{x.ticket.date}</span> },
+    {
+      key: 'customer',
+      header: 'Khách hàng',
+      render: x => <span className={styles.cell}>{x.companyName || x.customerCode}<small>{x.customerCode}</small></span>
+    },
+    { key: 'bill', header: 'Vận đơn', width: 110, render: x => (x.ticket.bill ? <span className="mono">{x.ticket.bill}</span> : '—') },
+    { key: 'kind', header: 'Loại', width: 110, render: x => <span className={styles.nowrap}>{t(adminKindLabel(x.ticket))}</span> },
+    { key: 'title', header: 'Vấn đề', render: x => t(ticketTitle(x.ticket)) },
+    { key: 'desc', header: 'Nội dung', width: '24%', render: x => <span className={styles.clip} title={x.ticket.desc}>{x.ticket.desc}</span> },
+    {
+      key: 'lv',
+      header: 'Mức độ',
+      width: 90,
+      render: x =>
+        kindOf(x.ticket) === 'su_co' ? <span className={cx(x.ticket.lv === 'high' && x.ticket.status !== 'done' && styles.hot)}>{t(TROUBLE_PRIORITY[x.ticket.lv].label)}</span> : '—'
+    },
+    { key: 'staff', header: 'Nhân viên', render: x => <span className={styles.nowrap}>{x.managerName || <span className={styles.faint}>{t('Chưa phân công')}</span>}</span> },
+    { key: 'status', header: 'Trạng thái', width: 110, render: x => <StatusPill tone={TROUBLE_STATUS[x.ticket.status].tone}>{t(TROUBLE_STATUS[x.ticket.status].label)}</StatusPill> }
+  ];
 
   return (
-    <Card
-      title={t('Yêu cầu của khách ({n})', { n: items.length })}
-      actions={
-        <select className={styles.kindSelect} aria-label={t('Lọc theo loại yêu cầu')} value={kind} onChange={e => setKind(e.target.value as KindFilter)}>
-          {KIND_FILTERS.map(k => <option key={k.value} value={k.value}>{t(k.label)}</option>)}
+    <div className={styles.wrap}>
+      <div>
+        <h2 className={styles.heading}>{t('Hỗ trợ & sự cố')}</h2>
+        <p className={styles.sub}>{t('Sự cố vận đơn, yêu cầu hỗ trợ và góp ý của khách')}</p>
+      </div>
+
+      <FilterBar options={options} value={filter} onChange={setFilter} query={query} onQuery={setQuery} placeholder="Tìm mã, vận đơn, khách">
+        <select className={styles.select} value={staff} onChange={e => setStaff(e.target.value)} aria-label={t('Nhân viên phụ trách')}>
+          <option value="">{t('Nhân viên: tất cả')}</option>
+          {staffList.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+          <option value={UNASSIGNED}>{t('Chưa phân công')}</option>
         </select>
-      }
-      flush
-    >
-      <Tabs ariaLabel="Lọc sự cố theo trạng thái" items={FILTERS.map(f => ({ ...f, count: counts[f.key] }))} value={filter} onChange={setFilter} />
-      {list.isError ? (
-        <div className={styles.pad}><Notice tone="danger">{getErrorMessage(list.error)}</Notice></div>
-      ) : list.isLoading ? (
-        <p className={`${styles.pad} ${styles.muted}`}>{t('Đang tải…')}</p>
-      ) : !rows.length ? (
-        <EmptyState title="Không có yêu cầu" description={items.length ? 'Không có yêu cầu khớp bộ lọc.' : 'Sự cố, yêu cầu hỗ trợ và góp ý của khách sẽ hiện ở đây.'} />
-      ) : (
-        <ul className={styles.list}>
-          {rows.map(x => (
-            <li key={x.ticket.id}>
-              <button type="button" className={styles.item} onClick={() => setOpenId(x.ticket.id)}>
-                <span className={styles.itemMain}>
-                  <span className={styles.itemTitle}>
-                    <span className="mono">{x.ticket.id}</span> · {t(ticketTitle(x.ticket))}
-                  </span>
-                  <span className={styles.muted}>
-                    {t(TROUBLE_KINDS[kindOf(x.ticket)].label)}
-                    {ticketSubline(x.ticket) && <> · {kindOf(x.ticket) === 'su_co' ? <span className="mono">{ticketSubline(x.ticket)}</span> : t(ticketSubline(x.ticket))}</>}
-                    {' '}· {x.companyName || x.customerCode} ({x.customerCode})
-                  </span>
-                  <span className={styles.preview}>{x.ticket.desc}</span>
-                </span>
-                <span className={styles.itemSide}>
-                  <StatusPill tone={TROUBLE_STATUS[x.ticket.status].tone}>{t(TROUBLE_STATUS[x.ticket.status].label)}</StatusPill>
-                  {kindOf(x.ticket) === 'su_co' && <StatusPill tone={TROUBLE_PRIORITY[x.ticket.lv].tone}>{t(TROUBLE_PRIORITY[x.ticket.lv].label)}</StatusPill>}
-                  <span className={styles.muted}>{x.ticket.updatedAt ?? x.ticket.date}</span>
-                </span>
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-      <AdminTroubleDialog item={current} onClose={() => setOpenId(null)} />
-    </Card>
+      </FilterBar>
+
+      <div className={styles.card}>
+        {list.isError ? (
+          <div className={styles.note}><Notice tone="danger">{getErrorMessage(list.error)}</Notice></div>
+        ) : (
+          <DataTable
+            columns={columns}
+            rows={shown}
+            rowKey={x => x.ticket.id}
+            loading={list.isLoading}
+            empty={{ title: 'Không có yêu cầu nào.' }}
+            onRowClick={x => setOpenId(x.ticket.id)}
+            highlight={x => x.ticket.id === openId}
+            minWidth={1180}
+            caption="Hỗ trợ & sự cố"
+          />
+        )}
+      </div>
+      {!!shown.length && <p className={styles.count}>{t('{n} yêu cầu · bấm vào dòng để xem và trả lời', { n: shown.length })}</p>}
+
+      <TroubleDrawer item={current} onClose={() => setOpenId(null)} />
+    </div>
   );
 }
 
-const STATUS_OPTIONS = (Object.keys(TROUBLE_STATUS) as TroubleStatus[]).map(k => ({ value: k, label: TROUBLE_STATUS[k].label }));
-
-function AdminTroubleDialog({ item, onClose }: { item: AdminTrouble | null; onClose: () => void }) {
+function TroubleDrawer({ item, onClose }: { item: AdminTrouble | null; onClose: () => void }) {
   const { t } = useI18n();
+  const toast = useToast();
   const reply = useReplyAdminTrouble();
-  const [message, setMessage] = useState('');
-  const [status, setStatus] = useState<TroubleStatus>('doing');
-  const [done, setDone] = useState<string | null>(null);
-  const id = item?.ticket.id;
+  const [note, setNote] = useState('');
 
-  // Mở sự cố khác: trạng thái gợi ý = "Đang xử lý" nếu sự cố còn mới, không thì giữ trạng thái hiện tại.
-  useEffect(() => {
-    setMessage('');
-    setDone(null);
+  const close = () => {
+    setNote('');
     reply.reset();
-    if (item) setStatus(item.ticket.status === 'new' ? 'doing' : item.ticket.status);
-  }, [id]);
-  if (!item) return null;
-  const x = item.ticket;
-  const kind = kindOf(x);
-  const changed = status !== x.status;
-  const info: Array<[string, ReactNode]> = [
-    ['Khách hàng', `${item.companyName || '—'} · ${item.customerCode}`],
-    ['Người gửi', t(item.isStaff ? 'tài khoản con {name}' : 'tài khoản chính {name}', { name: x.req })],
-    ['Loại yêu cầu', t(TROUBLE_KINDS[kind].label)]
-  ];
-  if (kind === 'su_co') {
-    info.push(['Mã vận đơn', <span className="mono">{x.bill}</span>], ['Người nhận', [x.cnee, x.ct].filter(Boolean).join(' · ') || '—'], ['Loại sự cố', t(x.type)]);
-  } else if (kind === 'ho_tro') {
-    info.push(['Tiêu đề', x.subject || '—'], ['Chủ đề', t(x.type)]);
-  }
-  info.push(['Người yêu cầu', `${x.req}${x.contact ? ` · ${x.contact}` : ''}`], ['Ngày gửi', x.date]);
-
-  const send = () =>
+    onClose();
+  };
+  const send = (status?: TroubleStatus) =>
+    item &&
     reply.mutate(
-      { id: x.id, reply: message, status: changed ? status : undefined },
-      {
-        onSuccess: res => {
-          setMessage('');
-          setDone(res.message);
-        }
-      }
+      { id: item.ticket.id, reply: note, status },
+      { onSuccess: res => { toast.show(t(res.message), 'success'); close(); } }
     );
 
+  const x = item?.ticket;
+  // Lời nhắn từ trang chủ: khách chưa có tài khoản → không gửi ghi chú được, nhân viên gọi / email rồi đổi trạng thái.
+  const contact = !!x && isContactMessage(x);
   return (
-    <Modal
-      open
-      size="lg"
-      title={`${t(TROUBLE_KINDS[kind].label)} ${x.id}`}
-      onClose={onClose}
-      footerNote={t('Khách nhận thông báo riêng trên portal kèm ghi chú; xử lý chi tiết ở phần mềm cũ')}
+    <Drawer
+      open={!!item}
+      title={x ? `${t(adminKindLabel(x))} · ${t(TROUBLE_STATUS[x.status].label)}` : 'Hỗ trợ & sự cố'}
+      onClose={close}
       footer={
-        <>
-          <Button onClick={onClose}>{t('Đóng')}</Button>
-          <Button variant="primary" disabled={reply.isPending || (!message.trim() && !changed)} onClick={send}>
-            {t(reply.isPending ? 'Đang gửi…' : 'Cập nhật & báo khách')}
-          </Button>
-        </>
+        x && (
+          <>
+            {note.trim() && (
+              <Button variant="ghost" className={styles.leftBtn} disabled={reply.isPending} onClick={() => send()}>
+                {t('Chỉ gửi ghi chú')}
+              </Button>
+            )}
+            {troubleActions(x.status, !contact).map(a => (
+              <Button key={a.status} variant={a.primary ? 'primary' : undefined} disabled={reply.isPending} onClick={() => send(a.status)}>
+                {t(a.label)}
+              </Button>
+            ))}
+          </>
+        )
       }
     >
-      <div className={styles.detail}>
-        {done && <Notice tone="success">{t(done)}</Notice>}
-        {reply.isError && <Notice tone="danger">{getErrorMessage(reply.error)}</Notice>}
-        <div className={styles.pills}>
-          <StatusPill tone={TROUBLE_STATUS[x.status].tone}>{t(TROUBLE_STATUS[x.status].label)}</StatusPill>
-          {kind === 'su_co' && <StatusPill tone={TROUBLE_PRIORITY[x.lv].tone}>{t(TROUBLE_PRIORITY[x.lv].label)}</StatusPill>}
-        </div>
-        <KeyValueList items={info} />
-        <section>
-          <h4 className={styles.subTitle}>{t('Nội dung')}</h4>
+      {item && x && (
+        <>
+          <h3 className={styles.dTitle}><span className="mono">{x.id}</span> · {t(ticketTitle(x))}</h3>
+          <dl className={styles.facts}>
+            <dt>{t('Khách')}</dt>
+            <dd>{contact ? t('Khách vãng lai (chưa đăng nhập)') : `${item.companyName || '—'} · ${item.customerCode}`}</dd>
+            <dt>{t('Người gửi')}</dt>
+            <dd>
+              {x.req}{x.contact && ` · ${x.contact}`}
+              {contact ? item.email && <small>{item.email}</small> : <small>{t(item.isStaff ? 'Tài khoản con' : 'Tài khoản chính')}</small>}
+            </dd>
+            {x.bill && (
+              <>
+                <dt>{t('Vận đơn')}</dt>
+                <dd><span className="mono">{x.bill}</span>{(x.cnee || x.ct) && <small>{[x.cnee, x.ct].filter(Boolean).join(' · ')}</small>}</dd>
+                <dt>{t('Mức độ')}</dt>
+                <dd>{t(TROUBLE_PRIORITY[x.lv].label)}</dd>
+              </>
+            )}
+            {kindOf(x) === 'ho_tro' && (
+              <>
+                <dt>{t('Chủ đề')}</dt>
+                <dd>{t(x.type)}</dd>
+              </>
+            )}
+            <dt>{t('Nhân viên')}</dt>
+            <dd>{item.managerName || t('Chưa phân công')}</dd>
+            <dt>{t('Gửi lúc')}</dt>
+            <dd>{x.date}{x.updatedAt && <small>{t('Cập nhật {at}', { at: x.updatedAt })}</small>}</dd>
+          </dl>
           <p className={styles.desc}>{x.desc}</p>
-        </section>
-        <div className={styles.replyBox}>
-          <TextAreaField
-            label="Ghi chú gửi khách (không bắt buộc)"
-            rows={4}
-            maxLength={4000}
-            placeholder={t('Kết quả kiểm tra, hướng xử lý, thông tin cần khách bổ sung…')}
-            value={message}
-            onChange={e => setMessage(e.target.value)}
-          />
-          <SelectField
-            label="Trạng thái"
-            options={STATUS_OPTIONS}
-            value={status}
-            hint={changed ? t('Sẽ đổi từ "{from}"', { from: t(TROUBLE_STATUS[x.status].label) }) : undefined}
-            onChange={e => setStatus(e.target.value as TroubleStatus)}
-          />
-        </div>
-      </div>
-    </Modal>
+          {reply.isError && <Notice tone="danger">{getErrorMessage(reply.error)}</Notice>}
+          {contact ? (
+            <Notice tone="info">{t('Khách chưa có tài khoản portal — gọi điện hoặc email để trả lời, xong thì đổi trạng thái.')}</Notice>
+          ) : (
+            <TextAreaField
+              label="Ghi chú gửi khách (không bắt buộc)"
+              rows={4}
+              maxLength={4000}
+              value={note}
+              onChange={e => setNote(e.target.value)}
+              hint={t('Bấm nút trạng thái bên dưới — khách nhận thông báo riêng kèm ghi chú')}
+            />
+          )}
+        </>
+      )}
+    </Drawer>
   );
 }

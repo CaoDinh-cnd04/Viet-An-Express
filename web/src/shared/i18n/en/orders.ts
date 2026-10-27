@@ -88,9 +88,8 @@ export const orders: Record<string, string> = {
   'Báo sự cố': 'Report an issue',
   'Hủy đơn': 'Cancel order',
   'Thao tác khác cho đơn {bill}': 'More actions for order {bill}',
-  'Trình duyệt đang chặn cửa sổ in — hãy cho phép pop-up cho trang này':
-    'Your browser is blocking the print window — please allow pop-ups for this site',
   'Đang chuẩn bị bản in…': 'Preparing print…',
+  'Không nhận được lệnh in — hãy đóng tab này và bấm in lại': 'No print request received — close this tab and print again',
 
   // Chi tiết đơn
   'Chi tiết đơn hàng': 'Order details',
@@ -102,7 +101,7 @@ export const orders: Record<string, string> = {
   // Ảnh kiện hàng
   'Ảnh kiện hàng · {bill}': 'Package photos · {bill}',
   'Đang tải ảnh…': 'Loading photos…',
-  'Chức năng xem ảnh đang được kết nối máy chủ.': 'Photo viewing is being connected to the server.',
+  'Chức năng xem ảnh kiện đang được phát triển.': 'Package photo viewing is under development.',
   'Không tải được ảnh, vui lòng thử lại.': 'Could not load photos, please try again.',
   'Đơn chưa có ảnh kiện hàng': 'No package photos yet',
   'Ảnh sẽ có sau khi kho Việt An nhận và cân hàng.': 'Photos will be available once the Viet An warehouse receives and weighs the goods.',

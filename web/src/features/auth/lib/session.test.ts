@@ -26,8 +26,9 @@ describe('loginPath', () => {
     expect(loginPath('/orders?status=new')).toBe('/login?next=%2Forders%3Fstatus%3Dnew');
   });
   it('bỏ next khi là trang mặc định hoặc trang ngoài', () => {
-    expect(loginPath('/orders')).toBe('/login');
+    expect(loginPath(PORTAL_HOME)).toBe('/login');
     expect(loginPath('/')).toBe('/login');
+    expect(loginPath('/orders')).toBe('/login?next=%2Forders');
     expect(loginPath()).toBe('/login');
   });
 });

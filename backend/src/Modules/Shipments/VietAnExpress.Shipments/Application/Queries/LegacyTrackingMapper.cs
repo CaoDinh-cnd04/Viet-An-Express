@@ -1,6 +1,7 @@
 using System.Globalization;
 using VietAnExpress.Shipments.Application.Dtos;
 using VietAnExpress.Shipments.Application.Orders;
+using VietAnExpress.Shipments.Infrastructure.Carriers.HubEz;
 using VietAnExpress.Shipments.Infrastructure.Legacy;
 
 namespace VietAnExpress.Shipments.Application.Queries;
@@ -15,7 +16,8 @@ internal static class LegacyTrackingMapper
         || string.Equals(o.Awb?.Trim(), bill, StringComparison.OrdinalIgnoreCase)
         || string.Equals(o.CustomerBill?.Trim(), bill, StringComparison.OrdinalIgnoreCase);
 
-    public static PublicTrackResultDto ToResult(string bill, LegacyOrder o, DateTime todayVn)
+    /// <param name="carrier">Hành trình HUB-EZ khi đơn đi HUB-EZ (ghép vào hành trình cũ).</param>
+    public static PublicTrackResultDto ToResult(string bill, LegacyOrder o, DateTime todayVn, HubEzTrack? carrier = null)
     {
         var destination = string.Join(", ", new[] { o.ConsigneeCity, o.ConsigneeCountry }
             .Select(s => s?.Trim())
@@ -28,7 +30,7 @@ internal static class LegacyTrackingMapper
             string.IsNullOrEmpty(destination) ? null : destination,
             string.IsNullOrEmpty(service) ? null : service,
             // Trang công khai: không đưa tên người ký nhận.
-            LegacyOrderView.Events(o, hideSigner: true).Select(e => new PublicTrackEventDto(e.Time, e.Title, e.Location)).ToList(),
+            HubEzEvents.Merge(LegacyOrderView.Events(o, hideSigner: true), carrier, !string.IsNullOrWhiteSpace(o.Pod)).Select(e => new PublicTrackEventDto(e.Time, e.Title, e.Location)).ToList(),
             Origin: Origin(o),
             ShipDate: Date(o.SentDate),
             EstimatedDate: Date(o.PodEstimate),

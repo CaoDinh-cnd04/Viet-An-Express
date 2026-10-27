@@ -218,7 +218,7 @@ function OrderRow({ order: o, index, checked, onToggle, actions, cell }: OrderRo
           </>
         ) : null}
       </td>
-      <td className={styles.colTracking} {...cell(6)}><TrackingLinks bill={o.bill} /></td>
+      <td className={styles.colTracking} {...cell(6)}><TrackingLinks bill={o.bill} refNo={o.ref} /></td>
       <td className={styles.colCreated} {...cell(7)}>
         {/* 3 dòng: ngày tạo · kiện, cân · tên hàng */}
         <div className="tabular">{datePart(o.created)}</div>

@@ -11,7 +11,7 @@
     <PackageReference Include="QRCoder" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="Application/Orders/Documents/Assets/logo.webp" LogicalName="VietAnExpress.Shipments.logo.webp" />
+    <EmbeddedResource Include="Application/Orders/Documents/Assets/header.webp" LogicalName="VietAnExpress.Shipments.header.webp" />
     <EmbeddedResource Include="Domain/eu-countries.json" LogicalName="VietAnExpress.Shipments.eu-countries.json" />
   </ItemGroup>
   <ItemGroup>

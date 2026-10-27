@@ -11,12 +11,13 @@ namespace VietAnExpress.Shipments.Infrastructure.Legacy;
 /// </summary>
 internal interface ILegacyBillReader
 {
-    Task<IReadOnlyList<LegacyOrder>> FindAsync(IReadOnlyList<string> bills, CancellationToken cancellationToken);
+    /// <param name="customerId">Có giá trị = chỉ tìm trong đơn của khách này (trang MyTracking của khách).</param>
+    Task<IReadOnlyList<LegacyOrder>> FindAsync(IReadOnlyList<string> bills, CancellationToken cancellationToken, long? customerId = null);
 }
 
 internal sealed class LegacyBillReader(ShipmentsDbContext db, ILogger<LegacyBillReader> logger) : ILegacyBillReader
 {
-    public async Task<IReadOnlyList<LegacyOrder>> FindAsync(IReadOnlyList<string> bills, CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<LegacyOrder>> FindAsync(IReadOnlyList<string> bills, CancellationToken cancellationToken, long? customerId = null)
     {
         if (bills.Count == 0) return [];
 
@@ -26,7 +27,9 @@ internal sealed class LegacyBillReader(ShipmentsDbContext db, ILogger<LegacyBill
             .ToList();
         try
         {
-            return await db.LegacyOrders.AsNoTracking()
+            var orders = db.LegacyOrders.AsNoTracking();
+            if (customerId is { } owner) orders = orders.Where(o => o.CustomerId == owner);
+            return await orders
                 .Where(o => (o.OrderNumber != null && numbers.Contains(o.OrderNumber.Value))
                     || (o.BillConnect != null && bills.Contains(o.BillConnect))
                     || (o.Awb != null && bills.Contains(o.Awb))

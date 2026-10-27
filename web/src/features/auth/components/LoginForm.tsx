@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { useI18n } from '@/shared/i18n';
 import { Button, Icon, LinkButton, Notice, TextField } from '@/shared/ui';
 import { useLogin, useLogout, useSession } from '../api';
+import { IDLE_TIMEOUT_MS } from '../lib/idle';
 import { safeNextPath } from '../lib/session';
 import styles from './LoginForm.module.css';
 
@@ -53,6 +54,12 @@ export function LoginForm({ autoFocus, next: nextPath }: { autoFocus?: boolean; 
 
   return (
     <form onSubmit={e => void submit(e)} noValidate className="page-stack">
+      {params.get('idle') === '1' && (
+        <Notice tone="info">
+          {t('Bạn đã được tự đăng xuất do không thao tác trong {n} phút. Vui lòng đăng nhập lại.', { n: IDLE_TIMEOUT_MS / 60_000 })}
+          {next === '/drafts' && <> {t('Đơn đang tạo dở đã được lưu vào Đơn nháp & chưa in.')}</>}
+        </Notice>
+      )}
       {status === 'open' && (
         <Notice title="Chưa kết nối máy chủ đăng nhập">{t('Bạn có thể vào portal để dùng thử trong lúc chờ kết nối.')}</Notice>
       )}

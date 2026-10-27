@@ -162,7 +162,7 @@ public class OrderQuerySqlServerTests(SqlServerQueryFixture fixture) : IClassFix
     public async Task Unknown_carrier_bill_does_not_match_an_order_with_a_null_order_number()
     {
         await using var db = fixture.CreateDb(new ReadCounter());
-        var result = await new GetOrderHandlers(db, Access(db), Clock)
+        var result = await new GetOrderHandlers(db, Access(db), Clock, NoHubEz.Instance)
             .Handle(new GetOrderEventsQuery("NONEXISTENT-CARRIER-BILL"), TestContext.Current.CancellationToken);
         Assert.True(result.IsFailure);
         Assert.Equal("ORDER_NOT_FOUND", result.Error.Code);
@@ -175,7 +175,7 @@ public class OrderQuerySqlServerTests(SqlServerQueryFixture fixture) : IClassFix
         await using var db = fixture.CreateDb(commands);
         var full = await db.LegacyOrders.AsNoTracking().Where(o => o.CustomerId == 42).OrderBy(o => o.Id).FirstAsync(TestContext.Current.CancellationToken);
         commands.Reads.Clear();
-        var handler = new GetOrderHandlers(db, Access(db), Clock);
+        var handler = new GetOrderHandlers(db, Access(db), Clock, NoHubEz.Instance);
         var result = await handler.Handle(new GetOrderEventsQuery(full.BillConnect!), TestContext.Current.CancellationToken);
         Assert.True(result.IsSuccess);
         Assert.Equal(JsonSerializer.Serialize(LegacyOrderView.Events(full, hideSigner: false)), JsonSerializer.Serialize(result.Value));

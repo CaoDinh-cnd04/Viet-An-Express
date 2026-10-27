@@ -12,6 +12,15 @@ internal sealed class CustomersApi(CustomersDbContext db) : ICustomersApi
         return c is null ? null : ToSummary(c);
     }
 
+    public async Task<CustomerSummary?> GetByCodeAsync(string code, CancellationToken cancellationToken = default)
+    {
+        var value = code.Trim();
+        if (value.Length == 0) return null;
+        // Cột CustomerCode theo collation mặc định (không phân biệt hoa thường).
+        var c = await db.Customers.AsNoTracking().FirstOrDefaultAsync(x => x.Code == value, cancellationToken);
+        return c is null ? null : ToSummary(c);
+    }
+
     public async Task<IReadOnlyList<CustomerSummary>> GetByIdsAsync(IReadOnlyCollection<long> customerIds, CancellationToken cancellationToken = default)
     {
         var result = new List<CustomerSummary>(customerIds.Count);
@@ -43,6 +52,9 @@ internal sealed class CustomersApi(CustomersDbContext db) : ICustomersApi
         return result;
     }
 
+    public async Task<IReadOnlyList<long>> GetCustomerIdsOfManagerAsync(int managerId, CancellationToken cancellationToken = default) =>
+        managerId <= 0 ? [] : await db.Customers.AsNoTracking().Where(c => c.AccountManagerId == managerId).Select(c => c.Id).ToListAsync(cancellationToken);
+
     /// <summary>
     /// Nhân viên CMS → thông tin hiển thị: họ tên = FIRST_NAME + LAST_NAME (thiếu thì tên đăng nhập), SĐT di động → SĐT cơ quan (bỏ giá trị không phải số điện thoại),
     /// đang hoạt động khi STATUS = ACTIVE. Nhân viên đã xóa (DELETED) coi như chưa phân công → null. Hàm thuần — có test.
@@ -72,7 +84,8 @@ internal sealed class CustomersApi(CustomersDbContext db) : ICustomersApi
         Clean(c.ContactEmail) ?? Clean(c.Email),
         Clean(c.ContactPhone) ?? Clean(c.Tel) ?? Clean(c.Phone),
         Clean(c.Address1),
-        Clean(c.TaxCode));
+        Clean(c.TaxCode),
+        Clean(c.InvoiceName));
 
     private static string? Clean(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }

@@ -18,11 +18,20 @@ namespace VietAnExpress.Identity.Application.Commands;
 /// </summary>
 internal sealed record LoginCommand(string UserName, string Password, bool Remember) : IRequest<Result<AuthSession>>;
 
-internal sealed class LoginHandler(IdentityDbContext db, SessionService sessions) : IRequestHandler<LoginCommand, Result<AuthSession>>
+internal sealed class LoginHandler(IdentityDbContext db, SessionService sessions, LoginAttemptGuard guard) : IRequestHandler<LoginCommand, Result<AuthSession>>
 {
     public async Task<Result<AuthSession>> Handle(LoginCommand cmd, CancellationToken ct)
     {
         var userName = cmd.UserName.Trim();
+        if (guard.LockedFor(userName) is { } locked) return IdentityErrors.LoginLocked(locked);
+        var result = await TryLoginAsync(userName, cmd, ct);
+        if (result.IsSuccess) guard.Succeeded(userName);
+        else if (result.Error == IdentityErrors.InvalidCredentials) guard.Failed(userName);
+        return result;
+    }
+
+    private async Task<Result<AuthSession>> TryLoginAsync(string userName, LoginCommand cmd, CancellationToken ct)
+    {
         var candidates = await db.Logins.AsNoTracking()
             .Where(l => l.UserName == userName && l.Password != null && l.Password != "")
             .ToListAsync(ct);
@@ -56,13 +65,16 @@ internal sealed class LoginHandler(IdentityDbContext db, SessionService sessions
 internal sealed record RefreshSessionCommand(string RefreshToken) : IRequest<Result<AuthSession>>;
 
 internal sealed class RefreshSessionHandler(
-    IdentityDbContext db, ITokenService tokens, SessionService sessions, ILogger<RefreshSessionHandler> logger)
+    IdentityDbContext db, ITokenService tokens, SessionService sessions, RevokedTokenStore revoked, TimeProvider clock, ILogger<RefreshSessionHandler> logger)
     : IRequestHandler<RefreshSessionCommand, Result<AuthSession>>
 {
     public async Task<Result<AuthSession>> Handle(RefreshSessionCommand cmd, CancellationToken ct)
     {
         var claims = await tokens.ReadRefreshTokenAsync(cmd.RefreshToken);
-        if (claims is null) return Rejected("refresh token hết hạn hoặc sai chữ ký (Jwt:Secret khác?)", null, null);
+        if (claims is null) return Rejected("refresh token hết hạn, quá giới hạn phiên (Jwt:MaxSessionDays) hoặc sai chữ ký (Jwt:Secret khác?)", null, null);
+        if (revoked.IsRevoked(claims.Id)) return Rejected("refresh token đã thu hồi khi đăng xuất", claims.CustomerId, claims.StaffId);
+        // Token cấp trước khi có giới hạn phiên: tính mốc từ lần gia hạn này (không đăng xuất đột ngột).
+        var authTime = claims.AuthTime ?? clock.GetUtcNow();
 
         if (claims.StaffId is { } staffId)
         {
@@ -71,7 +83,7 @@ internal sealed class RefreshSessionHandler(
             if (!staff.IsActive) return Rejected("tài khoản con đã bị khóa", claims.CustomerId, staffId);
             if (!JwtTokenService.FixedTimeEquals(tokens.PasswordStamp(staff.CustomerId, staff.Password, staff.Id), claims.PasswordStamp))
                 return Rejected("mật khẩu tài khoản con đã đổi", claims.CustomerId, staffId);
-            var staffSession = await sessions.StartAsync(staff, claims.IsPersistent, ct);
+            var staffSession = await sessions.StartAsync(staff, claims.IsPersistent, ct, authTime);
             return staffSession is null ? Rejected("hồ sơ khách cha không còn", claims.CustomerId, staffId) : staffSession;
         }
 
@@ -80,7 +92,7 @@ internal sealed class RefreshSessionHandler(
         if (!JwtTokenService.FixedTimeEquals(tokens.PasswordStamp(login.CustomerId, login.Password!), claims.PasswordStamp))
             return Rejected("mật khẩu tài khoản chính đã đổi (dbo.TCustomer.Login_Password)", claims.CustomerId, null);
 
-        var session = await sessions.StartAsync(login, claims.IsPersistent, ct);
+        var session = await sessions.StartAsync(login, claims.IsPersistent, ct, authTime);
         return session is null ? Rejected("hồ sơ khách không còn", claims.CustomerId, null) : session;
     }
 
@@ -89,6 +101,26 @@ internal sealed class RefreshSessionHandler(
     {
         logger.LogWarning("Không làm mới được phiên (khách {CustomerId}, tài khoản con {StaffId}): {Reason}", customerId, staffId, reason);
         return IdentityErrors.SessionExpired;
+    }
+}
+
+// ---------- Đăng xuất ----------
+
+/// <summary>
+/// Thu hồi token của phiên đang đăng xuất (không cần bảng DB — <see cref="RevokedTokenStore"/>): refresh token không đổi được phiên mới,
+/// access token bị từ chối ngay dù còn hạn. Token sai / hết hạn thì bỏ qua (đăng xuất vẫn thành công).
+/// </summary>
+/// <param name="AccessTokenId">jti của access token gửi kèm request (đã được xác thực).</param>
+internal sealed record LogoutCommand(string? RefreshToken, string? AccessTokenId, DateTimeOffset? AccessTokenExpiresAt) : IRequest<Result>;
+
+internal sealed class LogoutHandler(ITokenService tokens, RevokedTokenStore revoked) : IRequestHandler<LogoutCommand, Result>
+{
+    public async Task<Result> Handle(LogoutCommand cmd, CancellationToken ct)
+    {
+        if (cmd.AccessTokenExpiresAt is { } accessExpires) revoked.Revoke(cmd.AccessTokenId, accessExpires);
+        if (cmd.RefreshToken is { Length: > 0 } rt && await tokens.ReadRefreshTokenAsync(rt) is { } claims)
+            revoked.Revoke(claims.Id, claims.ExpiresAt);
+        return Result.Success();
     }
 }
 

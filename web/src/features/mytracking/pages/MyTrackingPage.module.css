@@ -11,6 +11,7 @@
 .groupHeading { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .groupHeading > span, .hint { color: var(--color-text-muted); font-size: var(--text-xs); }
 .hint { margin: 0; line-height: 1.6; }
+.hint code { font-family: var(--font-mono); overflow-wrap: anywhere; }
 .source { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: end; gap: 8px; margin-bottom: 6px; }
 .source > div, .logoSource { min-width: 0; }
 .source > button { height: var(--control-h); }
@@ -45,17 +46,29 @@
 .backdrop { position: absolute; inset: 0; z-index: -1; pointer-events: none; }
 .backgroundImage { display: block; width: 100%; height: 100%; object-fit: cover; object-position: top center; }
 .trackingShell { background: var(--color-surface); padding: 14px; min-width: 0; container-type: inline-size; }
-.brandHeader { display: grid; grid-template-columns: minmax(0, min(30%, 160px)) minmax(0, 1fr); gap: 12px; align-items: center; margin-bottom: 14px; }
-.brandHeader strong { display: block; font-size: 12px; line-height: 1.5; text-transform: uppercase; }
-.brandInfo { min-width: 0; text-align: right; overflow-wrap: anywhere; text-wrap: pretty; }
-.brandInfo p { margin: 2px 0 0; }
-.logo, .neutralLogo { width: 100%; max-width: 240px; height: 90px; object-fit: contain; object-position: left center; }
+/* Đầu trang theo mẫu mytracking.top cũ: logo trái (373px), cột thông tin căn trái — tên công ty đậm viết hoa, các dòng Add: / Tel: nhãn đậm. */
+.brandHeader { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); gap: 24px; align-items: center; margin-bottom: 18px; padding: 8px 0 4px; }
+.brandHeader strong { display: block; font-size: 15px; font-weight: 700; line-height: 1.5; text-transform: uppercase; color: var(--color-text); }
+.brandInfo { min-width: 0; text-align: left; font-size: 13px; line-height: 1.6; color: var(--color-text); overflow-wrap: anywhere; text-wrap: pretty; }
+.brandInfo p { margin: 6px 0 0; }
+.brandInfo b { font-weight: 700; }
+/* Tên công ty / địa chỉ dài: tối đa 2 hàng, phần dư "…" (rê chuột xem đủ). */
+.brandInfo .twoLines { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; }
+/* Địa chỉ dài: nhỏ chữ dần để cố nằm trên 1 hàng (xem lib/layout.ts). */
+.brandInfo .address_long { font-size: .9em; }
+.brandInfo .address_veryLong { font-size: .8em; }
+/* Logo như trang mytracking.top cũ: rộng 373px, cao theo tỷ lệ ảnh (logo vuông bị chặn ở max-height). */
+.logo, .neutralLogo { width: 373px; max-width: 100%; height: auto; max-height: 160px; object-fit: contain; object-position: left center; }
+.neutralLogo { height: 119px; }
 .neutralLogo { display: grid; place-items: center; border: 2px dashed var(--color-border-strong); color: var(--color-text-muted); }
 .trackingColumns { display: grid; grid-template-columns: minmax(0, 1fr) minmax(110px, .7fr); gap: 12px; align-items: start; }
 .trackingMain, .advertisingPanel { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
-.trackingSearch { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px; }
+.trackingSearch { display: grid; grid-auto-flow: column; grid-template-columns: minmax(0, 1fr); grid-auto-columns: auto; gap: 6px; }
 .trackingSearch input { min-width: 0; width: 100%; height: 30px; padding: 4px 6px; border: 1px solid var(--color-border-strong); border-radius: 4px; background: var(--color-surface); color: var(--color-text); font: inherit; }
-.trackingSearch button { height: 30px; padding: 4px 10px; border: 0; border-radius: 4px; color: var(--color-on-hero); background: var(--color-tracking-bar); font: inherit; }
+.trackingSearch button, .homeButton { height: 30px; padding: 4px 10px; border: 0; border-radius: 4px; color: var(--color-on-hero); background: var(--color-tracking-bar); font: inherit; }
+/* Nút Home cạnh nút Track: mở website trang home của khách (cùng màu thương hiệu với nút Track). */
+.homeButton:disabled { opacity: .55; cursor: not-allowed; }
+.homeButton { display: inline-flex; align-items: center; gap: 4px; text-decoration: none; white-space: nowrap; }
 .blackBar, .promotionTitle { margin: 0; background: var(--color-tracking-bar); color: var(--color-on-hero); padding: 9px 6px; font-size: 11px; font-weight: 600; text-align: center; }
 .promotionTitle { border-radius: 16px; overflow-wrap: anywhere; font-size: 12px; padding: 12px 6px; }
 .trackingPlaceholder { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; min-height: 160px; padding: 12px; background: var(--color-brand-soft); color: var(--color-text-muted); text-align: center; }
@@ -69,28 +82,30 @@
 .adCaption strong { display: block; font-size: 10px; text-transform: uppercase; }
 .adButton { display: inline-block; margin-top: 5px; padding: 3px 12px; border: 0; border-radius: 12px; color: var(--color-on-hero); background: var(--color-tracking-ad-button); font-family: inherit; font-size: 10px; line-height: inherit; }
 .adButton:disabled { opacity: .55; cursor: not-allowed; }
-.neutralAd { display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 12px; min-height: 140px; border: 2px dashed var(--color-border-strong); border-radius: 12px; background: var(--color-surface-muted); color: var(--color-text-muted); text-align: center; }
 .connect { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
 .socialIcons { display: flex; flex-wrap: wrap; gap: 6px; }
 .socialIcons a, .floatingContacts a { display: grid; place-items: center; width: 36px; height: 36px; color: var(--color-on-hero); font-size: 10px; font-weight: 700; text-decoration: none; background: var(--color-tracking-bar); }
 .socialIcons a { border-radius: 6px; }
+.logoLink { display: block; min-width: 0; }
+/* Facebook / Instagram / Zalo: logo màu chính thức lấp kín nút, không nền màu. */
+.socialIcons a.logoButton, .floatingContacts a.logoButton { background: transparent; box-shadow: none; }
+.socialIcons .logoButton img, .floatingContacts .logoButton img { width: 100%; height: 100%; }
+.brandInfo a { color: inherit; }
 .socialIcons img, .floatingContacts img { display: block; object-fit: contain; }
-.socialIcons .facebook, .socialIcons .instagram { background: var(--color-on-hero); }
 .floatingContacts { display: flex; flex-direction: column; gap: 4px; position: absolute; left: 0; top: 100px; }
 .floatingContacts a { width: 40px; height: 40px; border-radius: 0 8px 8px 0; box-shadow: var(--shadow-sm); }
 .floatingContacts img { width: 22px; height: 22px; }
-.floatingContacts .zalo { background: var(--color-social-zalo); }
 .socialIcons a:focus-visible, .floatingContacts a:focus-visible { outline: 2px solid var(--color-brand); outline-offset: 2px; }
-.floatingContacts .whatsapp { background: var(--color-social-whatsapp); }
-.floatingContacts .phone { background: var(--color-brand); }
 .mobile { width: 320px; max-width: 100%; margin: auto; padding-inline: 32px 12px; }
 .mobile .trackingColumns { grid-template-columns: 1fr; }
 .mobile .brandHeader { grid-template-columns: 1fr; align-items: start; }
 .mobile .brandInfo { text-align: left; }
-.mobile .neutralAd { min-height: 180px; }
 @container (max-width: 420px) {
   .brandHeader { grid-template-columns: 1fr; gap: 8px; }
-  .brandHeader > .logo, .brandHeader > .neutralLogo { max-width: 180px; }
+  .brandHeader > .logo, .brandHeader > .neutralLogo, .brandHeader .logoLink { max-width: 260px; }
+  .brandHeader strong { font-size: 15px; }
+  .brandInfo { font-size: 13px; }
+  .logo { max-height: 120px; }
 }
 @container (max-width: 480px) {
   .source { grid-template-columns: minmax(0, 1fr) auto; }
@@ -121,13 +136,17 @@
   .brandInfo { text-align: left; }
   .actions > button:last-child { margin-left: 0; }
 }
-/* Trang công khai /t/{slug}: cùng bố cục với preview nhưng toàn màn hình, chữ cỡ thường. */
+/* Trang công khai /tracking/{mã khách}/...: cùng bố cục với preview nhưng toàn màn hình, chữ cỡ thường. */
 .standalone { min-height: calc(100vh - 56px); padding: 32px 32px 32px 64px; border-radius: 0; font-size: var(--text-lg); }
 .standalone .trackingShell { max-width: 1180px; margin: 0 auto; padding: 24px; border-radius: 10px; }
-.standalone .brandHeader strong { font-size: var(--text-xl); }
-.standalone .logo, .standalone .neutralLogo { height: 110px; }
-.standalone .trackingSearch input, .standalone .trackingSearch button { height: var(--control-h); font-size: var(--text-lg); }
-.standalone .trackingSearch button { padding-inline: 20px; cursor: pointer; }
+.standalone .logo { max-height: 190px; }
+/* Trang công khai (máy tính): đúng cỡ mẫu — tên công ty 20px, thông tin 16px, cách logo 40px. */
+.standalone .brandHeader { gap: 40px; }
+.standalone .brandHeader strong { font-size: 20px; }
+.standalone .brandInfo { font-size: 16px; }
+.standalone .brandInfo p { margin-top: 10px; }
+.standalone .trackingSearch input, .standalone .trackingSearch button, .standalone .homeButton { height: var(--control-h); font-size: var(--text-lg); }
+.standalone .trackingSearch button, .standalone .homeButton { padding-inline: 20px; cursor: pointer; }
 .standalone .blackBar { padding: 12px; font-size: var(--text-lg); }
 .standalone .promotionTitle { font-size: var(--text-lg); }
 .standalone .adCaption strong, .standalone .adButton { font-size: var(--text-sm); }
@@ -139,16 +158,24 @@
   .standalone .trackingShell { padding: 14px; }
   .standalone .trackingColumns { grid-template-columns: 1fr; }
   .standalone .brandHeader { grid-template-columns: 1fr; }
-  .standalone .brandInfo { text-align: left; }
+  .standalone .brandInfo { text-align: left; font-size: 14px; }
+  .standalone .brandHeader strong { font-size: 18px; }
+  .standalone .logo { max-height: 130px; }
 }
 .publish { display: flex; flex-direction: column; gap: 12px; padding: 20px; }
 .publishHead { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
 .publishHead h2 { margin: 0; font-size: var(--text-lg); font-weight: 600; }
-.slugRow { display: grid; grid-template-columns: minmax(0, 360px) minmax(0, 1fr); align-items: start; gap: 12px; }
-.linkBox { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; min-height: var(--control-h); margin-top: 22px; padding: 4px 4px 4px 12px; border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-surface-muted); }
+.linkBox { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; min-height: var(--control-h); padding: 4px 4px 4px 12px; border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-surface-muted); }
 .linkBox code { flex: 1; min-width: 0; overflow-wrap: anywhere; font-family: var(--font-mono); font-size: 12.5px; }
-@media (max-width: 760px) {
-  .slugRow { grid-template-columns: 1fr; }
-  .linkBox { margin-top: 0; }
-}
 .openLink { padding: 0 8px; font-weight: 600; color: var(--color-brand); }
+/* Cổng liên lạc / mạng xã hội: chọn loại | nhập thông tin | nút */
+.channelList { display: flex; flex-direction: column; gap: 10px; }
+.channelRow { display: grid; grid-template-columns: minmax(0, 180px) minmax(0, 1fr) auto; align-items: end; gap: 8px; }
+.channelActions { display: flex; gap: 6px; padding-bottom: 2px; }
+.colorField { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: end; gap: 8px; }
+.colorSwatch { width: 40px; height: var(--control-h); padding: 2px; border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-surface); cursor: pointer; }
+@media (max-width: 760px) {
+  .channelRow { grid-template-columns: 1fr; align-items: stretch; }
+}
+/* Không có ảnh quảng cáo / mô tả: 1 cột, khung tra cứu rộng hết trang (đặt cuối để thắng .standalone .trackingColumns). */
+.previewPage .trackingColumns.singleColumn { grid-template-columns: minmax(0, 1fr); }

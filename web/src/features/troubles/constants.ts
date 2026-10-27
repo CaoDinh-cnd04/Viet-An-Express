@@ -1,17 +1,38 @@
+import { CONTACTS as COMPANY_CONTACTS } from '@/shared/config/company';
 import type { IconName, Tone } from '@/shared/ui';
 import type { TroubleKind, TroublePriority, TroubleStatus } from './types';
 
-/** 3 loại yêu cầu khách chọn khi gửi mới. */
+/** Loại yêu cầu: khách chọn Hỗ trợ & sự cố hoặc Góp ý; "Sự cố vận đơn" chỉ còn cho yêu cầu gửi trước 27/10/2026. */
 export const TROUBLE_KINDS: Record<TroubleKind, { label: string; hint: string; icon: IconName; tone: Tone }> = {
   su_co: { label: 'Sự cố vận đơn', hint: 'Giao chậm, thất lạc, hư hỏng, phụ phí… của 1 đơn hàng', icon: 'alert', tone: 'danger' },
-  ho_tro: { label: 'Yêu cầu hỗ trợ', hint: 'Hỏi về tạo đơn, tracking, cước, phần mềm…', icon: 'help', tone: 'info' },
+  ho_tro: { label: 'Hỗ trợ & sự cố', hint: 'Sự cố đơn hàng, tracking, cước, tạo đơn, sửa thông tin…', icon: 'help', tone: 'info' },
   gop_y: { label: 'Góp ý', hint: 'Ý kiến để Việt An cải thiện dịch vụ và phần mềm', icon: 'message', tone: 'brand' }
 };
 
-export const TROUBLE_KIND_ORDER: readonly TroubleKind[] = ['su_co', 'ho_tro', 'gop_y'];
+export const TROUBLE_KIND_ORDER: readonly TroubleKind[] = ['ho_tro', 'gop_y'];
 
 /** Chủ đề yêu cầu hỗ trợ. */
 export const SUPPORT_TOPICS = ['Hỗ trợ tạo đơn', 'Tra cứu / tracking', 'Cước & phụ phí', 'Sửa thông tin người gửi', 'Báo lỗi phần mềm', 'Khác'] as const;
+
+/** Vấn đề khách chọn khi gửi Hỗ trợ & sự cố (gộp loại sự cố + chủ đề hỗ trợ) — lưu ở TContact.KeyWord. */
+export const HELP_TOPICS = [
+  'Giao chậm / trễ hẹn',
+  'Thất lạc kiện hàng',
+  'Hư hỏng / vỡ hàng',
+  'Thiếu hàng trong kiện',
+  'Sai thông tin người nhận',
+  'Phát sai địa chỉ',
+  'Yêu cầu giữ / đổi địa chỉ',
+  'Cước & phụ phí',
+  'Tra cứu / tracking',
+  'Hỗ trợ tạo đơn',
+  'Sửa thông tin người gửi',
+  'Báo lỗi phần mềm',
+  'Khác'
+] as const;
+
+/** Nội dung góp ý — đúng 4 mục ô "Chọn nội dung góp ý" của form "Yêu cầu" (Bill Online cũ); lưu TContact.KeyWord như form cũ. */
+export const FEEDBACK_TOPICS = ['Chỉnh sửa phần mềm', 'Cập nhật thông tin', 'Góp ý nâng cấp', 'Khác'] as const;
 
 /** Chủ đề mở sẵn từ nút "Sửa hồ sơ người gửi" (form tạo đơn). */
 export const SENDER_INFO_TOPIC = 'Sửa thông tin người gửi';
@@ -65,10 +86,10 @@ export const TROUBLE_TABS: ReadonlyArray<{ key: TroubleStatus | 'all' | 'open'; 
 ];
 
 /** Liên hệ nhanh & câu hỏi thường gặp (trước ở trang Trợ giúp). Sửa câu hỏi / liên hệ tại đây. */
-// TODO(CS): thay hotline / email bằng thông tin thật của Việt An trước khi go-live.
-export const CONTACTS: ReadonlyArray<{ label: string; value: string }> = [
-  { label: 'Hotline CS', value: '1900 0000' },
-  { label: 'Email hỗ trợ', value: 'cs@vietanexpress.com.vn' },
+/** Hotline / email lấy từ cấu hình chung (shared/config/company.ts) — đổi số ở đó. */
+export const CONTACTS: ReadonlyArray<{ label: string; value: string; href?: string }> = [
+  { label: 'Hotline CS', value: COMPANY_CONTACTS.hotline.label, href: COMPANY_CONTACTS.hotline.href },
+  { label: 'Email hỗ trợ', value: COMPANY_CONTACTS.supportEmail.label, href: COMPANY_CONTACTS.supportEmail.href },
   { label: 'Giờ làm việc', value: 'Thứ 2 – Thứ 7, 08:00 – 18:00' }
 ];
 

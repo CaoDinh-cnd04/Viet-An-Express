@@ -79,17 +79,23 @@ internal sealed class AuthController(IOptions<JwtOptions> jwt) : ApiControllerBa
     }
 
     /// <summary>
-    /// Xoá cookie đăng nhập của trình duyệt này. Máy chủ không lưu phiên nên token đã cấp còn hiệu lực tới khi hết hạn;
-    /// đổi mật khẩu để huỷ phiên trên mọi thiết bị.
+    /// Đăng xuất phiên này: thu hồi refresh token (cookie, hoặc body với ứng dụng không dùng cookie) và access token đang gửi kèm
+    /// — chép được token cũng không dùng tiếp được — rồi xoá cookie. Đổi mật khẩu để huỷ phiên trên mọi thiết bị.
     /// </summary>
     [HttpPost("logout")]
     [AllowAnonymous]
     [ProducesResponseType<ApiMessage>(StatusCodes.Status200OK)]
-    public IActionResult Logout()
+    public async Task<IActionResult> Logout(RefreshRequest? body, CancellationToken ct)
     {
+        var refresh = !string.IsNullOrEmpty(body?.RefreshToken) ? body!.RefreshToken : Request.Cookies[AuthCookies.Refresh];
+        await Sender.Send(new LogoutCommand(refresh, User.FindFirst(VaClaimTypes.TokenId)?.Value, AccessTokenExpiry(User)), ct);
         AuthCookies.Clear(Response, jwt.Value);
         return Ok(new ApiMessage("Đã đăng xuất"));
     }
+
+    /// <summary>Hạn của access token đã xác thực (claim exp, giây Unix) — null khi request không kèm token hợp lệ.</summary>
+    internal static DateTimeOffset? AccessTokenExpiry(System.Security.Claims.ClaimsPrincipal user) =>
+        long.TryParse(user.FindFirst(VaClaimTypes.Expires)?.Value, out var seconds) ? DateTimeOffset.FromUnixTimeSeconds(seconds) : null;
 
     [HttpPost("change-password")]
     [HasPermission(IdentityPermissions.ChangePassword)]

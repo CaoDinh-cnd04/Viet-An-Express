@@ -13,6 +13,8 @@ internal sealed class LegacyCustomer
     public long Id { get; private set; }
     public string? Code { get; private set; }
     public string? CompanyName { get; private set; }
+    /// <summary>Tên công ty in trên hóa đơn (TCustomer.InvoiceCustomerName) — tên hiển thị trên trang MyTracking.</summary>
+    public string? InvoiceName { get; private set; }
     public string? ContactName { get; private set; }
     public string? ContactEmail { get; private set; }
     public string? Email { get; private set; }
@@ -27,6 +29,7 @@ internal sealed class LegacyCustomer
 
     /// <summary>Độ dài cột trong dbo.TCustomer.</summary>
     public const int CompanyNameMaxLength = 250;
+    public const int InvoiceNameMaxLength = 500;
     public const int TextMaxLength = 150;
     public const int AddressMaxLength = 250;
 }
@@ -40,6 +43,7 @@ internal sealed class LegacyCustomerConfiguration : IEntityTypeConfiguration<Leg
         b.Property(x => x.Id).HasColumnName("CustomerID");
         b.Property(x => x.Code).HasColumnName("CustomerCode");
         b.Property(x => x.CompanyName).HasColumnName("CustomerName").HasMaxLength(LegacyCustomer.CompanyNameMaxLength);
+        b.Property(x => x.InvoiceName).HasColumnName("InvoiceCustomerName").HasMaxLength(LegacyCustomer.InvoiceNameMaxLength);
         b.Property(x => x.ContactName).HasMaxLength(LegacyCustomer.TextMaxLength);
         b.Property(x => x.ContactPhone).HasMaxLength(LegacyCustomer.TextMaxLength);
         b.Property(x => x.ContactEmail).HasMaxLength(LegacyCustomer.TextMaxLength);

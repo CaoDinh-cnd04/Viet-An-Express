@@ -1,8 +1,30 @@
 import { COMPRESSED_IMAGE_BYTES, IMAGE_TYPES, MAX_IMAGE_BYTES, isWebUrl } from '../schema';
 
+/**
+ * Link khách hay dán không phải link file ảnh → đổi sang link ảnh trực tiếp khi đổi được:
+ * - Google Hình ảnh (google.com/imgres?imgurl=...) và link chuyển hướng Google (google.com/url?url=...).
+ * - Google Drive chia sẻ (drive.google.com/file/d/{id}/view, open?id=, uc?id=) → ảnh thu nhỏ của Drive (file phải để "Bất kỳ ai có đường liên kết").
+ * Còn lại giữ nguyên. Hàm thuần — có test.
+ */
+export function normalizeImageUrl(raw: string): string {
+  const src = raw.trim();
+  let url: URL;
+  try { url = new URL(src); } catch { return src; }
+  const host = url.hostname.replace(/^www\./, '');
+  if (/^google\.[a-z.]+$/.test(host)) {
+    const target = url.pathname === '/imgres' ? url.searchParams.get('imgurl') : url.pathname === '/url' ? url.searchParams.get('url') ?? url.searchParams.get('q') : null;
+    if (target && isWebUrl(target)) return target;
+  }
+  if (host === 'drive.google.com') {
+    const id = /\/file\/d\/([\w-]+)/.exec(url.pathname)?.[1] ?? url.searchParams.get('id');
+    if (id) return `https://drive.google.com/thumbnail?id=${id}&sz=w1600`;
+  }
+  return src;
+}
+
 /** Check remote images without requiring the source server to support CORS. */
-export function validateImageUrl(src: string): Promise<string> {
-  src = src.trim();
+export function validateImageUrl(raw: string): Promise<string> {
+  const src = normalizeImageUrl(raw);
   if (!isWebUrl(src)) return Promise.reject(new Error('Link phải bắt đầu bằng http:// hoặc https://'));
   return new Promise((resolve, reject) => {
     const image = new Image();
@@ -13,7 +35,7 @@ export function validateImageUrl(src: string): Promise<string> {
       if (loaded && image.naturalWidth > 0) resolve(src);
       else {
         image.src = '';
-        reject(new Error('Không tải được ảnh từ URL. Vui lòng dùng link trực tiếp tới ảnh hoặc tải ảnh lên.'));
+        reject(new Error('Link này không phải link file ảnh hoặc trang nguồn chặn lấy ảnh. Mở ảnh, bấm chuột phải → "Sao chép địa chỉ hình ảnh" rồi dán lại, hoặc lưu ảnh về máy và bấm "Thêm ảnh mới".'));
       }
     };
     const timer = setTimeout(() => finish(false), 15000);

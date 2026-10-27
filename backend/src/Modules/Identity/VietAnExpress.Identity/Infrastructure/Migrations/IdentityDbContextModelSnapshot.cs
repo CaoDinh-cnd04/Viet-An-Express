@@ -33,23 +33,22 @@ namespace VietAnExpress.Identity.Infrastructure.Migrations
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<string>("ButtonText")
-                        .HasColumnType("nvarchar(max)")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)")
                         .HasColumnName("Str3");
 
                     b.Property<long?>("CustomerId")
                         .HasColumnType("bigint")
                         .HasColumnName("CustomerID");
 
-                    b.Property<string>("ExtraConfigJson")
-                        .HasColumnType("nvarchar(max)")
-                        .HasColumnName("Cau_Hinh_Bo_Sung");
-
                     b.Property<string>("ImageKey")
-                        .HasColumnType("nvarchar(max)")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)")
                         .HasColumnName("Str1");
 
                     b.Property<string>("Link")
-                        .HasColumnType("nvarchar(max)")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)")
                         .HasColumnName("Link");
 
                     b.Property<int?>("MyTrackingId")
@@ -60,22 +59,25 @@ namespace VietAnExpress.Identity.Infrastructure.Migrations
                         .HasColumnType("int");
 
                     b.Property<string>("Source")
-                        .HasColumnType("nvarchar(max)")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)")
                         .HasColumnName("Url_Hinh");
 
                     b.Property<string>("Title")
-                        .HasColumnType("nvarchar(max)")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)")
                         .HasColumnName("Str2");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("MyTrackingId", "SortOrder")
-                        .HasDatabaseName("IX_TCustomer_MyTracking_Banner_MyTrackingID_SortOrder");
+                    b.HasIndex("MyTrackingId");
 
                     b.ToTable("TCustomer_MyTracking_Banner", "dbo", t =>
                         {
                             t.ExcludeFromMigrations();
                         });
+
+                    b.HasAnnotation("SqlServer:UseSqlOutputClause", false);
                 });
 
             modelBuilder.Entity("VietAnExpress.Identity.Domain.MyTrackingPage", b =>
@@ -88,94 +90,222 @@ namespace VietAnExpress.Identity.Infrastructure.Migrations
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<string>("Address")
-                        .HasColumnType("nvarchar(max)")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)")
                         .HasColumnName("Address");
 
                     b.Property<string>("Background")
-                        .HasColumnType("nvarchar(max)")
-                        .HasColumnName("Hinh_Nen");
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)")
+                        .HasColumnName("Str1");
+
+                    b.Property<string>("Color01")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)")
+                        .HasColumnName("Color_01");
+
+                    b.Property<string>("Color02")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)")
+                        .HasColumnName("Color_02");
 
                     b.Property<string>("CompanyName")
-                        .HasColumnType("nvarchar(max)")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)")
                         .HasColumnName("CompanyName");
 
-                    b.Property<DateTime?>("CreateDate")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("datetime")
-                        .HasDefaultValueSql("GETDATE()");
+                    b.Property<string>("CongTinNhan01")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)")
+                        .HasColumnName("CongTinNhan_01");
+
+                    b.Property<string>("CongTinNhan02")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)")
+                        .HasColumnName("CongTinNhan_02");
+
+                    b.Property<string>("CongTinNhan03")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)")
+                        .HasColumnName("CongTinNhan_03");
+
+                    b.Property<string>("CongTinNhan04")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)")
+                        .HasColumnName("CongTinNhan_04");
+
+                    b.Property<string>("CongTinNhan05")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)")
+                        .HasColumnName("CongTinNhan_05");
+
+                    b.Property<string>("CongTinNhan06")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)")
+                        .HasColumnName("CongTinNhan_06");
+
+                    b.Property<string>("CongTinNhan07")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)")
+                        .HasColumnName("CongTinNhan_07");
+
+                    b.Property<string>("CongTinNhan08")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)")
+                        .HasColumnName("CongTinNhan_08");
+
+                    b.Property<string>("CongTinNhan09")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)")
+                        .HasColumnName("CongTinNhan_09");
+
+                    b.Property<string>("CongTinNhan10")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)")
+                        .HasColumnName("CongTinNhan_10");
+
+                    b.Property<string>("CongTinNhan11")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)")
+                        .HasColumnName("CongTinNhan_11");
+
+                    b.Property<string>("CongTinNhan12")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)")
+                        .HasColumnName("CongTinNhan_12");
+
+                    b.Property<string>("CongTinNhan13")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)")
+                        .HasColumnName("CongTinNhan_13");
+
+                    b.Property<string>("CongTinNhan14")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)")
+                        .HasColumnName("CongTinNhan_14");
+
+                    b.Property<string>("CongTinNhan15")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)")
+                        .HasColumnName("CongTinNhan_15");
+
+                    b.Property<string>("CongTruyenThong01")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)")
+                        .HasColumnName("CongTruyenThong_01");
+
+                    b.Property<string>("CongTruyenThong02")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)")
+                        .HasColumnName("CongTruyenThong_02");
+
+                    b.Property<string>("CongTruyenThong03")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)")
+                        .HasColumnName("CongTruyenThong_03");
+
+                    b.Property<string>("CongTruyenThong04")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)")
+                        .HasColumnName("CongTruyenThong_04");
+
+                    b.Property<string>("CongTruyenThong05")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)")
+                        .HasColumnName("CongTruyenThong_05");
+
+                    b.Property<string>("CongTruyenThong06")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)")
+                        .HasColumnName("CongTruyenThong_06");
+
+                    b.Property<string>("CongTruyenThong07")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)")
+                        .HasColumnName("CongTruyenThong_07");
+
+                    b.Property<string>("CongTruyenThong08")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)")
+                        .HasColumnName("CongTruyenThong_08");
+
+                    b.Property<string>("CongTruyenThong09")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)")
+                        .HasColumnName("CongTruyenThong_09");
+
+                    b.Property<string>("CongTruyenThong10")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)")
+                        .HasColumnName("CongTruyenThong_10");
+
+                    b.Property<string>("CongTruyenThong11")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)")
+                        .HasColumnName("CongTruyenThong_11");
+
+                    b.Property<string>("CongTruyenThong12")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)")
+                        .HasColumnName("CongTruyenThong_12");
+
+                    b.Property<string>("CongTruyenThong13")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)")
+                        .HasColumnName("CongTruyenThong_13");
+
+                    b.Property<string>("CongTruyenThong14")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)")
+                        .HasColumnName("CongTruyenThong_14");
+
+                    b.Property<string>("CongTruyenThong15")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)")
+                        .HasColumnName("CongTruyenThong_15");
 
                     b.Property<long>("CustomerId")
                         .HasColumnType("bigint")
                         .HasColumnName("CustomerID");
 
                     b.Property<string>("Description")
-                        .HasColumnType("nvarchar(max)")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)")
                         .HasColumnName("UuDai_NoiDung");
 
-                    b.Property<string>("ExtraConfigJson")
-                        .HasColumnType("nvarchar(max)")
-                        .HasColumnName("Cau_Hinh_Bo_Sung");
-
-                    b.Property<string>("Facebook")
-                        .HasColumnType("nvarchar(max)")
-                        .HasColumnName("CongTruyenThong_01");
-
-                    b.Property<string>("Instagram")
-                        .HasColumnType("nvarchar(max)")
-                        .HasColumnName("CongTruyenThong_02");
-
-                    b.Property<bool>("IsPublished")
-                        .HasColumnType("bit")
-                        .HasColumnName("Da_Xuat_Ban");
+                    b.Property<string>("Email")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)")
+                        .HasColumnName("Email");
 
                     b.Property<string>("Logo")
-                        .HasColumnType("nvarchar(max)")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)")
                         .HasColumnName("Logo");
 
-                    b.Property<DateTime?>("ModifyDate")
-                        .HasColumnType("datetime");
-
                     b.Property<string>("Phone")
-                        .HasColumnType("nvarchar(max)")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)")
                         .HasColumnName("Tel");
 
-                    b.Property<string>("Slug")
-                        .HasMaxLength(60)
-                        .IsUnicode(false)
-                        .HasColumnType("varchar(60)")
-                        .HasColumnName("Duong_Dan");
-
                     b.Property<string>("Title")
-                        .HasColumnType("nvarchar(max)")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)")
                         .HasColumnName("UuDai_TieuDe");
 
-                    b.Property<string>("WhatsApp")
-                        .HasColumnType("nvarchar(max)")
-                        .HasColumnName("CongTinNhan_02");
-
-                    b.Property<string>("X")
-                        .HasColumnType("nvarchar(max)")
-                        .HasColumnName("CongTruyenThong_03");
-
-                    b.Property<string>("Zalo")
-                        .HasColumnType("nvarchar(max)")
-                        .HasColumnName("CongTinNhan_01");
+                    b.Property<string>("Website")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)")
+                        .HasColumnName("Website");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("CustomerId")
-                        .IsUnique()
-                        .HasDatabaseName("UX_TCustomer_MyTracking_CustomerID");
-
-                    b.HasIndex("Slug")
-                        .IsUnique()
-                        .HasDatabaseName("UX_TCustomer_MyTracking_Duong_Dan")
-                        .HasFilter("[Duong_Dan] IS NOT NULL");
 
                     b.ToTable("TCustomer_MyTracking", "dbo", t =>
                         {
                             t.ExcludeFromMigrations();
                         });
+
+                    b.HasAnnotation("SqlServer:UseSqlOutputClause", false);
                 });
 
             modelBuilder.Entity("VietAnExpress.Identity.Domain.Notification", b =>
@@ -186,6 +316,13 @@ namespace VietAnExpress.Identity.Infrastructure.Migrations
                         .HasColumnName("ID");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("Audience")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(10)")
+                        .HasColumnName("Doi_Tuong");
 
                     b.Property<string>("Body")
                         .IsRequired()
@@ -207,6 +344,12 @@ namespace VietAnExpress.Identity.Infrastructure.Migrations
                         .HasColumnType("bigint")
                         .HasColumnName("CustomerID");
 
+                    b.Property<string>("CustomerTypes")
+                        .HasMaxLength(200)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(200)")
+                        .HasColumnName("Loai_Khach");
+
                     b.Property<string>("EmailError")
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)")
@@ -227,6 +370,10 @@ namespace VietAnExpress.Identity.Infrastructure.Migrations
                         .HasColumnType("varchar(20)")
                         .HasColumnName("Email_Trang_Thai");
 
+                    b.Property<DateTime?>("ExpiresAt")
+                        .HasColumnType("datetime")
+                        .HasColumnName("Ngay_Het_Han");
+
                     b.Property<bool>("Important")
                         .HasColumnType("bit")
                         .HasColumnName("Quan_Trong");
@@ -235,6 +382,23 @@ namespace VietAnExpress.Identity.Infrastructure.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)")
                         .HasColumnName("Duong_Dan");
+
+                    b.Property<bool>("Pinned")
+                        .HasColumnType("bit")
+                        .HasColumnName("Ghim");
+
+                    b.Property<DateTime>("PublishAt")
+                        .HasColumnType("datetime")
+                        .HasColumnName("Ngay_Dang");
+
+                    b.Property<string>("Recipients")
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(max)")
+                        .HasColumnName("Khach_Nhan");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int")
+                        .HasColumnName("Trang_Thai");
 
                     b.Property<string>("Title")
                         .IsRequired()
@@ -245,9 +409,12 @@ namespace VietAnExpress.Identity.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("CreatedAt")
-                        .HasDatabaseName("IX_ThongBao_Ngay_Tao");
+                        .HasDatabaseName("IX_TThongBao_Ngay_Tao");
 
-                    b.ToTable("ThongBao", "dbo");
+                    b.HasIndex("Status", "PublishAt")
+                        .HasDatabaseName("IX_TThongBao_Trang_Thai_Ngay_Dang");
+
+                    b.ToTable("TThongBao", "dbo");
                 });
 
             modelBuilder.Entity("VietAnExpress.Identity.Domain.NotificationRead", b =>
@@ -281,9 +448,9 @@ namespace VietAnExpress.Identity.Infrastructure.Migrations
 
                     b.HasIndex("CustomerId", "StaffId", "NotificationId")
                         .IsUnique()
-                        .HasDatabaseName("UX_ThongBao_DaDoc_TaiKhoan");
+                        .HasDatabaseName("UX_TThongBao_DaDoc_TaiKhoan");
 
-                    b.ToTable("ThongBao_DaDoc", "dbo");
+                    b.ToTable("TThongBao_DaDoc", "dbo");
                 });
 
             modelBuilder.Entity("VietAnExpress.Identity.Domain.StaffAccount", b =>
@@ -359,6 +526,8 @@ namespace VietAnExpress.Identity.Infrastructure.Migrations
                         {
                             t.ExcludeFromMigrations();
                         });
+
+                    b.HasAnnotation("SqlServer:UseSqlOutputClause", false);
                 });
 
             modelBuilder.Entity("VietAnExpress.Identity.Domain.Trouble", b =>
@@ -476,50 +645,8 @@ namespace VietAnExpress.Identity.Infrastructure.Migrations
                         {
                             t.ExcludeFromMigrations();
                         });
-                });
 
-            modelBuilder.Entity("VietAnExpress.Identity.Domain.UsageEvent", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("Audience")
-                        .IsRequired()
-                        .HasMaxLength(12)
-                        .HasColumnType("nvarchar(12)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<Guid?>("FlowId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("Kind")
-                        .IsRequired()
-                        .HasMaxLength(24)
-                        .HasColumnType("nvarchar(24)");
-
-                    b.Property<string>("Mode")
-                        .HasMaxLength(8)
-                        .HasColumnType("nvarchar(8)");
-
-                    b.Property<string>("Path")
-                        .IsRequired()
-                        .HasMaxLength(80)
-                        .HasColumnType("nvarchar(80)");
-
-                    b.Property<string>("Visitor")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CreatedAt", "Audience", "Kind");
-
-                    b.HasIndex("FlowId", "Mode", "Kind");
-
-                    b.ToTable("ThongKeSuDung", "dbo");
+                    b.HasAnnotation("SqlServer:UseSqlOutputClause", false);
                 });
 
             modelBuilder.Entity("VietAnExpress.Identity.Infrastructure.CustomerLogin", b =>
@@ -527,6 +654,10 @@ namespace VietAnExpress.Identity.Infrastructure.Migrations
                     b.Property<long>("CustomerId")
                         .HasColumnType("bigint")
                         .HasColumnName("CustomerID");
+
+                    b.Property<int?>("CustomerTypeId")
+                        .HasColumnType("int")
+                        .HasColumnName("CustomerTypeID");
 
                     b.Property<string>("Password")
                         .HasMaxLength(150)
@@ -538,12 +669,39 @@ namespace VietAnExpress.Identity.Infrastructure.Migrations
                         .HasColumnType("nvarchar(50)")
                         .HasColumnName("Login_UserName");
 
+                    b.Property<int?>("ViewLinkTracking")
+                        .HasColumnType("int")
+                        .HasColumnName("ViewLinkTracking");
+
                     b.HasKey("CustomerId");
 
                     b.ToTable("TCustomer", "dbo", t =>
                         {
                             t.ExcludeFromMigrations();
                         });
+
+                    b.HasAnnotation("SqlServer:UseSqlOutputClause", false);
+                });
+
+            modelBuilder.Entity("VietAnExpress.Identity.Infrastructure.CustomerType", b =>
+                {
+                    b.Property<int>("Id")
+                        .HasColumnType("int")
+                        .HasColumnName("CustomerTypeID");
+
+                    b.Property<string>("Name")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("CustomerTypeName");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("TCustomerType", "dbo", t =>
+                        {
+                            t.ExcludeFromMigrations();
+                        });
+
+                    b.HasAnnotation("SqlServer:UseSqlOutputClause", false);
                 });
 
             modelBuilder.Entity("VietAnExpress.Identity.Domain.MyTrackingBanner", b =>
@@ -552,6 +710,49 @@ namespace VietAnExpress.Identity.Infrastructure.Migrations
                         .WithMany("Banners")
                         .HasForeignKey("MyTrackingId")
                         .OnDelete(DeleteBehavior.ClientCascade);
+                });
+
+            modelBuilder.Entity("VietAnExpress.Identity.Domain.Notification", b =>
+                {
+                    b.OwnsMany("VietAnExpress.Identity.Domain.NotificationItem", "Items", b1 =>
+                        {
+                            b1.Property<long>("NotificationId");
+
+                            b1.Property<int>("__synthesizedOrdinal")
+                                .ValueGeneratedOnAddOrUpdate();
+
+                            b1.Property<string>("Body")
+                                .IsRequired()
+                                .HasJsonPropertyName("Noi_Dung");
+
+                            b1.Property<string>("Detail")
+                                .HasJsonPropertyName("Chi_Tiet");
+
+                            b1.Property<string>("Images")
+                                .HasJsonPropertyName("Hinh_Anh");
+
+                            b1.Property<string>("Link")
+                                .HasJsonPropertyName("Duong_Dan");
+
+                            b1.Property<int>("SortOrder")
+                                .HasJsonPropertyName("Thu_Tu");
+
+                            b1.Property<string>("Title")
+                                .HasJsonPropertyName("Tieu_De");
+
+                            b1.HasKey("NotificationId", "__synthesizedOrdinal");
+
+                            b1.ToTable("TThongBao", "dbo");
+
+                            b1
+                                .ToJson("Tin")
+                                .HasColumnType("nvarchar(max)");
+
+                            b1.WithOwner()
+                                .HasForeignKey("NotificationId");
+                        });
+
+                    b.Navigation("Items");
                 });
 
             modelBuilder.Entity("VietAnExpress.Identity.Domain.NotificationRead", b =>

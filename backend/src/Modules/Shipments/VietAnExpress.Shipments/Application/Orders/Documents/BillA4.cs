@@ -26,8 +26,8 @@ internal static class BillA4
     private enum Slip { Shipper = 1, Origin = 2, Destination = 3 }
 
     public static string Render(OrderPrintModel m, CompanyInfo c, DateTime printedAt) => $"""
-        <section class="page sheet">{SlipHtml(m, c, Slip.Shipper)}{Terms}</section>
-        <section class="page sheet">{SlipHtml(m, c, Slip.Origin)}{SlipHtml(m, c, Slip.Destination)}</section>
+        <section class="page sheet">{SlipHtml(m, c, Slip.Shipper, printedAt)}{Terms}</section>
+        <section class="page sheet">{SlipHtml(m, c, Slip.Origin, printedAt)}{SlipHtml(m, c, Slip.Destination, printedAt)}</section>
         {ShippingMarks(m, c, printedAt)}
         """;
 
@@ -98,20 +98,14 @@ internal static class BillA4
             <div class="mark">
               <div class="m-box">
                 <div class="s-head m-head">
-                  <img class="logo" src="{LogoDataUri.Value}" alt="Việt An Express">
-                  <div class="brand">
-                    <div class="brand-name">Viet An Express</div>
-                    <div><b class="k">Tel</b> : {H(c.Phone)}</div>
-                    <div><b class="k">Hotline</b> : <b>{H(c.Hotline)}</b></div>
-                    <div><b class="k">Website</b> : <i>{H(c.Website)}</i></div>
-                  </div>
+                  <img class="head-img" src="{HeaderDataUri.Value}" alt="Viet An Express · Tel {H(c.Phone)} · Hotline {H(c.Hotline)}">
                   <div class="awb">{Code128.Svg(m.Bill, 40)}<div class="awb-no">{H(m.Bill)} <small>/{index}</small></div><div class="route">{H(RouteCode(o.ServiceName))}</div></div>
                 </div>
                 <div class="m-title">SHIPPING MARK</div>
                 <div class="m-hawb"><i>HAWB:</i> <b>{H(m.Bill)}</b></div>
                 <div class="bar m-bar center"><i>Ref no.:</i> {H(o.CustomerBill)}</div>
                 <div class="m-dest">
-                  <div class="qr-frame">{Qr(TrackingUrl(c, m.Bill))}</div>
+                  <div class="qr-frame">{Qr(m.Bill)}</div>
                   <div><div class="m-dest-lbl">DESTINATION</div><div class="m-dest-code">{H(CountryCode(o.ConsigneeCountry))}</div></div>
                 </div>
                 <div class="m-pcs"><i>Pcs no:</i> <b>{index} / {total}</b></div>
@@ -177,12 +171,11 @@ internal static class BillA4
 
     // ---------------- 1 liên ----------------
 
-    private static string SlipHtml(OrderPrintModel m, CompanyInfo c, Slip slip)
+    private static string SlipHtml(OrderPrintModel m, CompanyInfo c, Slip slip, DateTime printedAt)
     {
         var o = m.Order;
         var bill = H(m.Bill);
         var (addr1, addr2) = SplitAddress(o.SenderAddress);
-        var qrCaption = slip == Slip.Shipper ? "Quét QR để tracking" : m.Bill;
 
         var signs = slip == Slip.Destination
             ? $"""
@@ -190,7 +183,7 @@ internal static class BillA4
               <div class="sign"><div>Chữ ký người nhận <i>(Signed By Receiver)</i></div><div class="sign-date"><b>Ngày, giờ</b> <i>(Date /time)</i>:<br><i>NV kinh doanh</i> : </div></div>
               """
             : $"""
-              <div class="sign"><div>Chữ ký người gửi <i>(Sender's Signature)</i></div><div class="sign-date"><b>Ngày, giờ</b> <i>(Date /time)</i>: {Date(o.CreateDate)}</div></div>
+              <div class="sign"><div>Chữ ký người gửi <i>(Sender's Signature)</i></div><div class="sign-date"><b>Ngày, giờ</b> <i>(Date /time)</i>: {SenderDateTime(o.CreateDate, printedAt)}</div></div>
               <div class="sign"><div>Nhân viên nhận hàng <i>(Picked up by)</i></div><div class="sign-date"><b>Ngày, giờ</b> <i>(Date /time)</i>:<br><i>NV kinh doanh</i> : </div></div>
               """;
 
@@ -206,21 +199,15 @@ internal static class BillA4
             <div class="slip">
               <div class="box">
                 <div class="s-head">
-                  <img class="logo" src="{LogoDataUri.Value}" alt="Việt An Express">
-                  <div class="brand">
-                    <div class="brand-name">Viet An Express</div>
-                    <div><b class="k">Tel</b> : {H(c.Phone)}</div>
-                    <div><b class="k">Hotline</b> : <b>{H(c.Hotline)}</b></div>
-                    <div><b class="k">Website</b> : <i>{H(c.Website)}</i></div>
-                  </div>
+                  <img class="head-img" src="{HeaderDataUri.Value}" alt="Viet An Express · Tel {H(c.Phone)} · Hotline {H(c.Hotline)}">
                   <div class="awb">{Code128.Svg(m.Bill, 40)}<div class="awb-code">{H(m.Bill)}</div><div class="route">{H(RouteCode(o.ServiceName))}</div></div>
                 </div>
 
                 <div class="bar">1. Thông tin người gửi <i>(Sender's information)</i>:</div>
                 <div class="sender">
                   <div class="qr">
-                    <div class="qr-frame">{Qr(TrackingUrl(c, m.Bill))}</div>
-                    <div class="qr-cap">{H(qrCaption)}</div>
+                    <div class="qr-frame">{Qr(m.Bill)}</div>
+                    <a class="qr-cap" href="{H(TrackingUrl(c, m.Bill))}" target="_blank" rel="noopener noreferrer">{bill}</a>
                   </div>
                   <div class="lines">
                     <div class="ln">{H(addr1)}</div>
@@ -270,22 +257,23 @@ internal static class BillA4
         var dims = new List<string>();
         if (pk.Count > 0)
         {
-            gross = Kg(pk.Sum(p => p.GrossKg));
-            // Không khai kích thước → TL quy đổi 0 (như hệ thống cũ), cột kích thước để trống.
-            vol = Kg(pk.Sum(p => p.VolumeKg));
-            // Kiện không khai D×R×C → không in "1 × 0 × 0 × 0 cm".
+            gross = Kg1(pk.Sum(p => p.GrossKg));
+            // Không khai kích thước → TL quy đổi 0 (như hệ thống cũ), ô kích thước để trống.
+            vol = Kg1(pk.Sum(BillVolumeKg));
+            // Kiện không khai D×R×C → không in "1*(0*0*0)".
             var measured = pk.Where(p => p.Length * p.Width * p.Height > 0).ToList();
-            const int maxLines = 4;
-            var shown = measured.Count > maxLines ? measured.Take(maxLines - 1) : measured;
-            dims.AddRange(shown.Select(p => $"{p.Qty} × {Kg(p.Length)} × {Kg(p.Width)} × {Kg(p.Height)} cm"));
-            if (measured.Count > maxLines) dims.Add($"… và {measured.Count - (maxLines - 1)} dòng kiện khác");
+            var shown = measured.Count > DimSlots ? measured.Take(DimSlots - 1) : measured;
+            // Như hệ thống cũ: "TL thực | SL*(D*R*C)=TL quy đổi", vd "19.5 | 1*(47*37*32)=11.5".
+            dims.AddRange(shown.Select(p =>
+                $"{H(Kg1(p.GrossKg))} | {p.Qty}*({Kg(p.Length)}*{Kg(p.Width)}*{Kg(p.Height)})=<b>{H(Kg1(BillVolumeKg(p)))}</b>"));
+            if (measured.Count > DimSlots) dims.Add($"… và {measured.Count - (DimSlots - 1)} dòng kiện khác");
         }
         else
         {
-            gross = o.WeightKg is > 0 ? Kg(o.WeightKg) : "";
+            gross = o.WeightKg is > 0 ? Kg1(o.WeightKg) : "";
             vol = "";
         }
-        while (dims.Count < 4) dims.Add("");
+        while (dims.Count < DimSlots) dims.Add("");
 
         var pieces = m.TotalPieces;
         return $"""
@@ -294,7 +282,7 @@ internal static class BillA4
                 <th class="c-pcs">Số kiện<br><i>(PCS)</i></th>
                 <th class="c-w">TL thực<br><i>(G.W)</i></th>
                 <th class="c-w">TL Qui Đổi<br><i>(Vol.W)</i></th>
-                <th rowspan="2" class="dims"><div class="dims-title">Kích thước (Dimensions)</div>{string.Concat(dims.Select(d => $"<div class=\"dim\">{d}</div>"))}</th>
+                <th rowspan="2" class="dims"><div class="dims-title">Kích thước (Dimensions)</div><div class="dim-grid">{string.Concat(dims.Select(d => $"<div class=\"dim\">{d}</div>"))}</div></th>
               </tr>
               <tr>
                 <td class="pcs">{pieces}</td>
@@ -327,16 +315,25 @@ internal static class BillA4
     internal static string TrackingUrl(CompanyInfo c, string bill) =>
         $"{c.PortalUrl.TrimEnd('/')}/tracking/{Uri.EscapeDataString(bill)}";
 
-    internal static string Qr(string text)
+    /// <summary>CMS nhận số bill thuần như mã vạch; không đưa URL hoặc tiền tố vào QR chứng từ.</summary>
+    internal static string Qr(string bill)
     {
-        using var data = QRCodeGenerator.GenerateQrCode(text, QRCodeGenerator.ECCLevel.M);
-        return new SvgQRCode(data).GetGraphic(4, "#000000", "#ffffff", false, SvgQRCode.SizingMode.ViewBoxAttribute);
+        var code = bill.Trim();
+        if (code.Length == 0 || !code.All(char.IsAsciiDigit))
+            throw new ArgumentException("QR chứng từ phải chứa số bill thuần", nameof(bill));
+        // Dữ liệu số ngắn giữ QR thưa, ô đen lớn; mức H giúp đọc khi bản in bị mờ/xước.
+        using var data = QRCodeGenerator.GenerateQrCode(code, QRCodeGenerator.ECCLevel.H);
+        // Giữ vùng trắng 4 module, không cắt sát ô đen; SVG giữ nét vuông khi in PDF/giấy.
+        return new SvgQRCode(data).GetGraphic(8, "#000000", "#ffffff", true, SvgQRCode.SizingMode.ViewBoxAttribute);
     }
 
-    /// <summary>Logo nhúng trong assembly → data URI, để trang in không phụ thuộc đường dẫn web.</summary>
-    internal static readonly Lazy<string> LogoDataUri = new(() =>
+    /// <summary>
+    /// Hình đầu chứng từ mặc định (logo + Viet An Express + Tel / Hotline / Website, người dùng cung cấp 26/10/2026)
+    /// nhúng trong assembly → data URI, để trang in không phụ thuộc đường dẫn web. Đổi số điện thoại thì thay hình Assets/header.webp.
+    /// </summary>
+    internal static readonly Lazy<string> HeaderDataUri = new(() =>
     {
-        using var s = typeof(BillA4).Assembly.GetManifestResourceStream("VietAnExpress.Shipments.logo.webp");
+        using var s = typeof(BillA4).Assembly.GetManifestResourceStream("VietAnExpress.Shipments.header.webp");
         if (s is null) return "";
         using var ms = new MemoryStream();
         s.CopyTo(ms);
@@ -345,7 +342,24 @@ internal static class BillA4
 
     private static string H(string? value) => WebUtility.HtmlEncode(value?.Trim() ?? "");
 
+    /// <summary>
+    /// Ngày, giờ ở ô chữ ký người gửi: ngày tạo đơn + giờ in bill (giờ VN), vd "23/10/2026 14:20" — in lại khác ngày cũng chỉ lấy giờ in.
+    /// Chưa có ngày tạo đơn thì dùng ngày in. Hàm thuần — có test.
+    /// </summary>
+    public static string SenderDateTime(DateTime? created, DateTime printedAt) =>
+        $"{Date(created ?? printedAt)} {printedAt.ToString("HH:mm", CultureInfo.InvariantCulture)}";
+
     private static string Date(DateTime? value) => value?.ToString("dd/MM/yyyy", CultureInfo.InvariantCulture) ?? "";
+
+    /// <summary>Ô kích thước: 4 hàng × 2 ô như mẫu hệ thống cũ.</summary>
+    private const int DimSlots = 8;
+
+    /// <summary>TL quy đổi in trên bill: SL × D×R×C / 5000, làm tròn LÊN 0.5 kg như hệ thống cũ (11.13 → 11.5, 10.89 → 11.0); số đã lưu thì giữ nguyên.</summary>
+    public static decimal BillVolumeKg(PrintPackage p) =>
+        p.StoredVolumeKg ?? Math.Ceiling(p.Qty * p.Length * p.Width * p.Height / VolumeDivisor * 2) / 2;
+
+    /// <summary>Cân in trên bill: luôn 1 chữ số thập phân như hệ thống cũ (33.0, 19.5).</summary>
+    private static string Kg1(decimal? value) => (value ?? 0).ToString("0.0", CultureInfo.InvariantCulture);
 
     private static string Kg(decimal? value) => (value ?? 0).ToString("0.##", CultureInfo.InvariantCulture);
 
@@ -404,11 +418,9 @@ internal static class BillA4
         .sheet:last-of-type { break-after: auto; page-break-after: auto; }
         .slip { display: flex; flex-direction: column; min-width: 0; height: 100%; }
         .box { border: 1.5px solid #000; flex: 1; display: flex; flex-direction: column; min-height: 0; }
-        .s-head { display: grid; grid-template-columns: 22mm 1fr 42mm; gap: 2mm; align-items: center; padding: 1.5mm 3mm; height: 23mm; }
-        .logo { width: 22mm; height: 16mm; object-fit: contain; }
-        .brand { font-size: 11px; line-height: 1.3; }
-        .brand-name { font-size: 22px; font-weight: 700; line-height: 1.1; }
-        .brand .k { display: inline-block; min-width: 9mm; font-size: 11px; }
+        .s-head { display: grid; grid-template-columns: 28mm 1fr 42mm; gap: 2mm; align-items: center; padding: 1.5mm 3mm; height: 27mm; }
+        /* Hình đầu chiếm 2 cột trái (logo + tên + liên hệ), canh trái, giữ tỉ lệ. */
+        .head-img { grid-column: 1 / 3; width: 100%; height: 24mm; object-fit: contain; object-position: left center; }
         .awb { text-align: center; font-family: Aptos, "Aptos Body", Arial, Helvetica, sans-serif; }
         .awb .barcode { display: block; width: 100%; height: 9mm; }
         /* Số bill (OrderNumber) dưới mã vạch: Aptos, to, chữ thường (không đậm), căn giữa */
@@ -419,12 +431,13 @@ internal static class BillA4
         .bar { background: #92d050; font-weight: 700; padding: .4mm 1.5mm; border-top: 1px solid #000; border-bottom: 1px solid #000; }
         .sender { display: grid; grid-template-columns: 50mm 1fr; padding: 1mm 3mm 0 0; }
         .qr { display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        .qr-frame { position: relative; width: 26mm; height: 26mm; padding: 2mm; }
+        /* Vùng trắng 4 module nằm sẵn trong SVG nên khung không cần lề trong: mã ~22 mm (trước ~16 mm). */
+        .qr-frame { position: relative; width: 30mm; height: 30mm; padding: 0; background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
         .qr-frame::before, .qr-frame::after { content: ""; position: absolute; top: 0; bottom: 0; width: 4mm; border: 1.5px solid #000; }
         .qr-frame::before { left: 0; border-right: 0; }
         .qr-frame::after { right: 0; border-left: 0; }
-        .qr-frame svg { display: block; width: 100%; height: 100%; }
-        .qr-cap { color: #e00; font-style: italic; margin-top: .5mm; }
+        .qr-frame svg { display: block; width: 100%; height: 100%; shape-rendering: crispEdges; }
+        .qr-cap { color: #000; font-size: 14px; font-weight: 700; text-decoration: none; margin-top: .5mm; }
         .lines { display: flex; flex-direction: column; }
         .ln { border-bottom: 1px dashed #000; min-height: 5mm; line-height: 5mm; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .split { display: flex; gap: 2mm; align-items: flex-end; }
@@ -456,20 +469,22 @@ internal static class BillA4
         .c-w { width: 19mm; }
         .pkg .dims { font-weight: 400; text-align: left; padding: .5mm 2mm; }
         .dims-title { text-align: center; font-weight: 700; }
-        .dim { border-bottom: 1px dashed #000; min-height: 4.6mm; line-height: 4.6mm; font-size: 11px; }
+        .dim-grid { display: grid; grid-template-columns: 1fr 1fr; }
+        .dim { border-bottom: 1px dotted #000; min-height: 4.6mm; line-height: 4.6mm; padding-right: 2mm; font-size: 11px; white-space: nowrap; overflow: hidden; }
         .pkg td { height: 14mm; border-top: 0; vertical-align: middle; }
         .pkg .pcs { font-size: 20px; font-weight: 700; }
         /* Số kiện, TL thực, TL quy đổi cùng 1 cỡ. */
         .pkg .w { font-size: 20px; font-weight: 700; }
         .pkg tr:first-child th:not(.dims) { border-bottom: 0; }
-        .signs { display: grid; grid-template-columns: 1fr 1fr; flex: 1; min-height: 18mm; border-top: 1px solid #000; }
+        .signs { display: grid; grid-template-columns: 1fr 1fr; flex: 1; min-height: 16mm; border-top: 1px solid #000; }
         .sign { display: flex; flex-direction: column; justify-content: space-between; padding: 1mm 2mm; }
         .sign + .sign { border-left: 1px solid #000; }
         .sign-date { font-size: 11px; line-height: 1.2; }
-        .s-foot { display: flex; justify-content: space-between; align-items: flex-end; padding: 1.5mm 3mm 0; height: 15mm; }
+        .s-foot { display: flex; flex: 0 0 16mm; justify-content: space-between; align-items: center; padding: 1.5mm 3mm 0; }
+        .s-foot > div:first-child { flex: 1; min-width: 0; padding-right: 2mm; }
         .total { font-size: 16px; font-weight: 700; margin-bottom: 1.5mm; }
         .slip-name { font-size: 11px; }
-        .foot-awb { width: 42mm; text-align: center; font-family: Aptos, "Aptos Body", Arial, Helvetica, sans-serif; font-size: 18px; font-weight: 400; line-height: 1.1; }
+        .foot-awb { flex: none; width: 42mm; text-align: center; font-family: Aptos, "Aptos Body", Arial, Helvetica, sans-serif; font-size: 18px; font-weight: 400; line-height: 1.1; }
         .foot-awb .barcode { display: block; width: 100%; height: 9mm; }
         .terms-col { font-size: 10.5px; line-height: 1.28; text-align: justify; overflow: hidden; }
         .terms-col p { margin: 0 0 .55mm; }

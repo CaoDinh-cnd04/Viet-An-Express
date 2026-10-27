@@ -216,7 +216,7 @@ export function OrderDrawer({ order, onClose, actions }: OrderDrawerProps) {
               </SheetBox>
             )}
 
-            <SheetBox no={++no} title="Hành trình" aside={<TrackingLinks bill={o.bill} />}>
+            <SheetBox no={++no} title="Hành trình" aside={<TrackingLinks bill={o.bill} refNo={o.ref} />}>
               {events.data?.length ? (
                 <SheetTable
                   head={['Thời gian', 'Cập nhật', 'Nơi']}

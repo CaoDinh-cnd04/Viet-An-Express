@@ -28,6 +28,7 @@ internal sealed class TroubleConfiguration : IEntityTypeConfiguration<Trouble>
                 v => string.IsNullOrEmpty(v) ? null : long.Parse(v, CultureInfo.InvariantCulture));
         b.Property(x => x.Bill).HasColumnName("Des01").HasMaxLength(300);
         b.Property(x => x.Priority).HasColumnName("Des02").HasMaxLength(300);
+        b.Property(x => x.Gender).HasColumnName("Gender");
         b.Property(x => x.ConsigneeName).HasColumnName("Des03").HasMaxLength(300);
         b.Property(x => x.Country).HasColumnName("Des04").HasMaxLength(300);
         b.Property(x => x.Type).HasColumnName("KeyWord").HasMaxLength(250);
@@ -47,7 +48,8 @@ internal sealed class TroubleConfiguration : IEntityTypeConfiguration<Trouble>
         b.Property<long>("FileID3");
         b.Ignore(x => x.Code);
         b.Ignore(x => x.Subject);
+        b.Ignore(x => x.Topic);
 
-        b.HasQueryFilter(x => x.Kind == TroubleKind.Incident || x.Kind == TroubleKind.Support || x.Kind == TroubleKind.Feedback);
+        b.HasQueryFilter(x => x.Kind == TroubleKind.Incident || x.Kind == TroubleKind.Support || x.Kind == TroubleKind.Feedback || x.Kind == TroubleKind.Contact);
     }
 }

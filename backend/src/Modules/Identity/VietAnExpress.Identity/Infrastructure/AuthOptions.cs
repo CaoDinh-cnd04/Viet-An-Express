@@ -24,6 +24,14 @@ internal sealed class JwtOptions
     /// <summary>Hạn refresh token khi KHÔNG ghi nhớ (cookie phiên, hết khi đóng trình duyệt).</summary>
     [Range(1, 72)] public int SessionRefreshTokenHours { get; init; } = 12;
 
+    /// <summary>
+    /// Phiên dài nhất tính từ lần nhập mật khẩu: tự gia hạn (mở trang, làm mới token) không vượt quá mốc này — hết thì phải đăng nhập lại.
+    /// </summary>
+    [Range(1, 365)] public int MaxSessionDays { get; init; } = 14;
+
+    /// <summary>Hạn token trang quản trị /admin (không có refresh token — hết hạn thì đăng nhập lại).</summary>
+    [Range(5, 480)] public int AdminTokenMinutes { get; init; } = 15;
+
     /// <summary>Cookie chỉ gửi qua HTTPS. Chỉ tắt khi dev bằng http://localhost.</summary>
     public bool SecureCookies { get; init; } = true;
 

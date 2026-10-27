@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { getErrorMessage, http } from '@/shared/api/http';
 import { useToast } from '@/shared/ui';
 import { orderKeys } from '@/features/orders/api';
+import { TERMS, termsVersion } from '@/features/terms';
 
 /** Đơn nháp — docs/API_CONTRACT.md §2. 'draft' = đang làm dở, 'ready' = đã xong, chờ in. */
 export interface Draft {
@@ -59,12 +60,16 @@ export function useDeleteDraft() {
   });
 }
 
-/** In đơn: backend cấp mã bill, khóa đơn và chuyển sang "Đơn hàng của tôi". */
+/** In đơn: backend cấp mã bill, khóa đơn và chuyển sang "Đơn hàng của tôi". Khách đã đồng ý Điều khoản dịch vụ (bắt buộc). */
 export function usePrintDraft() {
   const qc = useQueryClient();
   const toast = useToast();
   return useMutation({
-    mutationFn: (id: string) => http.post<{ message: string; billCode: string }>(`/drafts/${encodeURIComponent(id)}/print`),
+    mutationFn: (id: string) =>
+      http.post<{ message: string; billCode: string }>(`/drafts/${encodeURIComponent(id)}/print`, {
+        acceptTerms: true,
+        termsVersion: termsVersion(TERMS)
+      }),
     onSuccess: res => toast.show(res.message, 'success'),
     onError: e => toast.show(getErrorMessage(e), 'error'),
     // Lỗi cũng tải lại: người khác vừa in / xóa đơn này thì danh sách cập nhật theo.
