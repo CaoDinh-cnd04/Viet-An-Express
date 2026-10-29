@@ -18,7 +18,7 @@ concurrency:
 jobs:
   # ---------- Frontend: kiểm tra kiểu, test, build (web/) ----------
   web:
-    name: Web — typecheck, test, build
+    name: Web — typecheck, lint, test, build
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -40,6 +40,9 @@ jobs:
 
       - name: Typecheck
         run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
 
       - name: Run tests
         run: npm test
@@ -101,6 +104,6 @@ jobs:
           import json
           from pathlib import Path
           web = json.loads(Path('../web/src/shared/config/eu-countries.json').read_text(encoding='utf-8'))
-          api = json.loads(Path('src/Modules/Shipments/VietAnExpress.Shipments/Domain/eu-countries.json').read_text(encoding='utf-8'))
+          api = json.loads(Path('src/Modules/Shipments/VietAnExpress.Shipments/Shared/eu-countries.json').read_text(encoding='utf-8'))
           assert web == api, 'EU country data differs between web and backend'
           PY

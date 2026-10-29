@@ -11,7 +11,6 @@ export const ecommerce: Record<string, string> = {
   'Đã lấy': 'Picked up',
   'Lỗi': 'Error',
   'Chờ cân đo': 'Awaiting weighing',
-  'liquid (lỏng)': 'liquid',
 
   // Tổng quan
   'Lỗi cần xử lý': 'Errors to fix',
@@ -23,7 +22,6 @@ export const ecommerce: Record<string, string> = {
   'Chỉ nhận file .csv. Với file Excel, hãy lưu lại dạng CSV UTF-8.': 'Only .csv files are accepted. For Excel files, save them as CSV UTF-8.',
   'Dòng {row}: {message}': 'Row {row}: {message}',
   '{message} — mã bill {bill}': '{message} — bill number {bill}',
-  'Chưa in được nhãn — chức năng đang được kết nối máy chủ': 'Could not print labels — this feature is being connected to the server',
 
   // Đánh bill lẻ
   'Mã đơn của shop (REF)': 'Shop order number (REF)',
@@ -37,24 +35,13 @@ export const ecommerce: Record<string, string> = {
   'Tên hàng (EN)': 'Item name (EN)',
   'Nhập tên hàng': 'Enter the item name',
   'Giá FOB': 'FOB price',
-  'Nhập giá FOB': 'Enter the FOB price',
   'Giá bán': 'Selling price',
-  'Nhập giá bán': 'Enter the selling price',
   'Xóa sản phẩm {n}': 'Remove product {n}',
   'Thêm sản phẩm': 'Add product',
-  'Khai báo hải quan nâng cao (tùy chọn — cho hàng đi US / EU)': 'Advanced customs declaration (optional — for US / EU shipments)',
-  'Tổng giá trị khai (declared value)': 'Declared value',
-  'CMND / ID người nhận': 'Receiver ID number',
-  'Link sản phẩm / gian hàng': 'Product / store link',
-  'Mã giao dịch thanh toán': 'Payment transaction ID',
-  'Nhà sản xuất: tên · nước · địa chỉ': 'Manufacturer: name · country · address',
   'Làm mới': 'Reset',
-  'Đang tạo…': 'Creating…',
-  'Tạo đơn & cấp bill': 'Create order & issue bill',
 
   // Đơn E-commerce
   'Tìm đơn E-commerce': 'Search E-commerce orders',
-  'Khổ nhãn': 'Label size',
   'Xuất Excel': 'Export Excel',
   'Không có đơn phù hợp': 'No matching orders',
   'Chọn tất cả': 'Select all',
@@ -98,11 +85,8 @@ export const ecommerce: Record<string, string> = {
   'Từ file Excel / CSV': 'From Excel / CSV file',
   'Nhập tay từng đơn': 'Enter orders manually',
   'Nhập đơn từ file': 'Import orders from file',
-  'Tải file mẫu, điền đơn (mỗi đơn tối đa 5 sản phẩm), lưu dạng CSV UTF-8 rồi kéo thả lên đây. Hệ thống báo kết quả từng dòng.':
-    'Download the template, fill in orders (up to 5 products each), save as CSV UTF-8 and drop it here. Results are reported per row.',
   '· đơn mới tự về tab Đơn hàng': '· new orders appear in the Orders tab',
   'Máy chủ chưa có chức năng kết nối sàn. Phần này sẽ hoạt động khi backend hoàn tất.': 'The server does not support store connections yet. This will work once the backend is done.',
-  'Tên cửa hàng': 'Store name',
   'Thị trường': 'Market',
   'Toàn cầu': 'Global',
   'đồng bộ {date}': 'synced {date}',
@@ -121,14 +105,12 @@ export const ecommerce: Record<string, string> = {
   'Đơn shop': 'Shop order',
   'Hàng': 'Goods',
   'Đã chọn {n} đơn': '{n} orders selected',
-  'Khổ {f}': 'Size {f}',
   'In nhãn': 'Print labels',
   'Chưa có đơn nào': 'No orders yet',
   'Xóa bộ lọc': 'Clear filters',
 
   // Thêm đơn — nhập tay
   'Vận chuyển': 'Shipping',
-  '· tối đa 5 sản phẩm': '· up to 5 products',
   'Chọn nước trong danh sách': 'Choose a country from the list',
   'Gõ để tìm nước': 'Type to search countries',
   'Đang tải danh sách nước…': 'Loading countries…',
@@ -143,7 +125,6 @@ export const ecommerce: Record<string, string> = {
   'Đơn {source}': '{source} order',
   'Đã sao chép mã đơn': 'Order number copied',
   'Sao chép mã đơn': 'Copy order number',
-  'Chưa tạo': 'Not created',
   'Giá trị đơn': 'Order value',
   'Chờ cân': 'Awaiting weighing',
   'Sản phẩm': 'Products',
@@ -236,5 +217,4 @@ export const ecommerce: Record<string, string> = {
   '{n} SP': '{n} items',
   'Kèm mã nước, vd +81…': 'Include country code, e.g. +81…',
   'Trống: Việt An cân': 'Blank: Viet An weighs',
-  'Gửi yêu cầu, Việt An tạo tài khoản và gửi thông tin đăng nhập cho bạn trong ngày làm việc.': 'Send us a request and Viet An will create your account and send your login details within one business day.',
 };

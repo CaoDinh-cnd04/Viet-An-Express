@@ -1,3 +1,4 @@
+import { formatViDate, relativeDayLabel } from '@/shared/lib/format';
 import { stripDiacritics } from '@/shared/lib/text';
 import { toPlainText } from './richText';
 
@@ -43,7 +44,7 @@ export function excerpt(n: Pick<InboxItem, 'body' | 'link' | 'items'>): string {
 export const imagesOf = (n: Pick<InboxItem, 'body' | 'link' | 'items'>): string[] => partsOf(n).flatMap(p => p.images);
 
 /** Mã yêu cầu trong tiêu đề thông báo hỗ trợ ("Sự cố TRB-2: Đã xử lý" → "TRB-2"), không có → null. */
-export const troubleIdOf = (title: string): string | null => /trb-\d+/i.exec(title)?.[0]?.toUpperCase() ?? null;
+export const ticketIdOf = (title: string): string | null => /trb-\d+/i.exec(title)?.[0]?.toUpperCase() ?? null;
 
 const norm = (s: string) => stripDiacritics(s).toLowerCase();
 
@@ -87,19 +88,12 @@ export function bellItems<T extends InboxItem>(items: readonly T[], limit: numbe
 /** Ngày 'dd/MM/yyyy' của thông báo. */
 const dayOf = (date: string) => date.trim().slice(0, 10);
 
-const fmt = (d: Date) => `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
-
 /** Giờ ngắn trong danh sách: hôm nay → "HH:mm", ngày khác → "dd/MM". */
-export const shortTime = (date: string, today: Date) => (dayOf(date) === fmt(today) ? date.slice(11, 16) : date.slice(0, 5));
+export const shortTime = (date: string, today: Date) => (dayOf(date) === formatViDate(today) ? date.slice(11, 16) : date.slice(0, 5));
 
 /** Nhóm giữ thứ tự: thông báo ghim → "Đã ghim"; còn lại "Hôm nay", "Hôm qua", hoặc ngày dd/MM/yyyy. */
 export function groupByDay<T extends InboxItem>(items: readonly T[], today: Date): Array<{ label: string; items: T[] }> {
-  const yesterday = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1);
-  const label = (n: T) => {
-    if (n.pin && n.kind === 'notice') return 'Đã ghim';
-    const day = dayOf(n.date);
-    return day === fmt(today) ? 'Hôm nay' : day === fmt(yesterday) ? 'Hôm qua' : day;
-  };
+  const label = (n: T) => (n.pin && n.kind === 'notice' ? 'Đã ghim' : relativeDayLabel(dayOf(n.date), today));
   const groups: Array<{ label: string; items: T[] }> = [];
   for (const n of items) {
     const l = label(n);

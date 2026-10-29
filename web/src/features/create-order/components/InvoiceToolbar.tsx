@@ -5,7 +5,7 @@ import { readFileAsText } from '@/shared/lib/files';
 import { Icon, Modal, Notice, useToast } from '@/shared/ui';
 import { importInvoiceFile, INVOICE_TEMPLATE_URL, useProductLibrary, useRecentInvoices } from '../api';
 import { parseInvoiceCsv } from '../lib/invoice-import';
-import type { InvoiceItemValues } from '../schema';
+import type { InvoiceItemValues } from '@/features/order-form';
 import { invoiceItemFromProduct } from '../lib/product-library';
 import { ProductLibraryList } from './ProductLibraryList';
 import styles from './form.module.css';

@@ -1,11 +1,11 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { useI18n } from '@/shared/i18n';
 import { cx } from '@/shared/lib/cx';
-import { formatNumber } from '@/shared/lib/format';
+import { formatMoney, formatNumber } from '@/shared/lib/format';
 import { useCopyToClipboard } from '@/shared/lib/useCopyToClipboard';
 import { Button, Icon, Notice, Sheet, SheetBox, SheetFields, SheetLines, SheetName, SheetTable, SheetTotals, StatusPill } from '@/shared/ui';
 import { ECOM_SOURCES } from '../constants';
-import { displayStatus, formatMoney, receiverLines } from '../lib/order-view';
+import { displayStatus, receiverLines } from '../lib/order-view';
 import type { EcomOrder } from '../types';
 import { EcomOrderEditForm } from './EcomOrderEditForm';
 import { PrintMenu } from './PrintMenu';
@@ -52,7 +52,7 @@ export function EcomOrderDrawer({ order, onClose, onDelete, onConfirm, confirmin
   const step = stepOf(o);
   const products = o.products ?? [];
   const hasHs = products.some(p => p.hsCode);
-  const money = (n: number | null | undefined) => formatMoney(n, o.currency, formatNumber);
+  const money = (n: number | null | undefined) => formatMoney(n, o.currency);
   const itemsTotal = products.reduce((sum, p) => sum + p.sellingPrice * p.qty, 0);
   const issues = o.issues ?? [];
   const extra = [

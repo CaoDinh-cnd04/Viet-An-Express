@@ -1,9 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using Moq;
-using VietAnExpress.Ecommerce.Application;
 using VietAnExpress.Ecommerce.Contracts;
-using VietAnExpress.Ecommerce.Domain;
-using VietAnExpress.Ecommerce.Infrastructure;
+using VietAnExpress.Ecommerce.Orders;
+using VietAnExpress.Ecommerce.Shared;
 using VietAnExpress.SharedKernel.Application;
 using Xunit;
 

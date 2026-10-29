@@ -12,6 +12,9 @@ const TOKEN = /<!--[\s\S]*?-->|<(\/)?([a-zA-Z][a-zA-Z0-9]*)\b((?:[^>"']|"[^"]*"|
 const RICH_TAG = /<\s*\/?\s*(?:p|div|br|span|b|strong|i|em|u|ul|ol|li)\b[^>]*>/i;
 const STYLE_ATTR = /\bstyle\s*=\s*("([^"]*)"|'([^']*)')/i;
 const COLOR = /^(#[0-9a-f]{3}|#[0-9a-f]{6}|rgb\(\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}\s*\))$/;
+/** Thẻ thêm cho HTML nhân viên soạn ở CRM (thông báo popup — TConfig.ThongBao_NoiDung): liên kết, ảnh, tiêu đề, bảng. */
+const MEDIA_TAGS = new Set(['a', 'img', 'h1', 'h2', 'h3', 'h4', 'hr', 'table', 'thead', 'tbody', 'tr', 'td', 'th']);
+const VOID_TAGS = new Set(['br', 'img', 'hr']);
 const LONE_AMP = /&(?!(?:[a-zA-Z][a-zA-Z0-9]{1,31}|#[0-9]{1,7}|#x[0-9a-fA-F]{1,6});)/g;
 
 /** Cỡ chữ trên thanh công cụ (px, như danh sách cỡ chữ của Word) — nằm trong khoảng backend cho phép (10 – 40 px). */
@@ -44,7 +47,7 @@ export function decodeEntities(text: string): string {
       return Number.isFinite(code) && code > 0 && code < 0x110000 ? String.fromCodePoint(code) : m;
     }
     return ENTITIES[e] ?? m;
-  }).replace(/ /g, ' ');
+  }).replace(/\u00A0/g, ' ');
 }
 
 export const escapeHtml = (text: string) => text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -74,8 +77,49 @@ function cleanStyle(attrs: string): string {
   return kept.join('; ');
 }
 
-/** HTML → chỉ còn thẻ / kiểu chữ cho phép, đóng đủ thẻ (khớp RichText.Sanitize ở backend). */
-export function sanitizeHtml(html: string): string {
+const attrValue = (attrs: string, name: string): string | null => {
+  const m = new RegExp(`\\b${name}\\s*=\\s*("([^"]*)"|'([^']*)'|([^\\s"'>]+))`, 'i').exec(attrs);
+  return m ? decodeEntities(m[2] ?? m[3] ?? m[4] ?? '').trim() : null;
+};
+
+/** Đường dẫn an toàn trong HTML CRM: http / https tuyệt đối hoặc đường dẫn gốc cùng tên miền ("/UserFile/…"); link thêm mailto / tel. */
+export function safeHtmlUrl(value: string | null, kind: 'href' | 'src'): string | null {
+  // Bỏ khoảng trắng / ký tự điều khiển trình duyệt bỏ qua khi đọc URL (chặn "java\tscript:").
+  const v = [...(value ?? '')].filter(ch => ch.charCodeAt(0) > 0x20 && ch.charCodeAt(0) !== 0x7f).join('');
+  if (!v || v.length > 2000) return null;
+  if (/^\/(?![/\\])/.test(v)) return v;
+  if (/^https?:\/\/[^/]/i.test(v)) return v;
+  return kind === 'href' && /^(mailto|tel):/i.test(v) ? v : null;
+}
+
+const escapeAttr = (v: string) => v.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+/** Thuộc tính giữ lại của thẻ media: a → href (mở tab mới), img → src / alt / width / height (số px). */
+function mediaAttrs(name: string, attrs: string): string | null {
+  if (name === 'a') {
+    const href = safeHtmlUrl(attrValue(attrs, 'href'), 'href');
+    return href ? ` href="${escapeAttr(href)}" target="_blank" rel="noopener noreferrer"` : '';
+  }
+  if (name === 'img') {
+    const src = safeHtmlUrl(attrValue(attrs, 'src'), 'src');
+    if (!src) return null;
+    let out = ` src="${escapeAttr(src)}"`;
+    const alt = attrValue(attrs, 'alt');
+    if (alt) out += ` alt="${escapeAttr(alt)}"`;
+    for (const dim of ['width', 'height']) {
+      const n = /^(\d{1,4})(?:px)?$/.exec(attrValue(attrs, dim) ?? '');
+      if (n) out += ` ${dim}="${n[1]}"`;
+    }
+    return out;
+  }
+  return '';
+}
+
+/**
+ * HTML → chỉ còn thẻ / kiểu chữ cho phép, đóng đủ thẻ (khớp RichText.Sanitize ở backend).
+ * `media`: giữ thêm liên kết, ảnh, tiêu đề, bảng — chỉ dùng cho HTML CRM soạn (thông báo popup), không có ở backend.
+ */
+export function sanitizeHtml(html: string, { media = false }: { media?: boolean } = {}): string {
   let out = '';
   const open: string[] = [];
   let skipUntil: string | null = null;
@@ -103,13 +147,17 @@ export function sanitizeHtml(html: string): string {
       if (!self) skipUntil = name;
       continue;
     }
-    if (!TAGS.has(name)) continue;
+    const isMedia = media && MEDIA_TAGS.has(name);
+    if (!TAGS.has(name) && !isMedia) continue;
     if (name === 'br') {
       out += '<br>';
       continue;
     }
+    const extra = isMedia ? mediaAttrs(name, attrs) : '';
+    if (extra === null) continue;
     const style = cleanStyle(attrs);
-    out += `<${name}${style ? ` style="${style}"` : ''}>`;
+    out += `<${name}${extra}${style ? ` style="${style}"` : ''}>`;
+    if (VOID_TAGS.has(name)) continue;
     if (self) out += `</${name}>`;
     else open.push(name);
   }

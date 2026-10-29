@@ -1,6 +1,6 @@
 import { isPhone, sanitizePhone } from '@/shared/lib/phone';
-import { RULES } from '../constants';
-import type { CreateOrderValues } from '../schema';
+import { RULES } from '@/features/order-form';
+import type { CreateOrderValues } from '@/features/order-form';
 
 type Shipper = CreateOrderValues['shipper'];
 

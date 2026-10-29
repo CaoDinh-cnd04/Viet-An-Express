@@ -3,7 +3,7 @@ import { useI18n } from '@/shared/i18n';
 import { Card, FormGrid, SelectField, TextField } from '@/shared/ui';
 import { CARRIERS, defaultHub, hubOptions } from '../constants';
 import { useFieldBinder } from '../hooks/useFieldBinder';
-import type { CreateOrderValues } from '../schema';
+import type { CreateOrderValues } from '@/features/order-form';
 
 export function ServiceSection() {
   const bind = useFieldBinder();

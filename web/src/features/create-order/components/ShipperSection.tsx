@@ -9,13 +9,13 @@ import { useDebouncedCallback } from '@/shared/lib/useDebouncedCallback';
 import { cx } from '@/shared/lib/cx';
 import { Button, Card, FormGrid, Icon, LinkButton, SelectField, TextField } from '@/shared/ui';
 import { useRecentSenders } from '../api';
-import { RULES } from '../constants';
+import { RULES } from '@/features/order-form';
 import { useCombobox } from '../hooks/useCombobox';
 import { useFieldBinder } from '../hooks/useFieldBinder';
 import { recentSenderQuery, recentSenderSubtitle, senderFields, type RecentSender } from '../lib/recent-senders';
 import { shipperFromProfile } from '../lib/shipper-profile';
 import { SuggestionList } from './SuggestionList';
-import type { CreateOrderValues } from '../schema';
+import type { CreateOrderValues } from '@/features/order-form';
 import styles from './form.module.css';
 
 export function ShipperSection() {

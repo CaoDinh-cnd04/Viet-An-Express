@@ -1,4 +1,4 @@
-using VietAnExpress.Shipments.Application.Orders.Import;
+using VietAnExpress.Shipments.Import;
 using Xunit;
 
 namespace VietAnExpress.Shipments.Tests.Application;

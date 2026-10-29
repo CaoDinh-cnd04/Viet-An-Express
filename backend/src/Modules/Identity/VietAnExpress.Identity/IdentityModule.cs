@@ -7,10 +7,11 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
-using VietAnExpress.Identity.Api;
+using VietAnExpress.Identity.Auth;
 using VietAnExpress.Identity.Contracts;
-using VietAnExpress.Identity.Application;
-using VietAnExpress.Identity.Infrastructure;
+using VietAnExpress.Identity.MyTracking;
+using VietAnExpress.Identity.Notifications;
+using VietAnExpress.Identity.Shared;
 using VietAnExpress.SharedKernel.Authorization;
 using VietAnExpress.SharedKernel.Persistence;
 using VietAnExpress.SharedKernel.Web;
@@ -114,8 +115,8 @@ internal sealed class IdentityPermissionProvider : IPermissionProvider
         new(IdentityPermissions.MyTracking, "Cấu hình trang MyTracking", SystemRoles.Customer),
         new(IdentityPermissions.ChangePassword, "Đổi mật khẩu", SystemRoles.Customer),
         new(IdentityPermissions.Notifications, "Xem thông báo của Việt An", SystemRoles.Customer),
-        new(IdentityPermissions.Troubles, "Gửi và theo dõi yêu cầu hỗ trợ & sự cố", SystemRoles.Customer),
+        new(IdentityPermissions.SupportRequests, "Gửi và theo dõi yêu cầu hỗ trợ & sự cố", SystemRoles.Customer),
         new(IdentityPermissions.AdminNotifications, "Soạn và gửi thông báo cho khách (quản trị Việt An)", SystemRoles.VietAnAdmin),
-        new(IdentityPermissions.AdminTroubles, "Xử lý yêu cầu hỗ trợ & sự cố của khách (quản trị Việt An)", SystemRoles.VietAnAdmin)
+        new(IdentityPermissions.AdminSupportRequests, "Xử lý yêu cầu hỗ trợ & sự cố của khách (quản trị Việt An)", SystemRoles.VietAnAdmin)
     ];
 }

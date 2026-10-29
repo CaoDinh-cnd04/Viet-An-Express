@@ -1,4 +1,4 @@
-import { EXPORT_TYPES, invoiceTotal, summarizePackages, type CreateOrderValues } from '@/features/create-order';
+import { EXPORT_TYPES, invoiceTotal, summarizePackages, type CreateOrderValues } from '@/features/order-form';
 
 export type DetailRows = ReadonlyArray<[label: string, value: string]>;
 

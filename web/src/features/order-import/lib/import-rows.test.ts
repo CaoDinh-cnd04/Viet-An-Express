@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ImportRow } from '../types';
-import { buildImportForm, checkImportFile, formatKg, formatMoney, rowState, serviceHubError, sortRows } from './import-rows';
+import { buildImportForm, checkImportFile, formatKg, rowState, serviceHubError, sortRows } from './import-rows';
 
 const row = (over: Partial<ImportRow> = {}): ImportRow => ({
   line: 3, ref: '', type: 'PACK', consignee: 'ACME', countryCode: 'US', country: 'United States', city: 'LA',
@@ -53,10 +53,8 @@ describe('rowState & sortRows', () => {
 });
 
 describe('định dạng', () => {
-  it('cân và tiền', () => {
+  it('cân', () => {
     expect(formatKg(7.2)).toBe('7.2 kg');
     expect(formatKg(16)).toBe('16 kg');
-    expect(formatMoney(1500, 'USD')).toBe('1,500.00 USD');
-    expect(formatMoney(0, 'USD')).toBe('—');
   });
 });

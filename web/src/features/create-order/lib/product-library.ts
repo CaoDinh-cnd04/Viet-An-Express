@@ -1,5 +1,5 @@
 import type { SavedProduct } from '../api';
-import { emptyInvoiceItem, type InvoiceItemValues } from '../schema';
+import { emptyInvoiceItem, type InvoiceItemValues } from '@/features/order-form';
 import { stripDiacritics } from '@/shared/lib/text';
 
 /** Chép thông tin mặt hàng, khách khai lại số lượng và đơn giá cho lần gửi mới. */

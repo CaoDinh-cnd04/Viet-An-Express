@@ -18,12 +18,10 @@ function MyTrackingEditor({ userId }: { userId: string }) {
   const busy = state.loading || state.saving;
   return <div className={styles.page}>
     <header className={styles.pageHeader}><h1>{t('MyTracking cá nhân')}</h1><p>{t('Tùy chỉnh nội dung và hình ảnh trang tra cứu của bạn.')}</p></header>
-    {state.mode === 'local'
-      ? <Notice title="Bản cấu hình thử nghiệm">{t('Cấu hình chỉ lưu trên trình duyệt này để xem trước. Trang cá nhân chưa được xuất bản.')}</Notice>
-      : !state.loading && <PublishPanel publication={state.publication} />}
+    {!state.loading && <PublishPanel publication={state.publication} />}
     {state.feedback && <Notice tone={state.feedback.warning ? 'warning' : 'info'}>{t(state.feedback.message)}</Notice>}
     <div className={styles.layout}>
-      <ConfigForm form={state.form} onSave={state.save} onRestore={state.restoreDefaults} disabled={busy} mode={state.mode} />
+      <ConfigForm form={state.form} onSave={state.save} onRestore={state.restoreDefaults} disabled={busy} />
       <TrackingPreview config={state.config} />
     </div>
   </div>;

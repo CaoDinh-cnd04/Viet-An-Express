@@ -4,9 +4,9 @@ using System.Text.Json;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
-using VietAnExpress.Shipments.Infrastructure.Geo;
-using VietAnExpress.Shipments.Infrastructure.Geo.GeoNames;
-using VietAnExpress.Shipments.Infrastructure.Geo.Geoapify;
+using VietAnExpress.Shipments.Geo;
+using VietAnExpress.Shipments.Geo.Geoapify;
+using VietAnExpress.Shipments.Geo.GeoNames;
 using Xunit;
 
 namespace VietAnExpress.Shipments.Tests.Application;

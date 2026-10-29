@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { cleanLoadedContacts, copyOrderValues } from './copy-order';
-import { defaultValues, emptyPackage, emptyInvoiceItem } from '../schema';
+import { defaultValues, emptyPackage, emptyInvoiceItem } from '@/features/order-form';
 
 describe('copy entire order form', () => {
   it('preserves every group, references, quantities, original decimals, invoice and addons', () => {

@@ -92,7 +92,8 @@ internal sealed class BackgroundJobQueue : IBackgroundJobQueue
 }
 
 /// <summary>Chạy lần lượt việc trong <see cref="BackgroundJobQueue"/>, mỗi việc 1 scope DI riêng; lỗi chỉ ghi log.</summary>
-internal sealed class BackgroundJobWorker(BackgroundJobQueue queue, IServiceScopeFactory scopes, ILogger<BackgroundJobWorker> logger) : BackgroundService
+internal sealed class BackgroundJobWorker(BackgroundJobQueue queue, IServiceScopeFactory scopes, ILogger<BackgroundJobWorker> logger)
+    : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {

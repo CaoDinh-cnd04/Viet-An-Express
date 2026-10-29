@@ -56,7 +56,3 @@ export function receiverLines(r: EcomReceiver | undefined, fallbackCountry: stri
   const cityLine = [r.city, r.state, r.postal].filter(Boolean).join(', ');
   return [r.address1, r.address2, cityLine, r.country ?? fallbackCountry].filter((s): s is string => !!s);
 }
-
-/** "59.9 USD" / "59.9" — trống khi chưa có giá trị. */
-export const formatMoney = (value: number | null | undefined, currency: string | null | undefined, format: (n: number) => string): string =>
-  value === null || value === undefined ? '' : `${format(value)}${currency ? ` ${currency}` : ''}`;

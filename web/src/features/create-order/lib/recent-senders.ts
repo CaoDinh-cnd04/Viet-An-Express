@@ -1,4 +1,4 @@
-import type { CreateOrderValues } from '../schema';
+import type { CreateOrderValues } from '@/features/order-form';
 
 /** 1 người gửi đã dùng ở đơn trước — GET /orders/senders?q=. */
 export interface RecentSender {

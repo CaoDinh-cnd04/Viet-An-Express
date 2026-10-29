@@ -1,4 +1,4 @@
-import { createOrderSchema, STEP_FIELDS, type CreateOrderValues } from '../schema';
+import { createOrderSchema, STEP_FIELDS, type CreateOrderValues } from '@/features/order-form';
 
 /**
  * Bước nào đã điền đủ: bước xong khi không còn lỗi kiểm tra nào thuộc các khung của bước đó

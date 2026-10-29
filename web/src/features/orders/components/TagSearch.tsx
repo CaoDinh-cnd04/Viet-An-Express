@@ -19,7 +19,8 @@ const TAG_LABEL: Record<OrderSearchField, string> = {
   cnee: 'Người nhận',
   bill: 'Bill',
   ref: 'Ref',
-  ct: 'Nước đến'
+  ct: 'Nước đến',
+  svc: 'Dịch vụ'
 };
 
 /**

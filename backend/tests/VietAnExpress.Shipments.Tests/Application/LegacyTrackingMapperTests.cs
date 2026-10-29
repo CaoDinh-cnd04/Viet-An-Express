@@ -1,5 +1,5 @@
-using VietAnExpress.Shipments.Application.Queries;
-using VietAnExpress.Shipments.Infrastructure.Legacy;
+using VietAnExpress.Shipments.OrderData;
+using VietAnExpress.Shipments.Tracking;
 using Xunit;
 
 namespace VietAnExpress.Shipments.Tests.Application;

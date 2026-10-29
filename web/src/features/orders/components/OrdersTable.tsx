@@ -8,7 +8,7 @@ import { ORDER_STATUS } from '../constants';
 import { vaTrackingLink } from '@/shared/config/domain';
 import { datePart } from '../lib/order-utils';
 import type { Order, OrderActions, OrderSortField, SortDir } from '../types';
-import { openTroubleOf, TROUBLE_STATUS, useTroubles } from '@/features/troubles';
+import { openTicketOf, SUPPORT_STATUS, useSupportTickets } from '@/features/support';
 import { LabelButton, PrintButtons, RowTools } from './OrderRowActions';
 import { TrackingLinks } from './TrackingLinks';
 import styles from './OrdersTable.module.css';
@@ -157,8 +157,8 @@ function OrderRow({ order: o, index, checked, onToggle, actions, cell }: OrderRo
   const loadingDetail = needDetail && detail.isLoading;
   const addressLines = r ? [r.addr1, r.addr2, r.addr3].filter(Boolean) : [];
   // Sự cố chưa xong của đơn (danh sách sự cố tải 1 lần, dùng chung mọi dòng).
-  const troubles = useTroubles();
-  const trouble = openTroubleOf(troubles.data ?? [], o.bill);
+  const tickets = useSupportTickets();
+  const ticket = openTicketOf(tickets.data ?? [], o.bill);
 
   return (
     // Bấm dòng không mở đơn nữa (dễ mở nhầm khi bôi chọn ô) — xem chi tiết bằng nút con mắt cuối dòng.
@@ -201,10 +201,10 @@ function OrderRow({ order: o, index, checked, onToggle, actions, cell }: OrderRo
       </td>
       <td className={styles.colPod} {...cell(5)}>
         <StatusPill tone={status.tone}>{status.label}</StatusPill>
-        {trouble && (
+        {ticket && (
           <div>
-            <span className={styles.troubleTag} title={t('Sự cố {id}: {type} — bấm biểu tượng con mắt để xem', { id: trouble.id, type: t(trouble.type) })}>
-              <Icon name="alert" size={12} /> {t('Sự cố')} · {t(TROUBLE_STATUS[trouble.status].label)}
+            <span className={styles.ticketTag} title={t('Sự cố {id}: {type} — bấm biểu tượng con mắt để xem', { id: ticket.id, type: t(ticket.type) })}>
+              <Icon name="alert" size={12} /> {t('Sự cố')} · {t(SUPPORT_STATUS[ticket.status].label)}
             </span>
           </div>
         )}

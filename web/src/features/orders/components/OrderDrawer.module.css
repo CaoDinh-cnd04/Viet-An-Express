@@ -118,7 +118,7 @@
 }
 
 /* Sự cố của đơn: mỗi sự cố 1 dòng bấm được để xem / trả lời */
-.troubles {
+.tickets {
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -127,7 +127,7 @@
   list-style: none;
 }
 
-.trouble {
+.ticket {
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -142,18 +142,18 @@
   cursor: pointer;
 }
 
-.trouble:hover {
+.ticket:hover {
   border-color: var(--color-brand);
 }
 
-.troubleHead {
+.ticketHead {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 6px;
 }
 
-.troubleSub {
+.ticketSub {
   overflow: hidden;
   color: var(--color-text-muted);
   font-size: var(--text-xs);

@@ -1,8 +1,5 @@
 import type { CargoType } from '@/shared/config/domain';
-
-/** Trạng thái đơn — hợp đồng API: docs/API_CONTRACT.md §1. */
-/** Nhóm lọc trạng thái (có thể trùng nhau): wait = chưa có ngày gửi · fly = có ngày gửi · nd = chưa có POD · ok = có POD. */
-export type OrderStatus = 'wait' | 'fly' | 'nd' | 'ok';
+import type { OrderStatus } from '@/shared/model/shipment';
 
 export interface OrderPod {
   date: string;
@@ -42,9 +39,12 @@ export interface Order {
   receiver?: OrderReceiver | null;
 }
 
-export type OrderSearchField = 'all' | 'cnee' | 'bill' | 'ref' | 'ct';
+export type OrderSearchField = 'all' | 'cnee' | 'bill' | 'ref' | 'ct' | 'svc';
 export type SortDir = 'asc' | 'desc';
 export type OrderSortField = 'seq' | 'ref' | 'bill' | 'cnee' | 'ct' | 'sent' | 'pod' | 'created';
+
+/** Phạm vi in / xuất: trang đang xem (đúng số dòng / trang) hoặc toàn bộ đơn khớp bộ lọc. */
+export type ExportScope = 'page' | 'all';
 
 export interface OrderFilters {
   q: string;
@@ -82,18 +82,11 @@ export interface OrderPhoto {
   takenAt?: string;
 }
 
-/** Một mốc hành trình đơn. */
-export interface OrderEvent {
-  time: string;
-  title: string;
-  location?: string;
-}
-
 /** Thao tác trên 1 dòng đơn — trang Đơn hàng cung cấp, bảng & menu chỉ gọi. */
 export interface OrderActions {
   onOpen: (order: Order) => void;
   onPhotos: (order: Order) => void;
-  onTrouble: (order: Order) => void;
+  onReportIssue: (order: Order) => void;
 }
 
 /** Người gửi đầy đủ — GET /orders/:bill. */

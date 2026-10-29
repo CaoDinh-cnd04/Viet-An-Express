@@ -1,6 +1,6 @@
-using VietAnExpress.Customers.Application;
 using VietAnExpress.Customers.Contracts;
-using VietAnExpress.Customers.Infrastructure;
+using VietAnExpress.Customers.Shared;
+using VietAnExpress.Customers.VietAnUsers;
 using Xunit;
 
 namespace VietAnExpress.Identity.Tests;

@@ -1,7 +1,6 @@
 /** Tiếng Anh — khung portal, menu, tiêu đề trang, thành phần dùng chung, thông báo lỗi form thường gặp. */
 export const common: Record<string, string> = {
   // Khung portal
-  'Portal khách hàng': 'Customer portal',
   'Menu chính': 'Main menu',
   'Thu gọn menu': 'Collapse navigation',
   'Mở rộng menu': 'Expand navigation',
@@ -33,7 +32,6 @@ export const common: Record<string, string> = {
   'E-commerce': 'E-commerce',
   'Hỗ trợ': 'Support',
   'Bán hàng': 'Sales',
-  'Quản lý sự cố': 'Issue management',
   'Thông báo': 'Notifications',
   'Trợ giúp & Góp ý': 'Help & feedback',
   'API Tracking': 'Tracking API',
@@ -51,7 +49,6 @@ export const common: Record<string, string> = {
   'Tất cả': 'All',
   'Thử lại': 'Try again',
   'Hủy': 'Cancel',
-  'Huỷ': 'Cancel',
   'Lưu': 'Save',
   'Xóa': 'Delete',
   'Xoá': 'Delete',
@@ -63,7 +60,6 @@ export const common: Record<string, string> = {
   'Có lỗi xảy ra, vui lòng thử lại': 'Something went wrong, please try again',
   'Lỗi máy chủ ({status})': 'Server error ({status})',
   'Đã sao chép': 'Copied',
-  'Không sao chép được': 'Could not copy',
 
   // Lỗi form thường gặp
   'Bắt buộc': 'Required',
@@ -78,15 +74,10 @@ export const common: Record<string, string> = {
   // Trung tâm thông báo
   'Hôm nay': 'Today',
   'Hôm qua': 'Yesterday',
-  'Thông báo từ Việt An: lịch cut-off, phụ phí, quy định hãng bay, bảo trì hệ thống, cập nhật sự cố.': 'Notices from Viet An: cut-off schedules, surcharges, airline rules, system maintenance, issue updates.',
-  'Danh sách thông báo': 'Notification list',
-  'Tìm thông báo…': 'Search notifications…',
   'Tìm thông báo': 'Search notifications',
   'Lọc thông báo': 'Filter notifications',
   'Không có thông báo nào khớp.': 'No matching notifications.',
   'Nội dung thông báo': 'Notification content',
-  'Chọn 1 thông báo để xem nội dung.': 'Select a notification to read it.',
-  'Mở sự cố {id}': 'Open issue {id}',
   'Bạn đã được tự đăng xuất do không thao tác trong {n} phút. Vui lòng đăng nhập lại.': 'You were signed out after {n} minutes of inactivity. Please sign in again.',
   'Đơn đang tạo dở đã được lưu vào Đơn nháp & chưa in.': 'The order you were creating has been saved to Drafts & unprinted.'
 };

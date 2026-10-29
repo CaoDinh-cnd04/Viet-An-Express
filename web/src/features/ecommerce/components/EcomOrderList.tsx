@@ -2,12 +2,12 @@ import { useState } from 'react';
 import { useI18n } from '@/shared/i18n';
 import { cx } from '@/shared/lib/cx';
 import { downloadTextFile, toCsv } from '@/shared/lib/files';
-import { formatNumber } from '@/shared/lib/format';
+import { formatMoney, formatNumber } from '@/shared/lib/format';
 import { useDebouncedCallback } from '@/shared/lib/useDebouncedCallback';
 import { Button, Card, DataTable, EmptyState, Icon, LinkButton, StatusPill, type Column } from '@/shared/ui';
 import { useConfirmEcomOrders, useEcomOrders, useStoreConnections, useSyncStore } from '../api';
 import { ECOM_SOURCES, STORE_PLATFORMS } from '../constants';
-import { ORDER_VIEWS, countByView, displayStatus, filterByView, formatMoney, type OrderScope, type OrderView } from '../lib/order-view';
+import { ORDER_VIEWS, countByView, displayStatus, filterByView, type OrderScope, type OrderView } from '../lib/order-view';
 import { formatSyncTime, needsReauthorize } from '../lib/store-connection';
 import type { EcomOrder, EcomSource, StoreConnection } from '../types';
 import { DeleteOrdersModal } from './DeleteOrdersModal';
@@ -106,7 +106,7 @@ export function EcomOrderList({ scope }: { scope: OrderScope }) {
         </>
       )
     },
-    { key: 'value', header: 'Giá trị', align: 'right', render: o => <span className="mono">{formatMoney(o.value, o.currency, formatNumber) || '—'}</span> },
+    { key: 'value', header: 'Giá trị', align: 'right', render: o => <span className="mono">{formatMoney(o.value, o.currency) || '—'}</span> },
     { key: 'bill', header: 'VA Bill', render: o => (o.bill ? <span className="mono">{o.bill}</span> : <span className={styles.muted}>—</span>) },
     {
       key: 'st',

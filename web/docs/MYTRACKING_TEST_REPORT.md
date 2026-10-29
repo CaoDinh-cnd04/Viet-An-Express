@@ -20,7 +20,7 @@ API phiên khách được giả lập trong test. Test không đăng nhập tà
 
 ## Lỗi đã sửa
 
-Khôi phục mặc định trước đây reset cả mốc đã lưu, khiến form báo không có thay đổi chưa lưu. Đã giữ mốc đã lưu khi khôi phục; test xác nhận form báo có thay đổi, bản localStorage vẫn giữ nguyên đến khi bấm Lưu.
+Khôi phục mặc định trước đây reset cả mốc đã lưu, khiến form báo không có thay đổi chưa lưu. Đã giữ mốc đã lưu khi khôi phục; test xác nhận form báo có thay đổi, bản đã lưu vẫn giữ nguyên đến khi bấm Lưu. (28/10/2026: bỏ chế độ lưu localStorage — script giả lập API `/account/mytracking`.)
 
 ## Chạy lại
 

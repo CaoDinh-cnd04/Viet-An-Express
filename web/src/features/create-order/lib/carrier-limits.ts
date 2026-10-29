@@ -1,6 +1,6 @@
 import { fill } from '@/shared/i18n';
-import type { PackageValues } from '../schema';
-import { summarizePackages, toNumber } from './shipment';
+import type { PackageValues } from '@/features/order-form';
+import { summarizePackages, toNumber } from '@/features/order-form';
 
 export interface CarrierLimit {
   /** Cạnh dài tối đa trước khi bị phụ phí quá khổ (cm) */

@@ -1,4 +1,4 @@
-import type { OrderEvent, OrderStatus } from '@/features/orders/types';
+import type { OrderEvent, OrderStatus } from '@/shared/model/shipment';
 
 /**
  * Kết quả tra cứu 1 vận đơn trên trang ngoài — POST /public/tracking.

@@ -4,7 +4,7 @@ import { useI18n } from '@/shared/i18n';
 import { formatNumber } from '@/shared/lib/format';
 import { useCopyToClipboard } from '@/shared/lib/useCopyToClipboard';
 import { Button, DropdownMenu, Icon, Sheet, SheetBox, SheetFields, SheetLines, SheetName, SheetRow, SheetTable, SheetTotals, StatusPill } from '@/shared/ui';
-import { TROUBLE_STATUS, TroubleDetailDialog, troublesOfBill, useTroubles } from '@/features/troubles';
+import { SUPPORT_STATUS, SupportTicketDialog, ticketsOfBill, useSupportTickets } from '@/features/support';
 import { useOrder, useOrderEvents } from '../api';
 import { ORDER_STATUS, PRINT_DOCUMENTS } from '../constants';
 import { invoiceTotal, lineVolume, receiverAddress, summarizePackages } from '../lib/order-detail';
@@ -17,7 +17,7 @@ import styles from './OrderDrawer.module.css';
 interface OrderDrawerProps {
   order: Order | null;
   onClose: () => void;
-  actions: Pick<OrderActions, 'onPhotos' | 'onTrouble'>;
+  actions: Pick<OrderActions, 'onPhotos' | 'onReportIssue'>;
 }
 
 /** Hình thức xuất khẩu (MaVanDon.Ly_Do_Xuat_Hang). */
@@ -34,8 +34,8 @@ export function OrderDrawer({ order, onClose, actions }: OrderDrawerProps) {
   const print = usePrintDocuments();
   const events = useOrderEvents(order?.bill ?? null);
   const detail = useOrder(order?.bill ?? null);
-  const troubleList = useTroubles();
-  const [openTroubleId, setOpenTroubleId] = useState<string | null>(null);
+  const ticketList = useSupportTickets();
+  const [openTicketId, setOpenTicketId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!order) return;
@@ -59,8 +59,8 @@ export function OrderDrawer({ order, onClose, actions }: OrderDrawerProps) {
     : o.invoice?.items ?? [];
   const cur = o.invoice?.currency || '';
   const money = (n: number) => `${formatNumber(n)}${cur ? ` ${cur}` : ''}`;
-  const troubles = troublesOfBill(troubleList.data ?? [], o.bill);
-  const openTrouble = troubles.find(x => x.id === openTroubleId) ?? null;
+  const tickets = ticketsOfBill(ticketList.data ?? [], o.bill);
+  const openTicket = tickets.find(x => x.id === openTicketId) ?? null;
   let no = 0;
 
   return (
@@ -97,7 +97,7 @@ export function OrderDrawer({ order, onClose, actions }: OrderDrawerProps) {
           />
           <Button size="sm" onClick={() => navigate(`/orders/new?from=${encodeURIComponent(o.bill)}`)}>{t('Copy đơn')}</Button>
           <Button size="sm" onClick={() => actions.onPhotos(o)}>{o.photos ? t('Ảnh kiện ({n})', { n: o.photos }) : t('Ảnh kiện')}</Button>
-          <Button size="sm" onClick={() => actions.onTrouble(o)}>{t('Báo sự cố')}</Button>
+          <Button size="sm" onClick={() => actions.onReportIssue(o)}>{t('Báo sự cố')}</Button>
         </div>
 
         <div className={styles.body}>
@@ -121,17 +121,17 @@ export function OrderDrawer({ order, onClose, actions }: OrderDrawerProps) {
               />
             </SheetBox>
 
-            {troubles.length > 0 && (
-              <SheetBox no={++no} title="Sự cố của đơn" aside={t('{n} sự cố', { n: troubles.length })}>
-                <ul className={styles.troubles}>
-                  {troubles.map(x => (
+            {tickets.length > 0 && (
+              <SheetBox no={++no} title="Sự cố của đơn" aside={t('{n} sự cố', { n: tickets.length })}>
+                <ul className={styles.tickets}>
+                  {tickets.map(x => (
                     <li key={x.id}>
-                      <button type="button" className={styles.trouble} onClick={() => setOpenTroubleId(x.id)}>
-                        <span className={styles.troubleHead}>
+                      <button type="button" className={styles.ticket} onClick={() => setOpenTicketId(x.id)}>
+                        <span className={styles.ticketHead}>
                           <strong className="mono">{x.id}</strong> · {t(x.type)}
-                          <StatusPill tone={TROUBLE_STATUS[x.status].tone}>{t(TROUBLE_STATUS[x.status].label)}</StatusPill>
+                          <StatusPill tone={SUPPORT_STATUS[x.status].tone}>{t(SUPPORT_STATUS[x.status].label)}</StatusPill>
                         </span>
-                        <span className={styles.troubleSub}>
+                        <span className={styles.ticketSub}>
                           {x.updatedAt ?? x.date} · {x.desc}
                         </span>
                       </button>
@@ -229,7 +229,7 @@ export function OrderDrawer({ order, onClose, actions }: OrderDrawerProps) {
           </Sheet>
         </div>
       </aside>
-      <TroubleDetailDialog ticket={openTrouble} onClose={() => setOpenTroubleId(null)} />
+      <SupportTicketDialog ticket={openTicket} onClose={() => setOpenTicketId(null)} />
     </>
   );
 }

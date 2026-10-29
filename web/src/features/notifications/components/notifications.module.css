@@ -9,3 +9,32 @@
   padding-top: var(--space-6);
   border-top: 1px solid var(--color-border);
 }
+
+/* Thông báo popup CRM: HTML nhân viên soạn (ảnh, bảng, tiêu đề) */
+.popupHtml img {
+  max-width: 100%;
+  height: auto;
+}
+
+.popupHtml a {
+  color: var(--color-success);
+}
+
+.popupHtml h1,
+.popupHtml h2,
+.popupHtml h3,
+.popupHtml h4 {
+  margin: 0.4em 0;
+  font-size: 16px;
+}
+
+.popupHtml table {
+  border-collapse: collapse;
+  max-width: 100%;
+}
+
+.popupHtml td,
+.popupHtml th {
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--color-border);
+}

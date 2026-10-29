@@ -3,8 +3,8 @@ using System.Text.Json;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
-using VietAnExpress.Shipments.Application.Dtos;
-using VietAnExpress.Shipments.Infrastructure.Carriers.HubEz;
+using VietAnExpress.Shipments.Orders;
+using VietAnExpress.Shipments.Tracking;
 using Xunit;
 
 namespace VietAnExpress.Shipments.Tests.Application;

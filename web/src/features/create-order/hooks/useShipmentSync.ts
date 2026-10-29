@@ -2,9 +2,8 @@ import { useCallback, useState } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
 import { useI18n } from '@/shared/i18n';
 import { useToast } from '@/shared/ui';
-import { RULES } from '../constants';
-import { applyDocWeightRule, summarizePackages, toNumber } from '../lib/shipment';
-import type { CreateOrderValues } from '../schema';
+import { RULES, applyDocWeightRule, summarizePackages, toNumber } from '@/features/order-form';
+import type { CreateOrderValues } from '@/features/order-form';
 
 const OPTS = { shouldDirty: true } as const;
 

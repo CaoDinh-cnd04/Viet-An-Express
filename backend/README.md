@@ -40,7 +40,7 @@ Frontend (`web/`, `npm run dev`) proxy `/api` sang `http://localhost:3000`, nên
 ```
 backend/
 ├── src/
-│   ├── VietAnExpress.API/                         Host: Program.cs, pipeline, Swagger, xử lý lỗi toàn cục
+│   ├── VietAnExpress.API/                         Host: Program.cs (ghép nối), Startup/ (đăng ký module, Web API, pipeline HTTP), Infrastructure/ (email, lỗi toàn cục, Swagger)
 │   ├── BuildingBlocks/VietAnExpress.SharedKernel/
 │   │   ├── Domain/        BaseEntity (audit, xoá mềm, BranchId), AggregateRoot, IDomainEvent, IIntegrationEvent
 │   │   ├── Results/       Result<T>, Error, PagedResult<T>
@@ -50,15 +50,61 @@ backend/
 │   │   ├── Persistence/   AuditableEntityInterceptor, DomainEventsInterceptor, AddModuleDbContext, sequence
 │   │   └── Web/           ApiControllerBase, ApiResponse, ProblemDetailsMapper
 │   └── Modules/
-│       ├── Identity/   VietAnExpress.Identity (+ .Contracts)    đăng nhập khách: dbo.TCustomer
-│       ├── Customers/  VietAnExpress.Customers (+ .Contracts)   hồ sơ khách: dbo.TCustomer (chỉ đọc)
+│       ├── Identity/   VietAnExpress.Identity (+ .Contracts)    đăng nhập, tài khoản con, MyTracking, thông báo, hỗ trợ & góp ý, /admin
+│       ├── Customers/  VietAnExpress.Customers (+ .Contracts)   hồ sơ khách dbo.TCustomer, nhân viên dbo.USERS (chỉ đọc)
 │       ├── Shipments/  VietAnExpress.Shipments (+ .Contracts)   dbo.MaVanDon (+ 2 bảng chi tiết; đơn chưa in Status = 0)
 │       └── Ecommerce/  VietAnExpress.Ecommerce (+ .Contracts)   kênh bán, shop đã kết nối, đơn e-com: dbo.KenhTMDT, dbo.KetNoiTMDT, dbo.DonTMDT
-├── tests/  Shipments.Tests, Identity.Tests, Architecture.Tests
+├── tests/  Identity.Tests, Shipments.Tests, Ecommerce.Tests, Architecture.Tests
 └── scripts/ add-migration.ps1, update-database.ps1, publish-ftp.ps1, iis/, legacy-tables.sql, setup-portal-current.sql…
 ```
 
-Bên trong mỗi module: `Domain/`, `Application/` (`Commands/`, `Queries/`, `Dtos/`, `Validators/`, `EventHandlers/`), `Infrastructure/` (`<Module>DbContext`, `Configurations/`, `Migrations/`), `Api/` (controller), `<Module>Module.cs` (đăng ký DI).
+### Trong module: mỗi thư mục = 1 chức năng / nhóm bảng
+
+Mỗi thư mục chứa đủ controller, use case, DTO, lỗi, entity và cấu hình EF của chức năng đó — sửa 1 chức năng chỉ mở 1 thư mục.
+
+```
+VietAnExpress.Identity/
+├── Auth/           đăng nhập, phiên, JWT — dbo.TCustomer (CustomerLogin)
+├── Staff/          tài khoản con — dbo.TCustomer_NguoiLienLac
+├── MyTracking/     dbo.TCustomer_MyTracking + dbo.TCustomer_MyTracking_Banner
+├── Notifications/  dbo.TThongBao + dbo.TThongBao_DaDoc (+ dbo.TCustomerType chỉ đọc)
+├── Support/        hỗ trợ & góp ý (SupportRequest), lời nhắn trang chủ — dbo.TContact
+├── Admin/          đăng nhập trang /admin (thông báo / hỗ trợ của /admin nằm ở Notifications/, Support/)
+├── Shared/         IdentityDbContext, IdentityErrors (lỗi chung), mẫu email
+└── Migrations/
+
+VietAnExpress.Shipments/
+├── OrderData/      bảng dbo.MaVanDon + MaVanDon_PCS_DIM + MaVanDon_ChiTietHang: entity, cấp số bill, dựng / ghi đơn (dùng chung)
+├── Orders/         "Đơn hàng của tôi": danh sách, chi tiết, hành trình, copy đơn
+├── Drafts/         đơn nháp & chưa in, In & cấp bill (PrintDraft)
+├── Printing/       in chứng từ (bill A4, invoice, CVCK, nhãn A6), xuất bảng kê Excel
+├── Import/         tạo đơn từ Excel, đọc file invoice
+├── AddressBook/    người gửi / người nhận đã dùng
+├── Catalog/        nhóm hàng (dbo.NhomHangHoa), thư viện mặt hàng (dbo.MatHangKhachHang), tra mã HS (dbo.Catalog_HsCode)
+├── Geo/            nước, mã bưu chính, gợi ý địa chỉ, vùng sâu vùng xa (dbo.VungXauVungXa)
+├── Tracking/       tra cứu công khai, HUB-EZ
+├── Shared/         ShipmentsDbContext, ShipmentsApi (Contracts), quy tắc cân, nước EU
+└── Migrations/
+
+VietAnExpress.Ecommerce/
+├── Stores/         kênh bán (dbo.KenhTMDT) + shop đã kết nối (dbo.KetNoiTMDT)
+├── Orders/         đơn e-com (dbo.DonTMDT): xem, nhập tay, sửa, xác nhận, xóa
+├── Shared/         EcommerceDbContext
+└── Migrations/
+
+VietAnExpress.Customers/
+├── Profiles/       hồ sơ khách dbo.TCustomer
+├── VietAnUsers/    nhân viên Việt An dbo.USERS (nhân viên phụ trách khách)
+└── Shared/         CustomersDbContext, CustomersApi (Contracts)
+```
+
+### Quy ước đặt file
+
+- **Namespace = thư mục:** `Shipments/Drafts/SaveDraft.cs` → `namespace VietAnExpress.Shipments.Drafts`. EF so model theo bảng / cột nên đổi namespace / tên kiểu không sinh migration (test `MigrationSnapshotTests` kiểm tra).
+- **Mỗi use case 1 file, đặt tên theo hành động:** `SaveDraft.cs` = `SaveDraftCommand` + `SaveDraftHandler`; `GetOrders.cs` = `GetOrdersQuery` + `GetOrdersHandler`. Không gom nhiều handler vào 1 class. Body request chỉ use case đó dùng thì đặt luôn trong file use case.
+- **Phần dùng chung của nhiều use case** tách lớp riêng, tên nói rõ việc: `DraftStore` (đọc / khóa / xoá nháp), `DraftOrders` (hàm thuần dựng / kiểm tra nháp), `StaffAccounts`, `CustomerInbox`, `AdminNotificationMapper`, `OrderLookup`…
+- **Mỗi chức năng:** `<X>Controller.cs` (controller quản trị: `Admin<X>Controller.cs`), `<X>Dtos.cs`, `<X>Errors.cs`, `<X>Rules.cs` (hàm thuần, có test), `<X>Validators.cs`, entity + `<Entity>Configuration.cs`.
+- Lỗi chung cả module (`IdentityErrors.NotLoggedIn`, `AdminOnly`) ở `Shared/`; lỗi riêng ở thư mục chức năng (`AuthErrors`, `StaffErrors`, `MyTrackingErrors`…).
 
 ## 3. Quy tắc bắt buộc (có test tự kiểm tra)
 
@@ -87,9 +133,18 @@ Test truy vấn SQL Server: đặt `VIETAN_TEST_SQLSERVER` thành connection str
 
 Danh sách đơn dùng một truy vấn thống kê và một truy vấn trang (trang rỗng chỉ dùng thống kê), đọc đúng các cột giao diện cần. Test so sánh với kết quả và số đếm của truy vấn cũ, gồm lọc trạng thái, ngày, cân nặng, phân trang và phạm vi khách hàng. Invoice gần đây dùng hai truy vấn; tracking và hành trình chỉ đọc các cột cần trả về.
 
-**Thêm use case:** tạo file `Commands/XxxCommand.cs` (gồm record command và handler), thêm validator trong `Validators/`, rồi thêm 1 action trong controller.
+**Thêm use case:** tạo file `<ThưMụcChứcNăng>/<HànhĐộng>.cs` (record command / query + handler riêng), validator thêm vào `<X>Validators.cs` cùng thư mục, rồi thêm 1 action trong controller của chức năng.
 
-**Thêm module mới:** tạo 2 project `VietAnExpress.X` và `VietAnExpress.X.Contracts` (copy csproj từ module có sẵn). Viết `XModule.AddXModule()`, thêm vào `Program.cs` (1 dòng `AddXModule` và thêm assembly vào mảng `moduleAssemblies`), rồi bổ sung tên module vào `Architecture.Tests` và 2 script.
+**Thêm module mới:** tạo 2 project `VietAnExpress.X` và `VietAnExpress.X.Contracts` (copy csproj từ module có sẵn). Viết `XModule.AddXModule()`, thêm vào `src/VietAnExpress.API/Startup/ModuleRegistration.cs` (1 dòng `AddXModule` và thêm assembly vào mảng `ModuleAssemblies`), rồi bổ sung tên module vào `Architecture.Tests` và 2 script.
+
+### Quy trình migration (bảng portal tự quản lý)
+
+Máy chủ đã áp mọi migration hiện có nên **không gộp / sửa / xoá migration cũ**. Mỗi thay đổi bảng đi theo thứ tự:
+
+1. Chốt thiết kế bảng / cột với người dùng trước (không tạo bảng mới khi chưa được duyệt), tránh tạo rồi lại bỏ.
+2. Sửa entity / `Configuration`, chạy `./scripts/add-migration.ps1 -Module X -Name TenRoRang`, đọc lại file migration sinh ra.
+3. `dotnet test` — `MigrationSnapshotTests` (mỗi module có migration) báo lỗi nếu model lệch snapshot (đổi entity mà quên tạo migration).
+4. Xuất SQL cho máy chủ (`dotnet ef migrations script <migration trước> <migration mới> --idempotent`) lưu vào `publish/migrations/`, gửi dev hệ thống chính chạy **trước** khi đẩy backend — portal không tự áp lên máy chủ.
 
 ## 5. API v1
 

@@ -2,7 +2,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { useI18n } from '@/shared/i18n';
 import { Button, Card, EmptyState, Pagination } from '@/shared/ui';
 import { useOrders } from '../api';
-import { ReportTroubleDialog } from '@/features/troubles';
+import { NewSupportRequestDialog } from '@/features/support';
 import { OrderDrawer } from '../components/OrderDrawer';
 import { OrderPhotosDialog } from '../components/OrderPhotosDialog';
 import { OrderFilterBar } from '../components/OrderFilterBar';
@@ -23,8 +23,8 @@ export default function OrdersPage() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [openOrder, setOpenOrder] = useState<Order | null>(null);
   const [photoOrder, setPhotoOrder] = useState<Order | null>(null);
-  const [troubleOrder, setTroubleOrder] = useState<Order | null>(null);
-  const actions = useMemo<OrderActions>(() => ({ onOpen: setOpenOrder, onPhotos: setPhotoOrder, onTrouble: setTroubleOrder }), []);
+  const [issueOrder, setIssueOrder] = useState<Order | null>(null);
+  const actions = useMemo<OrderActions>(() => ({ onOpen: setOpenOrder, onPhotos: setPhotoOrder, onReportIssue: setIssueOrder }), []);
 
   const items = data?.items ?? [];
   const summary = data?.summary;
@@ -70,8 +70,10 @@ export default function OrdersPage() {
           actions={
             <OrderSummaryBar
               selectedCount={selected.size}
-              onBulkPrint={docs => void print([...selected], docs)}
-              onExport={() => exportOrders.mutate(filters)}
+              pageCount={items.length}
+              total={data?.total ?? 0}
+              onBulkPrint={(docs, scope) => void print(scope === 'page' ? items.map(o => o.bill) : [...selected], docs)}
+              onExport={scope => exportOrders.mutate({ filters, scope })}
               exporting={exportOrders.isPending}
             />
           }
@@ -113,11 +115,9 @@ export default function OrdersPage() {
 
       <OrderDrawer order={openOrder} onClose={closeDrawer} actions={actions} />
       <OrderPhotosDialog order={photoOrder} onClose={() => setPhotoOrder(null)} />
-      <ReportTroubleDialog
-        open={!!troubleOrder}
-        context={troubleOrder && { bill: troubleOrder.bill, cnee: troubleOrder.cnee, ct: troubleOrder.ct }}
-        onClose={() => setTroubleOrder(null)}
-      />
+      {issueOrder && (
+        <NewSupportRequestDialog open preset={{ kind: 'ho_tro', bill: issueOrder.bill }} onClose={() => setIssueOrder(null)} />
+      )}
     </>
   );
 }

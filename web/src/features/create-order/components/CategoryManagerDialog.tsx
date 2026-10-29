@@ -4,7 +4,7 @@ import { useI18n } from '@/shared/i18n';
 import { cx } from '@/shared/lib/cx';
 import { Button, Icon, Modal, useToast } from '@/shared/ui';
 import { useCategories, useDeleteCategory, useFavoriteCategory, useSaveCategory, type Category } from '../api';
-import { RULES } from '../constants';
+import { RULES } from '@/features/order-form';
 import styles from './form.module.css';
 
 interface CategoryManagerDialogProps {

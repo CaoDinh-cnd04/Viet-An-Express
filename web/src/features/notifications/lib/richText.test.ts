@@ -21,6 +21,29 @@ describe('sanitizeHtml — khớp RichText.Sanitize ở backend', () => {
   ])('%s', (input, expected) => expect(sanitizeHtml(input)).toBe(expected));
 });
 
+describe('sanitizeHtml media — HTML thông báo popup của CRM', () => {
+  it('giữ liên kết, ảnh, tiêu đề an toàn; chế độ thường vẫn bỏ', () => {
+    const html =
+      '<h2>Lịch nghỉ lễ</h2><p>Xem <a href="https://vietanexpress.com/tin" onclick="x()">tại đây</a></p>' +
+      '<img src="/UserFile/editor/images/a.png" width="300px" height="abc" onerror="alert(1)" alt="Lịch"><hr>';
+    expect(sanitizeHtml(html, { media: true })).toBe(
+      '<h2>Lịch nghỉ lễ</h2><p>Xem <a href="https://vietanexpress.com/tin" target="_blank" rel="noopener noreferrer">tại đây</a></p>' +
+        '<img src="/UserFile/editor/images/a.png" alt="Lịch" width="300"><hr>'
+    );
+    expect(sanitizeHtml(html)).toBe('Lịch nghỉ lễ<p>Xem tại đây</p>');
+  });
+
+  it.each([
+    ['<a href="javascript:alert(1)">a</a>', '<a>a</a>'],
+    ['<a href="java\tscript:alert(1)">a</a>', '<a>a</a>'],
+    ['<a href="//evil.com">a</a>', '<a>a</a>'],
+    ['<a href=mailto:cs@vietan.vn>a</a>', '<a href="mailto:cs@vietan.vn" target="_blank" rel="noopener noreferrer">a</a>'],
+    ['<img src="data:image/png;base64,AAA">x', 'x'],
+    ['<img src="javascript:alert(1)"/>x', 'x'],
+    ['<img src=\'https://a.vn/x.png?a=1&amp;b="2"\'/>', '<img src="https://a.vn/x.png?a=1&amp;b=&quot;2&quot;">']
+  ])('%s', (input, expected) => expect(sanitizeHtml(input, { media: true })).toBe(expected));
+});
+
 describe('isRichText / toPlainText / plainToHtml / editorValue', () => {
   it('nhận diện chữ thường và lấy chữ thuần', () => {
     expect(isRichText('Giá < 2 kg\nvẫn là chữ thường')).toBe(false);

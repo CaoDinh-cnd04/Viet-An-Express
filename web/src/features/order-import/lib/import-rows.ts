@@ -41,6 +41,3 @@ export function sortRows(rows: readonly ImportRow[]): ImportRow[] {
 }
 
 export const formatKg = (kg: number) => `${Number(kg.toFixed(2))} kg`;
-
-export const formatMoney = (value: number, currency: string) =>
-  value > 0 ? `${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${currency}` : '—';

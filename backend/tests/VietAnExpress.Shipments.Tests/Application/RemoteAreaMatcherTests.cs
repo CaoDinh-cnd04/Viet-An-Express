@@ -1,4 +1,4 @@
-using VietAnExpress.Shipments.Infrastructure.Geo;
+using VietAnExpress.Shipments.Geo;
 using Xunit;
 
 namespace VietAnExpress.Shipments.Tests.Application;

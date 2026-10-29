@@ -1,5 +1,5 @@
 import type { FieldError, FieldErrors } from 'react-hook-form';
-import type { CreateOrderValues } from '../schema';
+import type { CreateOrderValues } from '@/features/order-form';
 
 /** Tên ô theo đường dẫn form — để thông báo lỗi nói rõ ô nào (kể cả ô đang nằm trong khung thu gọn). */
 const LABELS: Record<string, string> = {

@@ -1,4 +1,4 @@
-/** Giới hạn đường link thông báo — khớp backend (Domain/Notification.cs). */
+/** Giới hạn đường link thông báo — khớp backend (Identity/Notifications/Notification.cs). */
 export const NOTIFICATION_LINK_MAX = 500;
 
 /**

@@ -7,13 +7,12 @@ import { ecommerce } from './ecommerce';
 import { landing } from './landing';
 import { orders } from './orders';
 import { pricing } from './pricing';
-import { feedback } from './feedback';
+import { admin } from './admin';
 import { support } from './support';
 import { start } from './start';
 import { mytracking } from './mytracking';
 import { notifications } from './notifications';
 import { staff } from './staff';
-import { troubles } from './troubles';
 
 /**
  * Từ điển tiếng Anh: khoá = câu tiếng Việt gốc trong code, giá trị = bản tiếng Anh.
@@ -33,7 +32,6 @@ export const EN: Readonly<Record<string, string>> = {
   ...ecommerce,
   ...landing,
   ...categories,
-  ...feedback,
-  ...troubles,
+  ...admin,
   ...notifications
 };

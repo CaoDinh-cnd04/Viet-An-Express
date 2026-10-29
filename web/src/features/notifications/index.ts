@@ -1,5 +1,6 @@
 /** API công khai của feature — feature khác chỉ import từ đây. */
 export { ImportantNoticeModal } from './components/ImportantNoticeModal';
+export { PopupNoticeModal } from './components/PopupNoticeModal';
 export { NotificationBell } from './components/NotificationBell';
 export { NoticeContent, RichBody } from './components/NoticeContent';
 export { FilterBar, type FilterOption } from './components/FilterBar';

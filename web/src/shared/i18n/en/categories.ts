@@ -24,7 +24,6 @@ export const categories: Record<string, string> = {
   'Đã xóa nhóm hàng': 'Category deleted',
   'Nhập tên nhóm hàng': 'Enter a category name',
   'Tên nhóm tối đa {n} ký tự': 'Category name must be at most {n} characters',
-  'Đã có nhóm hàng "{name}"': 'Category "{name}" already exists',
   'Không tìm thấy nhóm hàng (nhóm chung của Việt An không sửa / xóa được)': 'Category not found (Viet An standard categories cannot be edited or deleted)',
 
   // Nhóm chung Việt An (dữ liệu mặc định trong dbo.NhomHangHoa)
@@ -75,13 +74,6 @@ export const categories: Record<string, string> = {
 
   // Số kiện phải khớp tổng SL các dòng kiện
   'Số lượng kiện chưa khớp': 'Piece count does not match',
-  'Chưa bằng số kiện đã khai': 'Does not match the declared number of pieces',
-  'Tổng SL các dòng kiện là {total}, chưa bằng số kiện đã khai ({pieces}). Hãy bấm "Thêm kiện" hoặc sửa SL cho khớp — hoặc sửa lại số kiện.':
-    'The package rows add up to {total}, but you declared {pieces} pieces. Click "Add piece" or change the quantities to match — or correct the number of pieces.',
-  'Đơn có nhiều dòng kiện — tổng cân được tính từ bảng kiện ở bước 2. Tổng SL các dòng kiện phải bằng số kiện.':
-    'This order has several package rows — the total weight is calculated from the package table in step 2. The row quantities must add up to the number of pieces.',
-  'Khai kích thước từng kiện ở bước 2 để tính trọng lượng quy đổi. Tổng SL các dòng kiện phải bằng số kiện.':
-    'Enter each piece’s dimensions in step 2 to calculate volumetric weight. The row quantities must add up to the number of pieces.',
   'VD: Quần áo, mỹ phẩm, đồ gia dụng': 'e.g. Clothing, cosmetics, household items',
   'Bấm để sửa thông tin người gửi': 'Click to edit shipper details',
   // Thông tin đơn hàng: mô tả tổng quan (PACK), chứng từ mặc định Documents
@@ -91,7 +83,6 @@ export const categories: Record<string, string> = {
   'Nhập mô tả tổng quan hàng hóa': 'Enter the goods content',
   'Nhập cân/kiện': 'Enter weight per piece',
   'Dịch vụ cộng thêm (nếu cần)': 'Add-on services (if needed)',
-  'Tracking & hành trình': 'Tracking & history',
   'Tăng {label}': 'Increase {label}',
   'Giảm {label}': 'Decrease {label}',
   // Biểu phí tùy chọn dịch vụ

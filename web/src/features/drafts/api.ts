@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { getErrorMessage, http } from '@/shared/api/http';
 import { useToast } from '@/shared/ui';
-import { orderKeys } from '@/features/orders/api';
+import { orderKeys } from '@/features/orders';
 import { TERMS, termsVersion } from '@/features/terms';
 
 /** Đơn nháp — docs/API_CONTRACT.md §2. 'draft' = đang làm dở, 'ready' = đã xong, chờ in. */

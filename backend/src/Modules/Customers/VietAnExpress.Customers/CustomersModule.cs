@@ -1,9 +1,8 @@
 using System.Reflection;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using VietAnExpress.Customers.Application;
 using VietAnExpress.Customers.Contracts;
-using VietAnExpress.Customers.Infrastructure;
+using VietAnExpress.Customers.Shared;
 using VietAnExpress.SharedKernel.Persistence;
 
 namespace VietAnExpress.Customers;

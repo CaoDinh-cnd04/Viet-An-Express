@@ -2,7 +2,7 @@ using System.Reflection;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using VietAnExpress.Ecommerce.Contracts;
-using VietAnExpress.Ecommerce.Infrastructure;
+using VietAnExpress.Ecommerce.Shared;
 using VietAnExpress.SharedKernel.Authorization;
 using VietAnExpress.SharedKernel.Persistence;
 

@@ -5,9 +5,9 @@ import { downloadBlob, fileNameFromDisposition } from '@/shared/lib/files';
 import { uuid } from '@/shared/lib/uuid';
 import { useToast } from '@/shared/ui';
 import { fetchOrdersExport } from './api';
-import { PRINT_DOCUMENTS } from './constants';
+import type { PRINT_DOCUMENTS } from './constants';
 import { writePrintJob } from './lib/print-job';
-import type { OrderFilters } from './types';
+import type { ExportScope, OrderFilters } from './types';
 
 export type PrintDoc = (typeof PRINT_DOCUMENTS)[number]['key'];
 
@@ -35,12 +35,12 @@ export function usePrintDocuments() {
   );
 }
 
-/** Xuất bảng kê gửi hàng (.xlsx) theo bộ lọc đang áp dụng. */
+/** Xuất bảng kê gửi hàng (.xlsx) theo bộ lọc đang áp dụng: trang đang xem hoặc toàn bộ. */
 export function useExportOrders() {
   const toast = useToast();
   return useMutation({
-    mutationFn: async (filters: OrderFilters) => {
-      const { blob, disposition } = await fetchOrdersExport(filters);
+    mutationFn: async ({ filters, scope }: { filters: OrderFilters; scope: ExportScope }) => {
+      const { blob, disposition } = await fetchOrdersExport(filters, scope);
       downloadBlob(fileNameFromDisposition(disposition, 'bang-ke-gui-hang.xlsx'), blob);
     },
     onSuccess: () => toast.show('Đã xuất bảng kê gửi hàng', 'success'),

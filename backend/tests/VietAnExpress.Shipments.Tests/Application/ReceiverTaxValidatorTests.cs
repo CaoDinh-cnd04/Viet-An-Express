@@ -1,7 +1,8 @@
 using System.Text.Json;
-using VietAnExpress.Shipments.Application.Orders;
-using VietAnExpress.Shipments.Application.Validators;
-using VietAnExpress.Shipments.Domain;
+using VietAnExpress.Shipments.Drafts;
+using VietAnExpress.Shipments.OrderData;
+using VietAnExpress.Shipments.Orders;
+using VietAnExpress.Shipments.Shared;
 using Xunit;
 
 namespace VietAnExpress.Shipments.Tests.Application;

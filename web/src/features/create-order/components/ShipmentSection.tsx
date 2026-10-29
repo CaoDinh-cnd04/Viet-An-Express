@@ -1,9 +1,9 @@
 import { Controller, useFormContext, useWatch } from 'react-hook-form';
 import { useI18n } from '@/shared/i18n';
 import { Card, FormGrid, SegmentedControl, TextField } from '@/shared/ui';
-import { RULES } from '../constants';
+import { RULES } from '@/features/order-form';
 import { useFieldBinder } from '../hooks/useFieldBinder';
-import type { CreateOrderValues } from '../schema';
+import type { CreateOrderValues } from '@/features/order-form';
 import styles from './form.module.css';
 
 interface ShipmentSectionProps {

@@ -10,7 +10,7 @@ import { useI18n } from "@/shared/i18n";
 import { cx } from "@/shared/lib/cx";
 import { Icon } from "@/shared/ui";
 import type { Category } from "../api";
-import { MULTI_CATEGORY } from "../constants";
+import { MULTI_CATEGORY } from "@/features/order-form";
 import { groupCategories } from "../lib/category-picker";
 import styles from "./CategoryPicker.module.css";
 

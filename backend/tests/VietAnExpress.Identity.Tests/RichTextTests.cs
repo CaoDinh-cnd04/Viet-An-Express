@@ -1,4 +1,4 @@
-using VietAnExpress.Identity.Domain;
+using VietAnExpress.Identity.Notifications;
 using Xunit;
 
 namespace VietAnExpress.Identity.Tests;

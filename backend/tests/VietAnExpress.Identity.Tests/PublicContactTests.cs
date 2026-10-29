@@ -1,7 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using Moq;
-using VietAnExpress.Identity.Application.Commands;
-using VietAnExpress.Identity.Domain;
+using VietAnExpress.Identity.Notifications;
+using VietAnExpress.Identity.Staff;
+using VietAnExpress.Identity.Support;
 using Xunit;
 
 namespace VietAnExpress.Identity.Tests;
@@ -22,10 +23,10 @@ public class PublicContactTests
         var result = await handler.Handle(Valid(), Ct);
 
         Assert.True(result.IsSuccess);
-        var row = await f.Db.Troubles.SingleAsync(Ct);
-        Assert.Equal((TroubleKind.Contact, 0L, "Nguyễn Thị Lan", "0909 123 456", "lan@shop.vn", TroubleStatus.New),
+        var row = await f.Db.SupportRequests.SingleAsync(Ct);
+        Assert.Equal((SupportRequestKind.Contact, 0L, "Nguyễn Thị Lan", "0909 123 456", "lan@shop.vn", SupportRequestStatus.New),
             (row.Kind, row.CustomerId, row.Requester, row.Contact, row.Email, row.Status));
-        Assert.Equal("Portal - Liên hệ", TroubleKind.FormTypeOf(row.Kind));
+        Assert.Equal("Portal - Liên hệ", SupportRequestKind.FormTypeOf(row.Kind));
         Assert.Equal(("ContactHome", ""), (row.Type, row.Title)); // như form liên hệ trang chủ website cũ (p_TContactHome_Rows)
         Assert.Contains(row.Code, Assert.Single(f.Jobs.Jobs).Name);
 
@@ -35,17 +36,18 @@ public class PublicContactTests
     }
 
     [Fact]
-    public async Task Khach_dang_nhap_khong_thay_loi_nhan_quan_tri_chi_doi_trang_thai_khong_ghi_chu()
+    public async Task Loi_nhan_trang_chu_quan_tri_doi_trang_thai_duoc()
     {
         await using var f = new IdentityFixture();
         await new PublicContactHandler(f.Db, f.Jobs, f.Company, f.Clock).Handle(Valid(email: ""), Ct);
-        var id = (await f.Db.Troubles.SingleAsync(Ct)).Code;
-        var admin = new AdminTroubleHandlers(f.Db, f.CurrentUser.Object, f.Customers.Object, f.Company, f.Clock);
+        var id = (await f.Db.SupportRequests.SingleAsync(Ct)).Code;
+        var list = new GetAdminSupportRequestsHandler(f.Db, f.Customers.Object);
+        var reply = new ReplySupportRequestHandler(f.Db, f.Customers.Object, f.Clock);
         f.Customers.Setup(c => c.GetByIdsAsync(It.IsAny<IReadOnlyCollection<long>>(), It.IsAny<CancellationToken>())).ReturnsAsync([]);
 
-        Assert.Equal("lien_he", Assert.Single(await admin.Handle(new GetAdminTroublesQuery(), Ct)).Ticket.Kind);
-        Assert.Equal(TroubleErrors.ContactNote, (await admin.Handle(new AdminReplyTroubleCommand(id, "Đã gọi lại", null), Ct)).Error);
-        Assert.True((await admin.Handle(new AdminReplyTroubleCommand(id, null, TroubleStatus.Done), Ct)).IsSuccess);
+        Assert.Equal("lien_he", Assert.Single(await list.Handle(new GetAdminSupportRequestsQuery(), Ct)).Ticket.Kind);
+        Assert.Equal(SupportRequestErrors.ContactReply, (await reply.Handle(new ReplySupportRequestCommand(id, "Đã gọi lại", null), Ct)).Error);
+        Assert.True((await reply.Handle(new ReplySupportRequestCommand(id, null, SupportRequestStatus.Done), Ct)).IsSuccess);
         Assert.Empty(await f.Db.Notifications.ToListAsync(Ct)); // không tạo thông báo cho CustID 0
     }
 

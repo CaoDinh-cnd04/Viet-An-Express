@@ -4,10 +4,10 @@ import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { CARRIER_HUBS, CARRIERS, defaultHub } from '@/shared/config/domain';
 import { useDebouncedCallback } from '@/shared/lib/useDebouncedCallback';
 import { useToast } from '@/shared/ui';
-import { useDrafts } from '@/features/drafts/api';
-import { useOrderCopy } from '@/features/orders/api';
+import { useDrafts } from '@/features/drafts';
+import { useOrderCopy } from '../api';
 import { cleanLoadedContacts, copyOrderValues } from '../lib/copy-order';
-import { defaultValues, type CreateOrderValues } from '../schema';
+import { defaultValues, type CreateOrderValues } from '@/features/order-form';
 
 /**
  * Khóa bản tự lưu theo tài khoản đang đăng nhập (mã khách + tên đăng nhập) — admin đăng xuất, nhân viên đăng nhập

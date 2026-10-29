@@ -3,9 +3,8 @@ using System.Text.Json.Nodes;
 using Microsoft.EntityFrameworkCore;
 using Moq;
 using VietAnExpress.Customers.Contracts;
-using VietAnExpress.Identity.Application.Commands;
-using VietAnExpress.Identity.Domain;
-using VietAnExpress.Identity.Infrastructure;
+using VietAnExpress.Identity.MyTracking;
+using VietAnExpress.Identity.Support;
 using Xunit;
 
 namespace VietAnExpress.Identity.Tests;
@@ -65,7 +64,7 @@ public class MyTrackingStorageTests
     {
         await using var f = new IdentityFixture();
         var config = FullConfigV2();
-        Assert.True((await f.MyTracking.Handle(new SaveMyTrackingCommand(JsonSerializer.SerializeToElement(config)), Ct)).IsSuccess);
+        Assert.True((await f.SaveMyTracking.Handle(new SaveMyTrackingCommand(JsonSerializer.SerializeToElement(config)), Ct)).IsSuccess);
         f.Db.ChangeTracker.Clear();
         var page = await f.Db.MyTrackingPages.Include(p => p.Banners).SingleAsync(Ct);
         // Ô cố định theo ứng dụng: CongTinNhan_01 Hotline, _04 WhatsApp; Email cột riêng; CongTruyenThong_01 Facebook, _05 Twitter.
@@ -84,7 +83,7 @@ public class MyTrackingStorageTests
     public async Task Old_system_rows_are_read_from_the_slot_columns()
     {
         await using var f = new IdentityFixture();
-        await f.MyTracking.Handle(new SaveMyTrackingCommand(JsonSerializer.SerializeToElement(FullConfigV2())), Ct);
+        await f.SaveMyTracking.Handle(new SaveMyTrackingCommand(JsonSerializer.SerializeToElement(FullConfigV2())), Ct);
         // Giả lập CS sửa thẳng các ô ở phần mềm cũ.
         var row = f.Db.Entry(await f.Db.MyTrackingPages.SingleAsync(Ct));
         foreach (var (name, value) in new (string, string?)[]
@@ -104,7 +103,7 @@ public class MyTrackingStorageTests
     {
         await using var f = new IdentityFixture();
         var config = FullConfigV2();
-        var result = await f.MyTracking.Handle(new SaveMyTrackingCommand(JsonSerializer.SerializeToElement(config)), Ct);
+        var result = await f.SaveMyTracking.Handle(new SaveMyTrackingCommand(JsonSerializer.SerializeToElement(config)), Ct);
         Assert.True(result.IsSuccess);
         f.Db.ChangeTracker.Clear();
         var page = await f.Db.MyTrackingPages.Include(p => p.Banners).SingleAsync(Ct);
@@ -112,7 +111,7 @@ public class MyTrackingStorageTests
         Assert.Equal(2, await f.Db.MyTrackingBanners.CountAsync(Ct));
         Assert.All(page.Banners, b => { Assert.Equal(page.Id, b.MyTrackingId); Assert.Equal(page.CustomerId, b.CustomerId); });
         Assert.True(JsonNode.DeepEquals(config, JsonNode.Parse(page.ConfigJson)));
-        var published = await f.MyTracking.Handle(new GetCustomerMyTrackingQuery("SaigonbayHN"), Ct);
+        var published = await f.GetCustomerMyTracking.Handle(new GetCustomerMyTrackingQuery("SaigonbayHN"), Ct);
         Assert.True(JsonNode.DeepEquals(config, JsonNode.Parse(published.Value.Config.Json)));
     }
 
@@ -126,7 +125,7 @@ public class MyTrackingStorageTests
         config["background"] = source;
         config["brand"]!["logo"] = source;
         config["images"]![0]!["src"] = source;
-        var result = await f.MyTracking.Handle(new SaveMyTrackingCommand(JsonSerializer.SerializeToElement(config)), Ct);
+        var result = await f.SaveMyTracking.Handle(new SaveMyTrackingCommand(JsonSerializer.SerializeToElement(config)), Ct);
         Assert.True(result.IsSuccess, result.Error.Message);
         var page = await f.Db.MyTrackingPages.Include(p => p.Banners).SingleAsync(Ct);
         Assert.StartsWith("/Upload/Banner/", page.Background);
@@ -139,7 +138,7 @@ public class MyTrackingStorageTests
         var display = JsonNode.Parse(result.Value.Config!.Value.Json)!;
         Assert.StartsWith("https://portal.test" + MyTrackingImageStore.ApiPath, display["background"]!.GetValue<string>());
         var savedPath = page.Background;
-        Assert.True((await f.MyTracking.Handle(new SaveMyTrackingCommand(JsonSerializer.SerializeToElement(display)), Ct)).IsSuccess);
+        Assert.True((await f.SaveMyTracking.Handle(new SaveMyTrackingCommand(JsonSerializer.SerializeToElement(display)), Ct)).IsSuccess);
         Assert.Equal(savedPath, (await f.Db.MyTrackingPages.SingleAsync(Ct)).Background);
         Assert.Null(f.Images.Find("Banner", "../secret.png"));
         Assert.Null(f.Images.Find("../Banner", "test.png"));
@@ -156,12 +155,12 @@ public class MyTrackingStorageTests
     {
         await using var f = new IdentityFixture();
         var config = FullConfigV2();
-        Assert.True((await f.MyTracking.Handle(new SaveMyTrackingCommand(JsonSerializer.SerializeToElement(config)), Ct)).IsSuccess);
+        Assert.True((await f.SaveMyTracking.Handle(new SaveMyTrackingCommand(JsonSerializer.SerializeToElement(config)), Ct)).IsSuccess);
         var before = (await f.Db.MyTrackingPages.SingleAsync(Ct)).ConfigJson;
         var target = key is "address" or "logo" ? config["brand"]!
             : key is "src" or "linkUrl" ? config["images"]![0]! : config;
         target[key] = new string('x', 251);
-        Assert.False((await f.MyTracking.Handle(new SaveMyTrackingCommand(JsonSerializer.SerializeToElement(config)), Ct)).IsSuccess);
+        Assert.False((await f.SaveMyTracking.Handle(new SaveMyTrackingCommand(JsonSerializer.SerializeToElement(config)), Ct)).IsSuccess);
         Assert.Equal(before, (await f.Db.MyTrackingPages.SingleAsync(Ct)).ConfigJson);
     }
 
@@ -172,7 +171,7 @@ public class MyTrackingStorageTests
         var config = FullConfigV2();
         config["background"] = "https://mytracking.top/Upload/Banner/legacy.jpg";
         config["brand"]!["logo"] = "https://mytracking.top/upload/Logo_ShippingMark/logo.png";
-        Assert.True((await f.MyTracking.Handle(new SaveMyTrackingCommand(JsonSerializer.SerializeToElement(config)), Ct)).IsSuccess);
+        Assert.True((await f.SaveMyTracking.Handle(new SaveMyTrackingCommand(JsonSerializer.SerializeToElement(config)), Ct)).IsSuccess);
         var page = await f.Db.MyTrackingPages.Include(p => p.Banners).SingleAsync(Ct);
         Assert.Equal("/Upload/Banner/legacy.jpg", page.Background);
         Assert.Equal("/upload/Logo_ShippingMark/logo.png", page.Logo);
@@ -188,9 +187,9 @@ public class MyTrackingStorageTests
         await using var f = new IdentityFixture();
         var config = FullConfigV2();
         config["background"] = "data:image/png;base64,bm90LWFuLWltYWdl";
-        Assert.False((await f.MyTracking.Handle(new SaveMyTrackingCommand(JsonSerializer.SerializeToElement(config)), Ct)).IsSuccess);
+        Assert.False((await f.SaveMyTracking.Handle(new SaveMyTrackingCommand(JsonSerializer.SerializeToElement(config)), Ct)).IsSuccess);
         config["background"] = "data:image/png;base64,invalid";
-        Assert.False((await f.MyTracking.Handle(new SaveMyTrackingCommand(JsonSerializer.SerializeToElement(config)), Ct)).IsSuccess);
+        Assert.False((await f.SaveMyTracking.Handle(new SaveMyTrackingCommand(JsonSerializer.SerializeToElement(config)), Ct)).IsSuccess);
         Assert.Empty(await f.Db.MyTrackingPages.ToListAsync(Ct));
     }
 
@@ -204,11 +203,11 @@ public class MyTrackingStorageTests
         f.Customers.Setup(c => c.GetByCodeAsync("SaigonbayHN", It.IsAny<CancellationToken>())).ReturnsAsync(customer);
         var config = FullConfigV2();
         config["brand"]!["companyName"] = "Tên khách tự sửa";
-        var saved = await f.MyTracking.Handle(new SaveMyTrackingCommand(JsonSerializer.SerializeToElement(config)), Ct);
+        var saved = await f.SaveMyTracking.Handle(new SaveMyTrackingCommand(JsonSerializer.SerializeToElement(config)), Ct);
         Assert.Equal("CÔNG TY TNHH SGB EXPRESS", saved.Value.CompanyName);
         f.Db.ChangeTracker.Clear();
         Assert.Equal("CÔNG TY TNHH SGB EXPRESS", (await f.Db.MyTrackingPages.SingleAsync(Ct)).CompanyName);
-        var published = await f.MyTracking.Handle(new GetCustomerMyTrackingQuery("SaigonbayHN"), Ct);
+        var published = await f.GetCustomerMyTracking.Handle(new GetCustomerMyTrackingQuery("SaigonbayHN"), Ct);
         Assert.Equal("CÔNG TY TNHH SGB EXPRESS", JsonNode.Parse(published.Value.Config.Json)!["brand"]!["companyName"]!.GetValue<string>());
     }
 
@@ -217,14 +216,14 @@ public class MyTrackingStorageTests
     {
         await using var f = new IdentityFixture();
         var config = FullConfigV2();
-        await f.MyTracking.Handle(new SaveMyTrackingCommand(JsonSerializer.SerializeToElement(config)), Ct);
+        await f.SaveMyTracking.Handle(new SaveMyTrackingCommand(JsonSerializer.SerializeToElement(config)), Ct);
         config["images"]!.AsArray().RemoveAt(0);
         f.Db.ChangeTracker.Clear();
-        await f.MyTracking.Handle(new SaveMyTrackingCommand(JsonSerializer.SerializeToElement(config)), Ct);
+        await f.SaveMyTracking.Handle(new SaveMyTrackingCommand(JsonSerializer.SerializeToElement(config)), Ct);
         f.Db.ChangeTracker.Clear();
         Assert.Equal("a", (await f.Db.MyTrackingBanners.SingleAsync(Ct)).ImageKey);
         config["images"] = new JsonArray();
-        await f.MyTracking.Handle(new SaveMyTrackingCommand(JsonSerializer.SerializeToElement(config)), Ct);
+        await f.SaveMyTracking.Handle(new SaveMyTrackingCommand(JsonSerializer.SerializeToElement(config)), Ct);
         f.Db.ChangeTracker.Clear();
         Assert.Empty(await f.Db.MyTrackingBanners.ToListAsync(Ct));
         Assert.True(JsonNode.DeepEquals(config, JsonNode.Parse((await f.Db.MyTrackingPages.SingleAsync(Ct)).ConfigJson)));

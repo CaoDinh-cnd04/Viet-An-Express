@@ -2,7 +2,7 @@ import { PERMISSIONS } from '@/features/auth';
 import type { IconName } from '@/shared/ui';
 
 /** Khóa badge số đếm trên menu — giá trị lấy từ useNavBadges. */
-export type BadgeKey = 'drafts' | 'troubles' | 'notifications';
+export type BadgeKey = 'drafts' | 'support' | 'notifications';
 
 export interface NavLinkItem {
   to: string;
@@ -71,7 +71,7 @@ export const NAV: ReadonlyArray<NavEntry> = [
     short: 'Hỗ trợ',
     icon: 'help',
     children: [
-      { to: '/troubles', label: 'Hỗ trợ & góp ý', badge: 'troubles' },
+      { to: '/troubles', label: 'Hỗ trợ & góp ý', badge: 'support' },
       { to: '/notifications', label: 'Thông báo', badge: 'notifications' }
     ]
   },

@@ -3,7 +3,6 @@ import { useFieldArray, type UseFormReturn } from 'react-hook-form';
 import { useI18n } from '@/shared/i18n';
 import { uuid } from '@/shared/lib/uuid';
 import { Button, Icon, TextAreaField, TextField } from '@/shared/ui';
-import type { StorageMode } from '../hooks/useMyTrackingConfig';
 import { CONTACT_TYPES, isHexColor, MAX_CHANNELS, SOCIAL_TYPES } from '../lib/channels';
 import { MAX_AD_IMAGES, type MyTrackingConfig } from '../schema';
 import { ChannelListEditor } from './ChannelListEditor';
@@ -16,11 +15,9 @@ interface Props {
   onSave: FormEventHandler<HTMLFormElement>;
   onRestore: () => void;
   disabled: boolean;
-  /** `server`: lưu trên server (trang hiện công khai ngay); `local`: chỉ lưu bản thử nghiệm trên trình duyệt. */
-  mode: StorageMode;
 }
 
-export function ConfigForm({ form, onSave, onRestore, disabled, mode }: Props) {
+export function ConfigForm({ form, onSave, onRestore, disabled }: Props) {
   const { t } = useI18n();
   const { register, control, setValue, getValues, formState: { errors, isDirty } } = form;
   const { fields, append, remove, move } = useFieldArray({ control, name: 'images', keyName: 'fieldKey' });
@@ -120,7 +117,7 @@ export function ConfigForm({ form, onSave, onRestore, disabled, mode }: Props) {
         <ChannelListEditor form={form} name="brand.socials" types={SOCIAL_TYPES} />
       </section>
       <div className={styles.actions}>
-        <Button type="submit" variant="primary">{t(mode === 'local' ? 'Lưu bản thử nghiệm' : 'Lưu')}</Button>
+        <Button type="submit" variant="primary">{t('Lưu')}</Button>
         <Button onClick={onRestore}>{t('Khôi phục mặc định')}</Button>
         <span className={styles.saveStatus} role="status">{t(isDirty ? 'Có thay đổi chưa lưu' : 'Không có thay đổi chưa lưu')}</span>
       </div>

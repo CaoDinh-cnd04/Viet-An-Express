@@ -1,9 +1,6 @@
 # ---------- Frontend (web/) ----------
 node_modules/
 web/dist/
-mini-app/dist/
-# Mini App giữ riêng trên máy theo yêu cầu, không đưa lên repository web/backend.
-/mini-app/
 *.local
 *.tsbuildinfo
 

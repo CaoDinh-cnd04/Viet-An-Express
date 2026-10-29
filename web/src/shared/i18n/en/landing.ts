@@ -24,13 +24,10 @@ export const landing: Record<string, string> = {
   'Chuyển phát nhanh quốc tế từ {year}': 'International express since {year}',
   'Gửi hàng đi nước ngoài': 'Ship abroad',
   'nhanh, an toàn, tiết kiệm': 'fast, safe, economical',
-  'Door-to-door tới hầu hết các quốc gia qua DHL, FedEx, UPS, TNT. Lấy hàng tận nơi, đóng gói miễn phí và cập nhật hành trình liên tục.':
-    'Door-to-door to almost every country via DHL, FedEx, UPS, TNT. Pickup at your door, free packing and continuous tracking updates.',
   'năm kinh nghiệm': 'years of experience',
   'chi nhánh': 'branches',
   'tuyến chuyên': 'dedicated routes',
   'theo dõi hành trình': 'shipment tracking',
-  'Đại lý gom hàng cho các hãng': 'Consolidation agent for',
   'Chọn chức năng': 'Choose a function',
   'Tra cứu vận đơn': 'Track shipments',
   'Đăng nhập portal': 'Sign in to portal',
@@ -44,9 +41,6 @@ export const landing: Record<string, string> = {
   'Theo dõi vận đơn': 'Track shipment',
 
   // Dịch vụ
-  'Giải pháp gửi hàng đi nước ngoài trọn gói': 'All-in-one international shipping',
-  'Door-to-door từ lấy hàng, đóng gói, khai báo hải quan tới khi phát cho người nhận.':
-    'Door-to-door from pickup, packing and customs declaration to final delivery.',
   'Chứng từ và hàng hóa đi hầu hết các nước, Việt An lo thủ tục thông quan để hàng đi nhanh nhất.':
     'Documents and parcels to almost every country; Viet An handles customs clearance for the fastest transit.',
   'Dịch vụ tiết kiệm': 'Economy service',
@@ -64,29 +58,17 @@ export const landing: Record<string, string> = {
 
   // Tuyến chuyên
   'Tuyến chuyên': 'Dedicated routes',
-  'Giá tốt, chăm sóc kỹ trên các tuyến chủ lực': 'Great rates and close care on our key routes',
   'Ngoài các tuyến dưới đây, Việt An nhận gửi đi hầu hết quốc gia qua mạng lưới hãng quốc tế.':
     'Beyond the routes below, Viet An ships to almost every country through international carrier networks.',
-  'Các tuyến chuyên': 'Dedicated routes',
-  'Cờ {country}': 'Flag of {country}',
   'Gửi hàng đi {country}': 'Ship to {country}',
   'Nước khác?': 'Another country?',
-  'Gửi đi hầu hết quốc gia qua DHL, FedEx, UPS, TNT': 'Ship to almost any country via DHL, FedEx, UPS, TNT',
   'Hỏi giá ngay': 'Get a quote',
   'Mỹ': 'USA',
   'Úc': 'Australia',
   'Đài Loan': 'Taiwan',
-  'Xem thẻ trước': 'Previous card',
-  'Xem thẻ tiếp theo': 'Next card',
-  'Tới vị trí {n}': 'Go to position {n}',
 
   // Về chúng tôi
   '{n} năm đồng hành cùng hàng Việt ra thế giới': '{n} years taking Vietnamese goods to the world',
-  'Trụ sở Việt An Express, 14 Sam Sơn, TP. Hồ Chí Minh': 'Viet An Express head office, 14 Sam Son, Ho Chi Minh City',
-  'Tham gia thị trường chuyển phát từ năm {year}, Việt An Express tập trung vào dịch vụ door-to-door và là đại lý gom hàng cho các hãng quốc tế hàng đầu tại Việt Nam như DHL, FedEx, UPS, TNT.':
-    'In the express market since {year}, Viet An Express focuses on door-to-door service and is a consolidation agent in Vietnam for leading international carriers such as DHL, FedEx, UPS and TNT.',
-  'Trụ sở tại TP. Hồ Chí Minh cùng chi nhánh Hà Nội, Cần Thơ và Bảo Lộc giúp bạn gửi hàng nhanh và thuận tiện hơn. Trạng thái bưu phẩm được cập nhật liên tục để bạn theo dõi mọi lúc, mọi nơi.':
-    'Our head office in Ho Chi Minh City and branches in Hanoi, Can Tho and Bao Loc make shipping faster and easier. Shipment status is updated continuously so you can track it anytime, anywhere.',
   'Nhanh chóng': 'Fast',
   'Lấy hàng tận nơi, xử lý và chuyển hãng nhanh chóng.': 'Pickup at your door, fast handling and carrier handover.',
   'Chính xác': 'Accurate',
@@ -95,7 +77,6 @@ export const landing: Record<string, string> = {
   'Đóng gói đúng chuẩn, chụp ảnh kiện tại kho.': 'Standard-compliant packing, photos of every package at the warehouse.',
   'Tiết kiệm': 'Economical',
   'Nhiều hãng, nhiều mức giá để chọn đúng nhu cầu.': 'Many carriers and price levels to fit your needs.',
-  'Hình ảnh hoạt động': 'Photo gallery',
   'Xem ảnh: {name}': 'View photo: {name}',
   'Ảnh trước': 'Previous photo',
   'Ảnh sau': 'Next photo',
@@ -107,8 +88,6 @@ export const landing: Record<string, string> = {
   'Hoạt động thiện nguyện': 'Charity activities',
 
   // Portal
-  'Tự tạo đơn, in bill và theo dõi hàng 24/7': 'Create orders, print bills and track shipments 24/7',
-  'Dành cho khách hàng doanh nghiệp và người bán hàng online gửi thường xuyên.': 'For business customers and online sellers who ship regularly.',
   'Nhập người nhận, kiện hàng và invoice.': 'Enter the receiver, packages and invoice.',
   'Kiểm tra đơn nháp': 'Review drafts',
   'Chỉnh sửa trước khi chốt.': 'Edit before finalising.',
@@ -141,10 +120,6 @@ export const landing: Record<string, string> = {
   'Huế': 'Hue',
   'Bảo Lộc': 'Bao Loc',
   'Cần Thơ': 'Can Tho',
-  'Đà Nẵng': 'Da Nang',
-  'Hải Phòng': 'Hai Phong',
-  'Bình Dương': 'Binh Duong',
-  'Đồng Nai': 'Dong Nai',
   'Trụ sở chính': 'Head office',
   'Gửi lời nhắn': 'Send message',
   'Chức năng gửi lời nhắn đang được kết nối máy chủ': 'Messaging is being connected to the server',
@@ -184,7 +159,6 @@ export const landing: Record<string, string> = {
   'Đã tạo vận đơn, chờ gửi': 'Bill created, awaiting shipment',
   'Đang vận chuyển': 'In transit',
   'Giao chưa thành công': 'Delivery attempt failed',
-  'Chậm so với dự kiến': 'Delayed',
   'Đã giao hàng': 'Delivered',
   'Đã tạo vận đơn': 'Bill created',
   'Rời kho Việt An': 'Left Viet An warehouse',

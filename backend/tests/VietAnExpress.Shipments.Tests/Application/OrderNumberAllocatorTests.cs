@@ -1,5 +1,5 @@
 using VietAnExpress.SharedKernel.Exceptions;
-using VietAnExpress.Shipments.Infrastructure;
+using VietAnExpress.Shipments.OrderData;
 using Xunit;
 
 namespace VietAnExpress.Shipments.Tests.Application;

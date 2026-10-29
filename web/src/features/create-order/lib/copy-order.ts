@@ -1,5 +1,4 @@
-import { defaultValues, emptyInvoiceItem, emptyPackage, type CreateOrderValues } from '../schema';
-import { MULTI_CATEGORY } from '../constants';
+import { defaultValues, emptyInvoiceItem, emptyPackage, type CreateOrderValues, MULTI_CATEGORY } from '@/features/order-form';
 import { sanitizePhone } from '@/shared/lib/phone';
 
 const packagingNames: Record<string, string> = { CARTON: 'Thùng carton', CTN: 'Thùng carton', BOX: 'Thùng carton', BAG: 'Bao / túi', PALLET: 'Pallet', 'WOODEN CASE': 'Kiện gỗ' };

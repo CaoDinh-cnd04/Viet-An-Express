@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react';
 import { useFormContext, useWatch } from 'react-hook-form';
 import { useI18n } from '@/shared/i18n';
 import { cx } from '@/shared/lib/cx';
-import { OTHER_UNIT, PRESET_UNITS, UNIT_MAX, unitChoice } from '../lib/units';
-import type { CreateOrderValues } from '../schema';
+import { OTHER_UNIT, PRESET_UNITS, UNIT_MAX, unitChoice } from '@/features/order-form';
+import type { CreateOrderValues } from '@/features/order-form';
 import styles from './form.module.css';
 
 /**

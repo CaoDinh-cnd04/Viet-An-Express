@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { EcomOrder } from '../types';
-import { countByView, displayStatus, filterByView, formatMoney, receiverLines } from './order-view';
+import { countByView, displayStatus, filterByView, receiverLines } from './order-view';
 
 const order = (id: string, st: EcomOrder['st'], bill = '', extra: Partial<EcomOrder> = {}): EcomOrder =>
   ({ id, src: 'tiktok', ref: id, bill, cnee: 'A', ct: 'US', items: 1, kg: 1, st, createdAt: '05/10/2026 09:00', ...extra });
@@ -36,17 +36,10 @@ describe('displayStatus', () => {
   });
 });
 
-describe('receiverLines / formatMoney', () => {
+describe('receiverLines', () => {
   it('ghép địa chỉ, bỏ dòng trống', () => {
     expect(receiverLines({ address1: '1 Main St', address2: '', city: 'Sydney', state: 'NSW', postal: '2000', country: 'Australia' }, 'AU'))
       .toEqual(['1 Main St', 'Sydney, NSW, 2000', 'Australia']);
     expect(receiverLines(undefined, 'Japan')).toEqual(['Japan']);
-  });
-
-  it('giá trị kèm tiền tệ', () => {
-    const f = (n: number) => String(n);
-    expect(formatMoney(59.9, 'USD', f)).toBe('59.9 USD');
-    expect(formatMoney(10, null, f)).toBe('10');
-    expect(formatMoney(null, 'USD', f)).toBe('');
   });
 });

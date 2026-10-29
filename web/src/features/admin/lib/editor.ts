@@ -2,7 +2,7 @@ import { fill } from '@/shared/i18n';
 import { editorValue, plainToHtml, toPlainText } from '@/features/notifications';
 import type { AdminNotification, NotificationAudience, NotificationAudienceKind, SaveNotificationBody } from '../api';
 
-/** Giới hạn — khớp backend (Domain/Notification.cs, NotificationRules). */
+/** Giới hạn — khớp backend (Identity/Notifications/Notification.cs, NotificationRules). */
 export const LIMITS = { title: 200, body: 4000, detail: 20000, items: 10, images: 5, link: 500, imageBytes: 2 * 1024 * 1024, imageWidth: 1600 } as const;
 
 export interface DraftItem {

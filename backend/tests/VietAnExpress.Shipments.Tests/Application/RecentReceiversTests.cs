@@ -1,4 +1,7 @@
-using VietAnExpress.Shipments.Application.Orders;
+using VietAnExpress.Shipments.AddressBook;
+using VietAnExpress.Shipments.OrderData;
+using VietAnExpress.Shipments.Orders;
+using VietAnExpress.Shipments.Printing;
 using Xunit;
 
 namespace VietAnExpress.Shipments.Tests.Application;

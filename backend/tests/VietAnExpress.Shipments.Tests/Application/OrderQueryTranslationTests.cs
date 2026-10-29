@@ -1,7 +1,8 @@
 using Microsoft.EntityFrameworkCore;
-using VietAnExpress.Shipments.Application.Orders;
-using VietAnExpress.Shipments.Infrastructure;
-using VietAnExpress.Shipments.Infrastructure.Legacy;
+using VietAnExpress.Shipments.Drafts;
+using VietAnExpress.Shipments.OrderData;
+using VietAnExpress.Shipments.Orders;
+using VietAnExpress.Shipments.Shared;
 using Xunit;
 
 namespace VietAnExpress.Shipments.Tests.Application;

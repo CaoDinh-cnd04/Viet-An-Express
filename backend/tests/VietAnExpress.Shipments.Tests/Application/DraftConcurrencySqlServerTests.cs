@@ -1,17 +1,18 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Moq;
 using VietAnExpress.Customers.Contracts;
 using VietAnExpress.SharedKernel.Application;
 using VietAnExpress.SharedKernel.Persistence;
-using VietAnExpress.Shipments.Application.Orders;
-using VietAnExpress.Shipments.Infrastructure;
-using VietAnExpress.Shipments.Infrastructure.Geo;
-using VietAnExpress.Shipments.Infrastructure.Legacy;
+using VietAnExpress.Shipments.Drafts;
+using VietAnExpress.Shipments.Geo;
+using VietAnExpress.Shipments.OrderData;
+using VietAnExpress.Shipments.Orders;
+using VietAnExpress.Shipments.Shared;
 using Xunit;
 
 namespace VietAnExpress.Shipments.Tests.Application;
 
-// In / xoÃ¡ cÃ¹ng 1 Ä‘Æ¡n nhÃ¡p tá»« 2 request cÃ¹ng lÃºc â€” cháº¡y trÃªn database táº¡m, khÃ´ng bao giá» trÃªn database á»©ng dá»¥ng.
+// In / xoá cùng 1 đơn nháp từ 2 request cùng lúc — chạy trên database tạm, không bao giờ trên database ứng dụng.
 public class DraftConcurrencySqlServerTests(DraftSqlServerFixture fixture) : IClassFixture<DraftSqlServerFixture>
 {
     public static bool SqlServerAvailable => !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("VIETAN_TEST_SQLSERVER"));
@@ -149,7 +150,7 @@ public class DraftConcurrencySqlServerTests(DraftSqlServerFixture fixture) : ICl
         await using var check = fixture.CreateDb();
         var order = await check.LegacyOrders.IgnoreQueryFilters().AsNoTracking().SingleAsync(o => o.Id == id, Ct);
         Assert.Equal(LegacyOrder.IssuedStatus, order.Status);
-        // Bill ngÆ°á»i Ä‘Æ°á»£c in nháº­n chÃ­nh lÃ  bill lÆ°u trong Ä‘Æ¡n â€” khÃ´ng bá»‹ láº§n in thá»© 2 cáº¥p sá»‘ khÃ¡c Ä‘Ã¨ lÃªn.
+        // Bill người được in nhận chính là bill lưu trong đơn — không bị lần in thứ 2 cấp số khác đè lên.
         Assert.Equal(ok.Value.BillCode, order.VaBill ?? order.OrderNumber?.ToString(System.Globalization.CultureInfo.InvariantCulture));
         Assert.NotNull(order.OrderNumber);
     }
@@ -161,10 +162,10 @@ public class DraftConcurrencySqlServerTests(DraftSqlServerFixture fixture) : ICl
         await using (var db = fixture.CreateDb())
             Assert.True((await Print(db).Handle(new PrintDraftCommand(id), Ct)).IsSuccess);
 
-        // NgÆ°á»i thá»© 2 váº«n cÃ²n má»Ÿ danh sÃ¡ch nhÃ¡p cÅ© vÃ  báº¥m xoÃ¡.
+        // Người thứ 2 vẫn còn mở danh sách nháp cũ và bấm xoá.
         await using (var db = fixture.CreateDb())
         {
-            var deleted = await new DraftHandlers(db, Access(), Mock.Of<IGeoLookup>(), TimeProvider.System).Handle(new DeleteDraftCommand(id), Ct);
+            var deleted = await new DeleteDraftHandler(db, Access()).Handle(new DeleteDraftCommand(id), Ct);
             Assert.True(deleted.IsFailure);
         }
 
@@ -206,7 +207,7 @@ public class AppLockSqlServerTests(DraftSqlServerFixture fixture) : IClassFixtur
     [Fact(Skip = "Set VIETAN_TEST_SQLSERVER to run disposable SQL Server integration tests", SkipUnless = nameof(SqlServerAvailable))]
     public async Task Kiem_tra_roi_ghi_trong_khoa_ung_dung_2_request_cung_luc_chi_ghi_1_lan()
     {
-        // MÃ´ phá»ng táº¡o tÃ i khoáº£n con cÃ¹ng tÃªn: "chÆ°a cÃ³ thÃ¬ thÃªm" cháº¡y song song 5 láº§n â†’ chá»‰ Ä‘Ãºng 1 dÃ²ng.
+        // Mô phỏng tạo tài khoản con cùng tên: "chưa có thì thêm" chạy song song 5 lần → chỉ đúng 1 dòng.
         var key = "LOCK-" + Guid.NewGuid().ToString("N")[..8];
         async Task<bool> TryAdd()
         {
@@ -214,7 +215,7 @@ public class AppLockSqlServerTests(DraftSqlServerFixture fixture) : IClassFixtur
             return await db.WithAppLockAsync("test:" + key, async () =>
             {
                 if (await db.LegacyOrders.IgnoreQueryFilters().AnyAsync(o => o.CustomerBill == key, Ct)) return false;
-                await Task.Delay(50, Ct); // ná»›i khoáº£ng giá»¯a kiá»ƒm tra vÃ  ghi Ä‘á»ƒ lá»™ lá»—i náº¿u khÃ´ng khÃ³a
+                await Task.Delay(50, Ct); // nới khoảng giữa kiểm tra và ghi để lộ lỗi nếu không khóa
                 db.LegacyOrders.Add(new LegacyOrder { CustomerId = DraftSqlServerFixture.CustomerId, CustomerBill = key, Status = LegacyOrder.DraftStatus });
                 await db.SaveChangesAsync(Ct);
                 return true;
@@ -241,7 +242,7 @@ public sealed class DraftSqlServerFixture : IAsyncLifetime
             sql => sql.EnableRetryOnFailure(3))
         .Options);
 
-    /// <summary>1 Ä‘Æ¡n nhÃ¡p Ä‘á»§ thÃ´ng tin Ä‘á»ƒ in (Status = 0, chÆ°a cÃ³ sá»‘ bill).</summary>
+    /// <summary>1 đơn nháp đủ thông tin để in (Status = 0, chưa có số bill).</summary>
     internal async Task<long> AddReadyDraftAsync()
     {
         await using var db = CreateDb();
@@ -277,7 +278,7 @@ public sealed class DraftSqlServerFixture : IAsyncLifetime
     public async ValueTask DisposeAsync()
     {
         if (connectionString is null) return;
-        // Chá»‰ xoÃ¡ Ä‘Ãºng database táº¡m do fixture nÃ y táº¡o.
+        // Chỉ xoá đúng database tạm do fixture này tạo.
         if (!databaseName.StartsWith(Prefix, StringComparison.Ordinal) || !Guid.TryParseExact(databaseName[Prefix.Length..], "N", out _))
             throw new InvalidOperationException("Invalid disposable database name");
         Microsoft.Data.SqlClient.SqlConnection.ClearAllPools();
@@ -286,7 +287,7 @@ public sealed class DraftSqlServerFixture : IAsyncLifetime
         connectionString = null;
     }
 
-    // Chá»‰ trong database táº¡m: cho phÃ©p táº¡o 3 báº£ng váº­n Ä‘Æ¡n cá»§a há»‡ thá»‘ng cÅ©.
+    // Chỉ trong database tạm: cho phép tạo 3 bảng vận đơn của hệ thống cũ.
     private sealed class TestSchemaDb(DbContextOptions<TestSchemaDb> options) : DbContext(options)
     {
         protected override void OnModelCreating(ModelBuilder modelBuilder)

@@ -1,7 +1,7 @@
 using ClosedXML.Excel;
-using VietAnExpress.Shipments.Application.Orders;
-using VietAnExpress.Shipments.Application.Orders.Documents;
-using VietAnExpress.Shipments.Infrastructure.Legacy;
+using VietAnExpress.Shipments.Drafts;
+using VietAnExpress.Shipments.OrderData;
+using VietAnExpress.Shipments.Printing;
 using Xunit;
 
 namespace VietAnExpress.Shipments.Tests.Application;
@@ -290,7 +290,7 @@ public class OrderDocumentRendererTests
     [InlineData("", false)]
     public void Validator_nhan_nhieu_loai_ngan_dau_phay(string doc, bool valid)
     {
-        var result = new VietAnExpress.Shipments.Application.Validators.PrintOrdersQueryValidator().Validate(new PrintOrdersQuery(["1"], doc));
+        var result = new VietAnExpress.Shipments.Printing.PrintOrdersQueryValidator().Validate(new PrintOrdersQuery(["1"], doc));
         Assert.Equal(valid, result.IsValid);
     }
 

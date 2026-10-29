@@ -3,12 +3,12 @@ import { getErrorMessage } from '@/shared/api/http';
 import { useI18n } from '@/shared/i18n';
 import { useTheme } from '@/shared/lib/useTheme';
 import { Button, Card, Icon, Notice, Tabs, TextField } from '@/shared/ui';
-import { adminLogout, getAdminToken, useAdminTroubles, useAdminLogin } from '../api';
+import { adminLogout, getAdminToken, useAdminSupportTickets, useAdminLogin } from '../api';
 import { AdminNotifications } from '../components/AdminNotifications';
-import { AdminTroubles } from '../components/AdminTroubles';
+import { AdminSupport } from '../components/AdminSupport';
 import styles from './AdminPage.module.css';
 
-type Section = 'troubles' | 'notifications';
+type Section = 'support' | 'notifications';
 
 /**
  * Trang quản trị Việt An (/admin) — chỉ tài khoản quản trị cố định trong code đăng nhập được.
@@ -18,10 +18,10 @@ type Section = 'troubles' | 'notifications';
 export default function AdminPage() {
   const { t } = useI18n();
   const [signedIn, setSignedIn] = useState(() => !!getAdminToken());
-  const [section, setSection] = useState<Section>('troubles');
-  const troubles = useAdminTroubles(signedIn);
+  const [section, setSection] = useState<Section>('support');
+  const supportTickets = useAdminSupportTickets(signedIn);
   // Token hết hạn (401) → về màn đăng nhập.
-  const expired = signedIn && troubles.isError && !getAdminToken();
+  const expired = signedIn && supportTickets.isError && !getAdminToken();
 
   if (!signedIn || expired) return <AdminLogin onSignedIn={() => setSignedIn(true)} expired={expired} />;
 
@@ -43,13 +43,13 @@ export default function AdminPage() {
         <Tabs
           ariaLabel="Chức năng quản trị"
           items={[
-            { key: 'troubles', label: 'Hỗ trợ & sự cố', count: troubles.data?.filter(x => x.ticket.status === 'new').length || undefined },
+            { key: 'support', label: 'Hỗ trợ & sự cố', count: supportTickets.data?.filter(x => x.ticket.status === 'new').length || undefined },
             { key: 'notifications', label: 'Thông báo' }
           ]}
           value={section}
           onChange={setSection}
         />
-        {section === 'troubles' ? <AdminTroubles /> : <AdminNotifications />}
+        {section === 'support' ? <AdminSupport /> : <AdminNotifications />}
       </div>
     </main>
   );

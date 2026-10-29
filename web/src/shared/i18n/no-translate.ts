@@ -15,7 +15,7 @@ export const NO_TRANSLATE: ReadonlySet<string> = new Set([
   // Tin nhắn gửi CS Việt An (CS đọc tiếng Việt)
   'Khách hàng xác nhận đã xử lý xong.',
   'Khách hàng nhắc CS xử lý yêu cầu.',
-  // Chữ ghi vào nội dung yêu cầu gửi CS (troubles/lib/conversation.ts)
+  // Chữ ghi vào nội dung yêu cầu gửi CS (support/lib/draft.ts)
   'vận đơn',
   'Mức hài lòng'
 ]);

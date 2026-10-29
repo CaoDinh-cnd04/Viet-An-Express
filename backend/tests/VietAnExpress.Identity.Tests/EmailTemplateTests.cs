@@ -1,6 +1,5 @@
-using VietAnExpress.Identity.Application;
-using VietAnExpress.Identity.Application.Commands;
-using VietAnExpress.Identity.Domain;
+using VietAnExpress.Identity.Notifications;
+using VietAnExpress.Identity.Shared;
 using Xunit;
 
 namespace VietAnExpress.Identity.Tests;
@@ -15,7 +14,7 @@ public class EmailTemplateTests
         var n = Notification.Create("Lịch nghỉ lễ", "Kho nghỉ 2/9.\n\nNhận hàng lại từ 3/9.", true, true, "admin",
             new DateTime(2026, 8, 25, 9, 30, 0), "https://vietanexpress.com.vn/le");
 
-        var mail = NotificationRules.Email(n, Company);
+        var mail = NotificationEmail.Email(n, Company);
 
         Assert.Equal("[Quan trọng] Lịch nghỉ lễ — Việt An Express", mail.Subject);
         var html = mail.HtmlBody!;
@@ -51,7 +50,7 @@ public class EmailTemplateTests
     [Fact]
     public void Thong_bao_thuong_khong_nhan_va_khong_nut_khi_khong_co_link()
     {
-        var mail = NotificationRules.Email(Notification.Create("Phụ phí", "Tăng 2%.", false, false, "admin", DateTime.Now), Company);
+        var mail = NotificationEmail.Email(Notification.Create("Phụ phí", "Tăng 2%.", false, false, "admin", DateTime.Now), Company);
 
         Assert.Equal("Phụ phí — Việt An Express", mail.Subject);
         Assert.DoesNotContain("Thông báo quan trọng", mail.HtmlBody);

@@ -44,7 +44,7 @@ export function HsLookupDialog({ open, onClose }: { open: boolean; onClose: () =
     [fallback, query, categories.data, products.data, invoices.data]
   );
 
-  const items = fallback ? fallbackItems : lookup.data ?? [];
+  const items = useMemo(() => (fallback ? fallbackItems : lookup.data ?? []), [fallback, fallbackItems, lookup.data]);
   const groups = useMemo(() => groupByHs6(items), [items]);
   const meta = HS_COUNTRIES.find(c => c.code === country)!;
   const search = () => setQuery(input.trim());

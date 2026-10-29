@@ -1,4 +1,5 @@
-import type { OrderSearchField, OrderStatus } from '../types';
+import type { OrderStatus } from '@/shared/model/shipment';
+import type { OrderSearchField } from '../types';
 
 export const ALL_STATUSES: readonly OrderStatus[] = ['wait', 'fly', 'nd', 'ok'];
 /** Số thẻ tìm tối đa mỗi lần (dán cả cột bill). */
@@ -28,7 +29,7 @@ export interface SearchTag {
   value: string;
 }
 
-const FIELDS: readonly OrderSearchField[] = ['all', 'cnee', 'bill', 'ref', 'ct'];
+const FIELDS: readonly OrderSearchField[] = ['all', 'cnee', 'bill', 'ref', 'ct', 'svc'];
 
 /** Ký tự chốt từ khóa đang gõ thành thẻ: chỉ dấu phẩy (dấu cách thuộc từ khóa, vd tên người nhận). */
 export const TAG_SEPARATOR = /^,$/;

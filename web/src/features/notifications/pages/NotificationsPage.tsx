@@ -7,7 +7,7 @@ import { useMarkAllRead, useMarkRead, useNotifications, type Notification } from
 import { FilterBar, type FilterOption } from '../components/FilterBar';
 import { NoticeContent } from '../components/NoticeContent';
 import { NoticeRow } from '../components/NoticeRow';
-import { filterCounts, filterInbox, groupByDay, partsOf, troubleIdOf, type InboxFilter } from '../lib/inbox';
+import { filterCounts, filterInbox, groupByDay, partsOf, ticketIdOf, type InboxFilter } from '../lib/inbox';
 import styles from './NotificationsPage.module.css';
 
 /**
@@ -41,8 +41,8 @@ export default function NotificationsPage() {
 
   const open = (n: Notification) => {
     if (n.unread) markRead.mutate(n.id);
-    const trouble = n.kind === 'support' ? troubleIdOf(n.title) : null;
-    if (trouble) void navigate(`/troubles?id=${encodeURIComponent(trouble)}`);
+    const ticketId = n.kind === 'support' ? ticketIdOf(n.title) : null;
+    if (ticketId) void navigate(`/troubles?id=${encodeURIComponent(ticketId)}`);
     else setOpenId(String(n.id));
   };
 

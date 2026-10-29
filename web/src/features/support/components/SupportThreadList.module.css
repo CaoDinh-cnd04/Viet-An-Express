@@ -1,0 +1,28 @@
+.log {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.log li {
+  padding: 4px 0 6px;
+  border-bottom: 1px dashed var(--color-border);
+}
+
+.log li:last-child {
+  border-bottom: 0;
+}
+
+.when {
+  color: var(--color-text-faint);
+  font-size: var(--text-xs);
+}
+
+.cs {
+  color: var(--color-brand);
+}
+
+.text {
+  margin-top: 2px;
+  white-space: pre-wrap;
+}

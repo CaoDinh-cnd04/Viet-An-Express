@@ -1,4 +1,4 @@
-import { usePrintDocuments } from '@/features/orders/mutations';
+import { usePrintDocuments } from '@/features/orders';
 import { usePrintDraft } from '../api';
 
 /** Chứng từ in ngay khi cấp bill — in lần lượt trong 1 hộp thoại. */

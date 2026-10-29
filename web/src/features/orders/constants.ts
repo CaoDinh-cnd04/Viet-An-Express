@@ -1,9 +1,10 @@
 import type { Tone } from '@/shared/ui';
-import type { OrderFilters, OrderSearchField, OrderStatus } from './types';
+import type { OrderStatus } from '@/shared/model/shipment';
+import type { OrderFilters, OrderSearchField } from './types';
 
 export const ORDER_STATUS: Record<OrderStatus, { label: string; tone: Tone }> = {
-  wait: { label: 'Chưa đi', tone: 'info' },
-  fly: { label: 'Đã đi', tone: 'success' },
+  wait: { label: 'Chưa đi', tone: 'neutral' },
+  fly: { label: 'Đã đi', tone: 'info' },
   nd: { label: 'Chưa phát', tone: 'warning' },
   ok: { label: 'Đã phát', tone: 'brand' }
 };
@@ -13,7 +14,8 @@ export const SEARCH_FIELDS: ReadonlyArray<{ value: OrderSearchField; label: stri
   { value: 'cnee', label: 'Tên người nhận' },
   { value: 'bill', label: 'VA Bill' },
   { value: 'ref', label: 'Số tham chiếu' },
-  { value: 'ct', label: 'Nước đến' }
+  { value: 'ct', label: 'Nước đến' },
+  { value: 'svc', label: 'Dịch vụ' }
 ];
 
 export const PAGE_SIZES = [20, 50, 100] as const;

@@ -144,7 +144,7 @@
 }
 
 /* Đơn có sự cố chưa xong */
-.troubleTag {
+.ticketTag {
   display: inline-flex;
   align-items: center;
   gap: 4px;

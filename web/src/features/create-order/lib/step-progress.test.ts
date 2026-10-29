@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { defaultValues } from '../schema';
+import { defaultValues } from '@/features/order-form';
 import { completedSteps, stepProgress } from './step-progress';
 
 describe('completedSteps', () => {

@@ -2,9 +2,10 @@ using Microsoft.EntityFrameworkCore;
 using Moq;
 using VietAnExpress.Customers.Contracts;
 using VietAnExpress.SharedKernel.Application;
-using VietAnExpress.Shipments.Application.Orders;
 using VietAnExpress.Shipments.Contracts;
-using VietAnExpress.Shipments.Infrastructure;
+using VietAnExpress.Shipments.Drafts;
+using VietAnExpress.Shipments.Orders;
+using VietAnExpress.Shipments.Shared;
 using Xunit;
 
 namespace VietAnExpress.Shipments.Tests.Application;

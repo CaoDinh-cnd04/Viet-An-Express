@@ -1,4 +1,4 @@
-using VietAnExpress.Ecommerce.Application;
+using VietAnExpress.Ecommerce.Orders;
 using Xunit;
 
 namespace VietAnExpress.Ecommerce.Tests;

@@ -1,15 +1,17 @@
-using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.JsonWebTokens;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.Http;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.IdentityModel.JsonWebTokens;
 using Moq;
 using VietAnExpress.Customers.Contracts;
-using VietAnExpress.Identity.Application;
-using VietAnExpress.Identity.Application.Commands;
+using VietAnExpress.Identity.Auth;
 using VietAnExpress.Identity.Contracts;
-using VietAnExpress.Identity.Infrastructure;
+using VietAnExpress.Identity.MyTracking;
+using VietAnExpress.Identity.Notifications;
+using VietAnExpress.Identity.Shared;
+using VietAnExpress.Identity.Staff;
 using VietAnExpress.SharedKernel.Application;
 using VietAnExpress.SharedKernel.Authorization;
 using Xunit;
@@ -74,12 +76,27 @@ internal sealed class IdentityFixture : IAsyncDisposable
     public RevokedTokenStore NewRevokedTokenStore() =>
         new(Environment.Object, Clock, Microsoft.Extensions.Logging.Abstractions.NullLogger<RevokedTokenStore>.Instance);
     public ChangePasswordHandler ChangePassword => new(Db, Tokens, Sessions, CurrentUser.Object);
-    public StaffHandlers Staff => new(Db, Sessions, CurrentUser.Object, Clock);
-    public MyTrackingHandlers MyTracking => new(Db, Customers.Object, CurrentUser.Object, Images);
-    public AdminNotificationHandlers AdminNotifications => new(Db, CurrentUser.Object, Customers.Object, Email, Jobs, NotificationImages, Clock, PortalConfig);
+    public ListStaffHandler ListStaff => new(Db, Sessions, CurrentUser.Object);
+    public ListAssignablePermissionsHandler ListAssignablePermissions => new(Sessions, CurrentUser.Object);
+    public CreateStaffHandler CreateStaff => new(Db, Sessions, CurrentUser.Object, Clock);
+    public UpdateStaffHandler UpdateStaff => new(Db, Sessions, CurrentUser.Object);
+    public ResetStaffPasswordHandler ResetStaffPassword => new(Db, CurrentUser.Object);
+    public DeleteStaffHandler DeleteStaff => new(Db, CurrentUser.Object);
+    public GetMyTrackingHandler GetMyTracking => new(Db, Customers.Object, CurrentUser.Object, Images);
+    public SaveMyTrackingHandler SaveMyTracking => new(Db, Customers.Object, CurrentUser.Object, Images);
+    public GetCustomerMyTrackingHandler GetCustomerMyTracking => new(Db, Customers.Object, Images);
+    public SaveNotificationHandler SaveNotification => new(Db, CurrentUser.Object, Customers.Object, Email, Jobs, NotificationImages, Clock);
+    public TestNotificationEmailHandler TestNotificationEmail => new(CurrentUser.Object, Email, NotificationImages, Clock, PortalConfig);
+    public GetAdminNotificationsHandler GetAdminNotifications => new(Db, Customers.Object, Clock);
+    public GetNotificationAudienceHandler GetNotificationAudience => new(Db);
+    public GetNotificationReadersHandler GetNotificationReaders => new(Db, Customers.Object);
+    public RemoveNotificationHandler RemoveNotification => new(Db, Customers.Object, Clock);
+    public DeleteNotificationHandler DeleteNotification => new(Db);
     public IConfiguration PortalConfig { get; } = new ConfigurationBuilder()
         .AddInMemoryCollection(new Dictionary<string, string?> { ["Company:PortalUrl"] = "https://portal.test/" }).Build();
-    public CustomerNotificationHandlers CustomerNotifications => new(Db, CurrentUser.Object, Clock);
+    public GetNotificationsHandler GetNotifications => new(Db, CurrentUser.Object, Clock);
+    public MarkNotificationReadHandler MarkNotificationRead => new(Db, CurrentUser.Object, Clock);
+    public MarkAllNotificationsReadHandler MarkAllNotificationsRead => new(Db, CurrentUser.Object, Clock);
 
     /// <summary>Giả lập request của tài khoản con (null = tài khoản chính / admin).</summary>
     public void SignInAs(long? staffId)
@@ -106,7 +123,7 @@ internal sealed class IdentityFixture : IAsyncDisposable
             new("shipments.create", "Tạo", SystemRoles.Customer),
             new(IdentityPermissions.ManageStaff, "Quản lý nhân viên", SystemRoles.Customer),
             new(IdentityPermissions.MyTracking, "MyTracking", SystemRoles.Customer),
-            new(IdentityPermissions.Troubles, "Hỗ trợ & sự cố", SystemRoles.Customer),
+            new(IdentityPermissions.SupportRequests, "Hỗ trợ & sự cố", SystemRoles.Customer),
             new("internal.only", "Không cấp cho khách")
         ];
     }
@@ -151,7 +168,7 @@ public class AuthHandlerTests
     {
         await using var f = new IdentityFixture();
         var result = await f.Login.Handle(new LoginCommand(userName, password, false), Ct);
-        Assert.Equal(IdentityErrors.InvalidCredentials, result.Error);
+        Assert.Equal(AuthErrors.InvalidCredentials, result.Error);
     }
 
     [Fact]
@@ -166,7 +183,7 @@ public class AuthHandlerTests
         Assert.False(refreshed.Value.IsPersistent);
 
         var withAccessToken = await f.Refresh.Handle(new RefreshSessionCommand(login.AccessToken), Ct);
-        Assert.Equal(IdentityErrors.SessionExpired, withAccessToken.Error);
+        Assert.Equal(AuthErrors.SessionExpired, withAccessToken.Error);
     }
 
     [Fact]
@@ -176,7 +193,7 @@ public class AuthHandlerTests
         var login = (await f.Login.Handle(new LoginCommand(IdentityFixture.UserName, IdentityFixture.Password, false), Ct)).Value;
 
         f.Clock.Now = f.Clock.Now.AddHours(f.Jwt.SessionRefreshTokenHours + 1);
-        Assert.Equal(IdentityErrors.SessionExpired, (await f.Refresh.Handle(new RefreshSessionCommand(login.RefreshToken), Ct)).Error);
+        Assert.Equal(AuthErrors.SessionExpired, (await f.Refresh.Handle(new RefreshSessionCommand(login.RefreshToken), Ct)).Error);
     }
 
     [Fact]
@@ -184,7 +201,7 @@ public class AuthHandlerTests
     {
         await using var f = new IdentityFixture();
         for (var i = 0; i < LoginAttemptGuard.MaxFailures; i++)
-            Assert.Equal(IdentityErrors.InvalidCredentials, (await f.Login.Handle(new LoginCommand(IdentityFixture.UserName, "sai", false), Ct)).Error);
+            Assert.Equal(AuthErrors.InvalidCredentials, (await f.Login.Handle(new LoginCommand(IdentityFixture.UserName, "sai", false), Ct)).Error);
 
         var locked = await f.Login.Handle(new LoginCommand(" " + IdentityFixture.UserName.ToUpperInvariant(), IdentityFixture.Password, false), Ct);
         Assert.Equal("LOGIN_LOCKED", locked.Error.Code);
@@ -201,7 +218,7 @@ public class AuthHandlerTests
         for (var i = 0; i < LoginAttemptGuard.MaxFailures - 1; i++)
             await f.Login.Handle(new LoginCommand(IdentityFixture.UserName, "sai", false), Ct);
         Assert.True((await f.Login.Handle(new LoginCommand(IdentityFixture.UserName, IdentityFixture.Password, false), Ct)).IsSuccess);
-        Assert.Equal(IdentityErrors.InvalidCredentials, (await f.Login.Handle(new LoginCommand(IdentityFixture.UserName, "sai", false), Ct)).Error);
+        Assert.Equal(AuthErrors.InvalidCredentials, (await f.Login.Handle(new LoginCommand(IdentityFixture.UserName, "sai", false), Ct)).Error);
         Assert.Null(f.LoginGuard.LockedFor(IdentityFixture.UserName));
     }
 
@@ -214,7 +231,7 @@ public class AuthHandlerTests
 
         Assert.True((await f.Logout.Handle(new LogoutCommand(login.RefreshToken, null, null), Ct)).IsSuccess);
 
-        Assert.Equal(IdentityErrors.SessionExpired, (await f.Refresh.Handle(new RefreshSessionCommand(login.RefreshToken), Ct)).Error);
+        Assert.Equal(AuthErrors.SessionExpired, (await f.Refresh.Handle(new RefreshSessionCommand(login.RefreshToken), Ct)).Error);
         Assert.True((await f.Refresh.Handle(new RefreshSessionCommand(other.RefreshToken), Ct)).IsSuccess); // thiết bị khác không ảnh hưởng
         Assert.True(f.NewRevokedTokenStore().IsRevoked((await f.Tokens.ReadRefreshTokenAsync(login.RefreshToken))!.Id)); // đọc lại từ file
         // Token rác / hết hạn: đăng xuất vẫn thành công, không ghi gì.
@@ -252,7 +269,7 @@ public class AuthHandlerTests
         }
 
         f.Clock.Now = loginAt.AddDays(f.Jwt.MaxSessionDays).AddMinutes(1);
-        Assert.Equal(IdentityErrors.SessionExpired, (await f.Refresh.Handle(new RefreshSessionCommand(session.RefreshToken), Ct)).Error);
+        Assert.Equal(AuthErrors.SessionExpired, (await f.Refresh.Handle(new RefreshSessionCommand(session.RefreshToken), Ct)).Error);
         // Đăng nhập lại bằng mật khẩu → mốc mới.
         Assert.True((await f.Login.Handle(new LoginCommand(IdentityFixture.UserName, IdentityFixture.Password, true), Ct)).IsSuccess);
     }
@@ -268,7 +285,7 @@ public class AuthHandlerTests
         Assert.True(changed.IsSuccess);
         Assert.Equal("MatKhauMoi9", f.StoredPassword());      // hệ thống cũ đọc được
         Assert.True(changed.Value.IsPersistent);                // giữ kiểu phiên đang dùng
-        Assert.Equal(IdentityErrors.SessionExpired, (await f.Refresh.Handle(new RefreshSessionCommand(other.RefreshToken), Ct)).Error);
+        Assert.Equal(AuthErrors.SessionExpired, (await f.Refresh.Handle(new RefreshSessionCommand(other.RefreshToken), Ct)).Error);
         Assert.True((await f.Refresh.Handle(new RefreshSessionCommand(changed.Value.RefreshToken), Ct)).IsSuccess);
         Assert.True((await f.Login.Handle(new LoginCommand(IdentityFixture.UserName, "MatKhauMoi9", false), Ct)).IsSuccess);
     }
@@ -280,7 +297,7 @@ public class AuthHandlerTests
 
         var result = await f.ChangePassword.Handle(new ChangePasswordCommand("sai", "MatKhauMoi9", null), Ct);
 
-        Assert.Equal(IdentityErrors.WrongCurrentPassword, result.Error);
+        Assert.Equal(AuthErrors.WrongCurrentPassword, result.Error);
         Assert.Equal(IdentityFixture.Password, f.StoredPassword());
     }
 

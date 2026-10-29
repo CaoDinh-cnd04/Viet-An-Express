@@ -5,7 +5,8 @@ import { BRANCHES, CARRIERS, defaultHub, hubOptions } from '@/shared/config/doma
 import { Button, Card, DataTable, FileDrop, FormGrid, Icon, LinkButton, Notice, PageHeader, SelectField, StatusPill, type Column } from '@/shared/ui';
 import { useCommitImport, usePreviewImport } from '../api';
 import { IMPORT_GUIDE, IMPORT_LIMITS, IMPORT_STEPS, IMPORT_TEMPLATE_URL } from '../constants';
-import { checkImportFile, formatKg, formatMoney, rowState, serviceHubError, sortRows } from '../lib/import-rows';
+import { formatMoney } from '@/shared/lib/format';
+import { checkImportFile, formatKg, rowState, serviceHubError, sortRows } from '../lib/import-rows';
 import type { ImportDefaults, ImportResult, ImportRow } from '../types';
 import styles from './OrderImportPage.module.css';
 
@@ -63,7 +64,7 @@ export default function OrderImportPage() {
     { key: 'pcs', header: 'Kiện', width: 56, align: 'right', render: r => r.pieces },
     { key: 'gw', header: 'Cân thực', align: 'right', className: styles.nowrap, render: r => formatKg(r.weightKg) },
     { key: 'cw', header: 'Cân tính cước', align: 'right', className: styles.nowrap, render: r => <strong>{formatKg(r.chargeableKg)}</strong> },
-    { key: 'value', header: 'Giá trị', align: 'right', className: styles.nowrap, render: r => formatMoney(r.value, r.currency) },
+    { key: 'value', header: 'Giá trị', align: 'right', className: styles.nowrap, render: r => (r.value > 0 ? formatMoney(r.value, r.currency) : '—') },
     { key: 'products', header: 'Mặt hàng', width: 72, align: 'right', render: r => r.products || '—' },
     { key: 'result', header: 'Kết quả', width: '30%', render: r => <RowResult row={r} /> }
   ];

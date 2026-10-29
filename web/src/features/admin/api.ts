@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiUrl, toError } from '@/shared/api/http';
 import type { NotificationItem } from '@/features/notifications';
-import type { TroubleStatus, TroubleTicket } from '@/features/troubles';
+import type { SupportStatus, SupportTicket } from '@/features/support';
 
 /**
  * Trang quản trị Việt An (/admin): token riêng giữ trong sessionStorage, gửi bằng header Authorization —
@@ -211,8 +211,8 @@ export async function uploadNotificationImage(file: Blob, fileName: string): Pro
 }
 
 /** Yêu cầu hỗ trợ & sự cố ở trang quản trị — GET /admin/troubles. */
-export interface AdminTrouble {
-  ticket: TroubleTicket;
+export interface AdminSupportTicket {
+  ticket: SupportTicket;
   customerCode: string;
   companyName: string;
   isStaff: boolean;
@@ -223,27 +223,30 @@ export interface AdminTrouble {
   email?: string | null;
 }
 
-const troubleKey = ['admin', 'troubles'] as const;
+const supportKey = ['admin', 'troubles'] as const;
 
-export function useAdminTroubles(enabled: boolean) {
+export function useAdminSupportTickets(enabled: boolean) {
   return useQuery({
-    queryKey: troubleKey,
-    queryFn: async () => ((await (await adminFetch('/admin/troubles')).json()) as { data: AdminTrouble[] }).data,
+    queryKey: supportKey,
+    queryFn: async () => ((await (await adminFetch('/admin/troubles')).json()) as { data: AdminSupportTicket[] }).data,
     enabled,
     refetchInterval: 60_000
   });
 }
 
-/** Đổi trạng thái và / hoặc ghi chú cho khách — khách nhận thông báo riêng trên portal (ghi chú không lưu ở yêu cầu). */
-export function useReplyAdminTrouble() {
+/**
+ * Trả lời (nối vào TContact.Content) và / hoặc đổi trạng thái — không gửi thông báo, khách xem ở trang Hỗ trợ & góp ý;
+ * "Chờ khách phản hồi" thì khách trả lời lại được.
+ */
+export function useReplyAdminSupportTicket() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, reply, status }: { id: string; reply: string; status?: TroubleStatus }) =>
+    mutationFn: async ({ id, reply, status }: { id: string; reply: string; status?: SupportStatus }) =>
       ((await (await adminFetch(`/admin/troubles/${encodeURIComponent(id)}/reply`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ reply: reply.trim() || null, status: status ?? null })
-      })).json()) as { message: string; data: AdminTrouble }),
-    onSuccess: () => void qc.invalidateQueries({ queryKey: troubleKey })
+      })).json()) as { message: string; data: AdminSupportTicket }),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: supportKey })
   });
 }

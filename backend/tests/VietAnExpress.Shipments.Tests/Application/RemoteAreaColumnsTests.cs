@@ -1,6 +1,7 @@
-using VietAnExpress.Shipments.Application.Orders;
-using VietAnExpress.Shipments.Infrastructure.Geo;
-using VietAnExpress.Shipments.Infrastructure.Legacy;
+using VietAnExpress.Shipments.Drafts;
+using VietAnExpress.Shipments.Geo;
+using VietAnExpress.Shipments.OrderData;
+using VietAnExpress.Shipments.Orders;
 using Xunit;
 
 namespace VietAnExpress.Shipments.Tests.Application;

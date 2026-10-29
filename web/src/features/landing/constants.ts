@@ -1,11 +1,11 @@
-import type { OrderStatus } from '@/features/orders/types';
+import type { OrderStatus } from '@/shared/model/shipment';
 import type { IconName, Tone } from '@/shared/ui';
 
 /**
  * Nội dung trang ngoài — lấy từ website hiện tại vietanexpress.com.vn và bảng hiệu trụ sở.
  * Đổi thông tin liên hệ / chi nhánh: chỉ sửa ở đây.
  */
-export { COMPANY, CONTACTS, type ContactLink } from '@/shared/config/company';
+export { COMPANY, CONTACTS, type ContactLink, CARRIERS } from '@/shared/config/company';
 
 
 export const BRANCHES: ReadonlyArray<{ city: string; note?: string }> = [
@@ -16,7 +16,6 @@ export const BRANCHES: ReadonlyArray<{ city: string; note?: string }> = [
 ];
 
 /** Hãng mà Việt An làm đại lý gom hàng. */
-export { CARRIERS } from '@/shared/config/company';
 
 export const SERVICES: ReadonlyArray<{ icon: IconName; title: string; desc: string }> = [
   { icon: 'plane', title: 'Chuyển phát nhanh quốc tế', desc: 'Chứng từ và hàng hóa đi hầu hết các nước, Việt An lo thủ tục thông quan để hàng đi nhanh nhất.' },

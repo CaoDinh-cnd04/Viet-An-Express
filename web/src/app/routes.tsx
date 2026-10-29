@@ -3,7 +3,7 @@ import { createBrowserRouter, Navigate, useLocation, useParams, type RouteObject
 import { PERMISSIONS, RequireAuth, RequirePermission, useCan } from '@/features/auth';
 import LandingPage from '@/features/landing/pages/LandingPage';
 import TrackingPage from '@/features/landing/pages/TrackingPage';
-import { isMyTrackingHost } from '@/features/mytracking/lib/link';
+import { isMyTrackingHost } from '@/features/mytracking';
 import { AppShell } from './layout/AppShell';
 import { NotFoundPage } from './pages/NotFoundPage';
 
@@ -40,7 +40,7 @@ const pages = {
   pricing: lazy(() => import('@/features/pricing/pages/PricingPage')),
   ecommerce: lazy(() => import('@/features/ecommerce/pages/EcommercePage')),
   ecomOrders: lazy(() => import('@/features/ecommerce/pages/EcomOrdersPage')),
-  troubles: lazy(() => import('@/features/troubles/pages/TroublesPage')),
+  support: lazy(() => import('@/features/support/pages/SupportPage')),
   notifications: lazy(() => import('@/features/notifications/pages/NotificationsPage')),
   apiTracking: lazy(() => import('@/features/account/pages/ApiTrackingPage')),
   password: lazy(() => import('@/features/account/pages/ChangePasswordPage'))
@@ -98,7 +98,7 @@ const routes: RouteObject[] = [
       page('pricing', 'Giá & gợi ý dịch vụ', pages.pricing),
       page('ecommerce', 'E-commerce', pages.ecommerce, PERMISSIONS.ecommerceView),
       page('ecommerce/orders', 'Đơn hàng E-com', pages.ecomOrders, PERMISSIONS.ecommerceView),
-      page('troubles', 'Hỗ trợ & góp ý', pages.troubles),
+      page('troubles', 'Hỗ trợ & góp ý', pages.support),
       page('notifications', 'Thông báo', pages.notifications),
       // Trang Trợ giúp & Góp ý cũ đã gộp vào Hỗ trợ & sự cố.
       { path: 'help', element: <RedirectKeepQuery to="/troubles" /> },

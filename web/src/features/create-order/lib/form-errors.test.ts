@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { FieldErrors } from 'react-hook-form';
-import type { CreateOrderValues } from '../schema';
+import type { CreateOrderValues } from '@/features/order-form';
 import { fieldLabel, listFormErrors } from './form-errors';
 
 describe('listFormErrors', () => {

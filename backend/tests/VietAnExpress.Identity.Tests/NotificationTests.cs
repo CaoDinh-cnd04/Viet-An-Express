@@ -3,9 +3,9 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using VietAnExpress.Customers.Contracts;
-using VietAnExpress.Identity.Application.Commands;
-using VietAnExpress.Identity.Domain;
-using VietAnExpress.Identity.Infrastructure;
+using VietAnExpress.Identity.Auth;
+using VietAnExpress.Identity.Notifications;
+using VietAnExpress.Identity.Staff;
 using VietAnExpress.SharedKernel.Application;
 using Xunit;
 
@@ -68,7 +68,7 @@ public class NotificationTests
     private static async Task<IReadOnlyList<NotificationDto>> SeenBy(IdentityFixture f, long customerId)
     {
         f.CurrentUser.SetupGet(u => u.CustomerId).Returns(customerId);
-        return (await f.CustomerNotifications.Handle(new GetNotificationsQuery(), Ct)).Value.Data;
+        return (await f.GetNotifications.Handle(new GetNotificationsQuery(), Ct)).Value.Data;
     }
 
     private static void EmailOf(IdentityFixture f, params (long Id, string Email)[] customers) =>
@@ -82,13 +82,13 @@ public class NotificationTests
     public async Task Khach_thay_thong_bao_moi_danh_dau_da_doc_rieng_tung_tai_khoan()
     {
         await using var f = new IdentityFixture();
-        var created = await f.AdminNotifications.Handle(Simple(" Nghỉ lễ 2/9 ", "Kho nghỉ 2 ngày.", important: true), Ct);
+        var created = await f.SaveNotification.Handle(Simple(" Nghỉ lễ 2/9 ", "Kho nghỉ 2 ngày.", important: true), Ct);
         Assert.True(created.IsSuccess, created.Error.Message);
         f.Clock.Now = f.Clock.Now.AddMinutes(1);
-        await f.AdminNotifications.Handle(Simple("Phụ phí xăng dầu", "Tăng 2%."), Ct);
+        await f.SaveNotification.Handle(Simple("Phụ phí xăng dầu", "Tăng 2%."), Ct);
         Assert.Empty(f.Jobs.Jobs);
 
-        var list = (await f.CustomerNotifications.Handle(new GetNotificationsQuery(), Ct)).Value;
+        var list = (await f.GetNotifications.Handle(new GetNotificationsQuery(), Ct)).Value;
         Assert.Equal(2, list.UnreadCount);
         Assert.Equal(["Phụ phí xăng dầu", "Nghỉ lễ 2/9"], list.Data.Select(n => n.Title));
         Assert.True(list.Data[1].Imp);
@@ -96,20 +96,20 @@ public class NotificationTests
         Assert.Equal("Kho nghỉ 2 ngày.", Assert.Single(list.Data[1].Items).Body);
 
         var id = long.Parse(created.Value.Id);
-        Assert.True((await f.CustomerNotifications.Handle(new MarkNotificationReadCommand(id), Ct)).IsSuccess);
-        Assert.True((await f.CustomerNotifications.Handle(new MarkNotificationReadCommand(id), Ct)).IsSuccess); // bấm lại không lỗi
-        Assert.Equal(1, (await f.CustomerNotifications.Handle(new GetNotificationsQuery(), Ct)).Value.UnreadCount);
+        Assert.True((await f.MarkNotificationRead.Handle(new MarkNotificationReadCommand(id), Ct)).IsSuccess);
+        Assert.True((await f.MarkNotificationRead.Handle(new MarkNotificationReadCommand(id), Ct)).IsSuccess); // bấm lại không lỗi
+        Assert.Equal(1, (await f.GetNotifications.Handle(new GetNotificationsQuery(), Ct)).Value.UnreadCount);
 
         // Tài khoản con có trạng thái đã đọc riêng.
         f.SignInAs(55);
-        Assert.Equal(2, (await f.CustomerNotifications.Handle(new GetNotificationsQuery(), Ct)).Value.UnreadCount);
-        Assert.Equal(2, (await f.CustomerNotifications.Handle(new MarkAllNotificationsReadCommand(), Ct)).Value);
-        Assert.Equal(0, (await f.CustomerNotifications.Handle(new GetNotificationsQuery(), Ct)).Value.UnreadCount);
+        Assert.Equal(2, (await f.GetNotifications.Handle(new GetNotificationsQuery(), Ct)).Value.UnreadCount);
+        Assert.Equal(2, (await f.MarkAllNotificationsRead.Handle(new MarkAllNotificationsReadCommand(), Ct)).Value);
+        Assert.Equal(0, (await f.GetNotifications.Handle(new GetNotificationsQuery(), Ct)).Value.UnreadCount);
 
-        var admin = Assert.Single(await f.AdminNotifications.Handle(new GetAdminNotificationsQuery(), Ct), n => n.Id == created.Value.Id);
+        var admin = Assert.Single(await f.GetAdminNotifications.Handle(new GetAdminNotificationsQuery(), Ct), n => n.Id == created.Value.Id);
         Assert.Equal((2, 1, 1), (admin.ReadCount, admin.ReadCustomers, admin.Recipients)); // 1 khách có mật khẩu portal trong fixture
         Assert.Equal("live", admin.Status);
-        Assert.Equal(NotificationErrors.NotFound, (await f.CustomerNotifications.Handle(new MarkNotificationReadCommand(999), Ct)).Error);
+        Assert.Equal(NotificationErrors.NotFound, (await f.MarkNotificationRead.Handle(new MarkNotificationReadCommand(999), Ct)).Error);
     }
 
     [Fact]
@@ -118,7 +118,7 @@ public class NotificationTests
         await using var f = new IdentityFixture();
         var image = NotificationImageStore.NameOf(await f.NotificationImages.SaveAsync(Png, Ct))!;
 
-        var created = await f.AdminNotifications.Handle(Save("Bản tin tuần 44",
+        var created = await f.SaveNotification.Handle(Save("Bản tin tuần 44",
         [
             Item("Phụ phí xăng dầu", "Từ 1/11 tăng 1%.", "https://vietanexpress.com.vn/phu-phi", image),
             Item("Lịch nghỉ lễ", "Kho nghỉ thứ 6."),
@@ -142,7 +142,7 @@ public class NotificationTests
         await using var f = new IdentityFixture();
         EmailOf(f, (IdentityFixture.CustomerId, "ops@sgb.vn"));
         var image = NotificationImageStore.NameOf(await f.NotificationImages.SaveAsync(Png, Ct))!;
-        await f.AdminNotifications.Handle(Save("Bản tin", [Item("Tin A", "Nội dung A", "https://a.vn/x", image), Item("Tin B", "Nội dung B")], email: true), Ct);
+        await f.SaveNotification.Handle(Save("Bản tin", [Item("Tin A", "Nội dung A", "https://a.vn/x", image), Item("Tin B", "Nội dung B")], email: true), Ct);
         await f.Jobs.RunAllAsync(Services(f));
 
         var html = Assert.Single(f.Email.Sent).HtmlBody!;
@@ -162,7 +162,7 @@ public class NotificationTests
     {
         await using var f = new IdentityFixture();
         var image = NotificationImageStore.NameOf(await f.NotificationImages.SaveAsync(Png, Ct))!;
-        await f.AdminNotifications.Handle(new TestNotificationEmailCommand("a@x.vn", "A", [Item(null, "B", null, image)], false), Ct);
+        await f.TestNotificationEmail.Handle(new TestNotificationEmailCommand("a@x.vn", "A", [Item(null, "B", null, image)], false), Ct);
 
         var mail = Assert.Single(f.Email.Sent);
         Assert.Contains($"src=\"cid:{image}\"", mail.HtmlBody);
@@ -174,7 +174,7 @@ public class NotificationTests
     {
         await using var f = new IdentityFixture();
         EmailOf(f, (IdentityFixture.CustomerId, "ops@sgb.vn"));
-        var created = await f.AdminNotifications.Handle(Save("Bản tin",
+        var created = await f.SaveNotification.Handle(Save("Bản tin",
         [
             new NotificationItemInput("Phụ phí", "<p>Tăng <b>2%</b><script>x</script></p>", [], null,
                 "<p>Chi tiết <span style=\"color: #dc2626\">bảng giá</span></p>"),
@@ -208,7 +208,7 @@ public class NotificationTests
     public async Task Anh_khong_co_tren_may_chu_thi_bao_loi()
     {
         await using var f = new IdentityFixture();
-        var result = await f.AdminNotifications.Handle(Save("A", [Item(null, "B", null, new string('a', 64) + ".png")]), Ct);
+        var result = await f.SaveNotification.Handle(Save("A", [Item(null, "B", null, new string('a', 64) + ".png")]), Ct);
         Assert.Equal(NotificationErrors.ImageNotFound, result.Error);
         await Assert.ThrowsAsync<FormatException>(() => f.NotificationImages.SaveAsync("GIF89a"u8.ToArray(), Ct));
     }
@@ -224,7 +224,7 @@ public class NotificationTests
         await f.Db.SaveChangesAsync(Ct);
         EmailOf(f, (IdentityFixture.CustomerId, "ops@sgb.vn"), (301, "shop@x.vn"), (302, "daily@x.vn"));
 
-        var created = await f.AdminNotifications.Handle(Save("Ưu đãi shop", [Item(null, "Giảm 10%.")], email: true, audience: NotificationAudience.Types, types: [3]), Ct);
+        var created = await f.SaveNotification.Handle(Save("Ưu đãi shop", [Item(null, "Giảm 10%.")], email: true, audience: NotificationAudience.Types, types: [3]), Ct);
         Assert.Equal(1, created.Value.Recipients); // 303 chưa có mật khẩu portal
         Assert.Equal([3], created.Value.CustomerTypes);
 
@@ -235,12 +235,12 @@ public class NotificationTests
         await f.Jobs.RunAllAsync(Services(f));
         Assert.Equal(["shop@x.vn"], Assert.Single(f.Email.Sent).Bcc);
 
-        var audience = await f.AdminNotifications.Handle(new GetNotificationAudienceQuery(), Ct);
+        var audience = await f.GetNotificationAudience.Handle(new GetNotificationAudienceQuery(), Ct);
         Assert.Equal(3, audience.Total);
         // Tên từ dbo.TCustomerType; loại chưa có khách vẫn hiện; mã loại không có trong danh mục → "Loại {id}".
         Assert.Equal([(2, "Cá nhân", 0), (3, "Công Ty", 1), (4, "Loại 4", 1)], audience.Types.Select(t => (t.Id, t.Name, t.Count)));
         Assert.Equal(NotificationErrors.TypesRequired,
-            (await f.AdminNotifications.Handle(Save("A", [Item(null, "B")], audience: NotificationAudience.Types, types: []), Ct)).Error);
+            (await f.SaveNotification.Handle(Save("A", [Item(null, "B")], audience: NotificationAudience.Types, types: []), Ct)).Error);
     }
 
     [Fact]
@@ -249,7 +249,7 @@ public class NotificationTests
         await using var f = new IdentityFixture();
         var items = new[] { Item("Tin 1", "<b>Đậm</b> chữ"), Item("Tin 2", "Chữ thường", "https://vietan.vn/a") };
 
-        var sent = await f.AdminNotifications.Handle(new TestNotificationEmailCommand(" admin@vietan.vn; cs@vietan.vn ", "Đổi giá", items, true), Ct);
+        var sent = await f.TestNotificationEmail.Handle(new TestNotificationEmailCommand(" admin@vietan.vn; cs@vietan.vn ", "Đổi giá", items, true), Ct);
 
         Assert.Equal(2, sent.Value);
         var mail = Assert.Single(f.Email.Sent);
@@ -269,7 +269,7 @@ public class NotificationTests
     public async Task Gui_thu_email_sai_dia_chi_bi_chan(string to)
     {
         await using var f = new IdentityFixture();
-        var result = await f.AdminNotifications.Handle(new TestNotificationEmailCommand(to, "A", [Item(null, "B")], false), Ct);
+        var result = await f.TestNotificationEmail.Handle(new TestNotificationEmailCommand(to, "A", [Item(null, "B")], false), Ct);
         Assert.Equal(NotificationErrors.TestEmailInvalid, result.Error);
         Assert.Empty(f.Email.Sent);
     }
@@ -279,7 +279,7 @@ public class NotificationTests
     {
         await using var f = new IdentityFixture();
         f.Email.IsConfigured = false;
-        var result = await f.AdminNotifications.Handle(new TestNotificationEmailCommand("a@x.vn", "A", [Item(null, "B")], false), Ct);
+        var result = await f.TestNotificationEmail.Handle(new TestNotificationEmailCommand("a@x.vn", "A", [Item(null, "B")], false), Ct);
         Assert.Equal(NotificationErrors.EmailNotConfigured, result.Error);
     }
 
@@ -290,12 +290,12 @@ public class NotificationTests
         f.Db.Logins.Add(new CustomerLogin(301, "khac", "pw"));
         await f.Db.SaveChangesAsync(Ct);
 
-        var unknown = await f.AdminNotifications.Handle(Save("A", [Item(null, "B")], audience: NotificationAudience.Customers, codes: ["SaigonbayHN, KHONGCO"]), Ct);
+        var unknown = await f.SaveNotification.Handle(Save("A", [Item(null, "B")], audience: NotificationAudience.Customers, codes: ["SaigonbayHN, KHONGCO"]), Ct);
         Assert.Equal(NotificationErrors.UnknownCustomers(["KHONGCO"]), unknown.Error);
         Assert.Empty(await f.Db.Notifications.ToListAsync(Ct));
 
         EmailOf(f, (IdentityFixture.CustomerId, "ops@sgb.vn"));
-        var created = await f.AdminNotifications.Handle(Save("Hồ sơ hải quan", [Item(null, "Bổ sung invoice.")], audience: NotificationAudience.Customers,
+        var created = await f.SaveNotification.Handle(Save("Hồ sơ hải quan", [Item(null, "Bổ sung invoice.")], audience: NotificationAudience.Customers,
             codes: ["saigonbayhn", "SaigonbayHN"]), Ct);
         Assert.True(created.IsSuccess, created.Error.Message);
         Assert.Equal(1, created.Value.Recipients);
@@ -311,9 +311,9 @@ public class NotificationTests
     {
         await using var f = new IdentityFixture();
         EmailOf(f, (IdentityFixture.CustomerId, "ops@sgb.vn"));
-        var draft = await f.AdminNotifications.Handle(Save("Nháp", [Item(null, "Đang soạn")], publish: false, email: true), Ct);
+        var draft = await f.SaveNotification.Handle(Save("Nháp", [Item(null, "Đang soạn")], publish: false, email: true), Ct);
         Assert.Equal(("draft", NotificationEmailStatus.Scheduled), (draft.Value.Status, draft.Value.EmailStatus));
-        var scheduled = await f.AdminNotifications.Handle(Save("Bảng giá DHL", [Item(null, "Từ 1/10.")], email: true, at: Now.AddHours(2)), Ct);
+        var scheduled = await f.SaveNotification.Handle(Save("Bảng giá DHL", [Item(null, "Từ 1/10.")], email: true, at: Now.AddHours(2)), Ct);
         Assert.Equal(("scheduled", NotificationEmailStatus.Scheduled), (scheduled.Value.Status, scheduled.Value.EmailStatus));
         Assert.Empty(f.Jobs.Jobs);
         Assert.Empty(await SeenBy(f, IdentityFixture.CustomerId));
@@ -332,14 +332,14 @@ public class NotificationTests
     public async Task Het_han_thi_khach_khong_thay()
     {
         await using var f = new IdentityFixture();
-        var created = await f.AdminNotifications.Handle(Save("Bảo trì", [Item(null, "22h hôm nay")], until: DateOnly.FromDateTime(Now)), Ct);
+        var created = await f.SaveNotification.Handle(Save("Bảo trì", [Item(null, "22h hôm nay")], until: DateOnly.FromDateTime(Now)), Ct);
         Assert.Single(await SeenBy(f, IdentityFixture.CustomerId));
         f.Clock.Now = f.Clock.Now.AddDays(1);
         Assert.Empty(await SeenBy(f, IdentityFixture.CustomerId));
-        Assert.Equal("expired", Assert.Single(await f.AdminNotifications.Handle(new GetAdminNotificationsQuery(), Ct)).Status);
+        Assert.Equal("expired", Assert.Single(await f.GetAdminNotifications.Handle(new GetAdminNotificationsQuery(), Ct)).Status);
 
         Assert.Equal(NotificationErrors.ExpiresBeforePublish,
-            (await f.AdminNotifications.Handle(Save("A", [Item(null, "B")], until: DateOnly.FromDateTime(Now).AddDays(-1)), Ct)).Error);
+            (await f.SaveNotification.Handle(Save("A", [Item(null, "B")], until: DateOnly.FromDateTime(Now).AddDays(-1)), Ct)).Error);
         Assert.True(created.IsSuccess);
     }
 
@@ -348,22 +348,22 @@ public class NotificationTests
     {
         await using var f = new IdentityFixture();
         EmailOf(f, (IdentityFixture.CustomerId, "ops@sgb.vn"));
-        var created = (await f.AdminNotifications.Handle(Save("Phụ phí", [Item(null, "Tăng 2%.")], email: true), Ct)).Value;
+        var created = (await f.SaveNotification.Handle(Save("Phụ phí", [Item(null, "Tăng 2%.")], email: true), Ct)).Value;
         await f.Jobs.RunAllAsync(Services(f));
         var id = long.Parse(created.Id);
-        await f.CustomerNotifications.Handle(new MarkNotificationReadCommand(id), Ct);
+        await f.MarkNotificationRead.Handle(new MarkNotificationReadCommand(id), Ct);
 
-        var edited = await f.AdminNotifications.Handle(Save("Phụ phí (sửa)", [Item("Tin 1", "Tăng 3%."), Item("Tin 2", "Áp dụng 1/11.")], email: true, id: id), Ct);
+        var edited = await f.SaveNotification.Handle(Save("Phụ phí (sửa)", [Item("Tin 1", "Tăng 3%."), Item("Tin 2", "Áp dụng 1/11.")], email: true, id: id), Ct);
         Assert.True(edited.IsSuccess, edited.Error.Message);
         Assert.Empty(f.Jobs.Jobs);
         Assert.Equal((1, 2), (edited.Value.ReadCount, edited.Value.Items.Count));
         Assert.Equal(2, (await f.Db.Notifications.SingleAsync(Ct)).Items.Count); // các tin ghi đè trong cột JSON Tin
 
-        var removed = await f.AdminNotifications.Handle(new RemoveNotificationCommand(id), Ct);
+        var removed = await f.RemoveNotification.Handle(new RemoveNotificationCommand(id), Ct);
         Assert.Equal("removed", removed.Value.Status);
         Assert.Empty(await SeenBy(f, IdentityFixture.CustomerId));
 
-        await f.AdminNotifications.Handle(Save("Phụ phí (sửa)", [Item(null, "Tăng 3%.")], email: true, id: id), Ct);
+        await f.SaveNotification.Handle(Save("Phụ phí (sửa)", [Item(null, "Tăng 3%.")], email: true, id: id), Ct);
         Assert.False(Assert.Single(await SeenBy(f, IdentityFixture.CustomerId)).Unread);
         Assert.Single(f.Email.Sent);
     }
@@ -373,15 +373,15 @@ public class NotificationTests
     {
         await using var f = new IdentityFixture();
         EmailOf(f, (IdentityFixture.CustomerId, "ops@sgb.vn"));
-        var id = long.Parse((await f.AdminNotifications.Handle(
+        var id = long.Parse((await f.SaveNotification.Handle(
             Save("A", [Item(null, "B")], audience: NotificationAudience.Customers, codes: ["SaigonbayHN"]), Ct)).Value.Id);
-        await f.CustomerNotifications.Handle(new MarkNotificationReadCommand(id), Ct);
+        await f.MarkNotificationRead.Handle(new MarkNotificationReadCommand(id), Ct);
 
-        Assert.True((await f.AdminNotifications.Handle(new DeleteNotificationCommand(id), Ct)).IsSuccess);
+        Assert.True((await f.DeleteNotification.Handle(new DeleteNotificationCommand(id), Ct)).IsSuccess);
 
         Assert.Empty(await f.Db.Notifications.ToListAsync(Ct));
         Assert.Empty(await f.Db.NotificationReads.ToListAsync(Ct));
-        Assert.Equal(NotificationErrors.NotFound, (await f.AdminNotifications.Handle(new DeleteNotificationCommand(id), Ct)).Error);
+        Assert.Equal(NotificationErrors.NotFound, (await f.DeleteNotification.Handle(new DeleteNotificationCommand(id), Ct)).Error);
     }
 
     [Fact]
@@ -389,14 +389,14 @@ public class NotificationTests
     {
         await using var f = new IdentityFixture();
         EmailOf(f, (IdentityFixture.CustomerId, "ops@sgb.vn"));
-        var id = long.Parse((await f.AdminNotifications.Handle(Simple("A", "B"), Ct)).Value.Id);
-        await f.CustomerNotifications.Handle(new MarkNotificationReadCommand(id), Ct);
+        var id = long.Parse((await f.SaveNotification.Handle(Simple("A", "B"), Ct)).Value.Id);
+        await f.MarkNotificationRead.Handle(new MarkNotificationReadCommand(id), Ct);
         f.SignInAs(55);
-        await f.CustomerNotifications.Handle(new MarkNotificationReadCommand(id), Ct);
+        await f.MarkNotificationRead.Handle(new MarkNotificationReadCommand(id), Ct);
 
-        var reader = Assert.Single((await f.AdminNotifications.Handle(new GetNotificationReadersQuery(id), Ct)).Value);
+        var reader = Assert.Single((await f.GetNotificationReaders.Handle(new GetNotificationReadersQuery(id), Ct)).Value);
         Assert.Equal(("KH201008", "Công ty 201008", 2, "29/09/2026 10:00"), (reader.CustomerCode, reader.CompanyName, reader.Accounts, reader.ReadAt));
-        Assert.Equal(NotificationErrors.NotFound, (await f.AdminNotifications.Handle(new GetNotificationReadersQuery(999), Ct)).Error);
+        Assert.Equal(NotificationErrors.NotFound, (await f.GetNotificationReaders.Handle(new GetNotificationReadersQuery(999), Ct)).Error);
     }
 
     [Theory]
@@ -405,7 +405,7 @@ public class NotificationTests
     public async Task Thieu_tieu_de_hoac_noi_dung_thi_bao_loi(string title, string body)
     {
         await using var f = new IdentityFixture();
-        Assert.True((await f.AdminNotifications.Handle(Simple(title, body), Ct)).IsFailure);
+        Assert.True((await f.SaveNotification.Handle(Simple(title, body), Ct)).IsFailure);
         Assert.Empty(await f.Db.Notifications.ToListAsync(Ct));
     }
 
@@ -429,7 +429,7 @@ public class NotificationTests
     public async Task Tu_choi_duong_link_khong_phai_http(string link)
     {
         await using var f = new IdentityFixture();
-        Assert.StartsWith("Tin 1: đường link", (await f.AdminNotifications.Handle(Simple("A", "B", link: link), Ct)).Error.Message);
+        Assert.StartsWith("Tin 1: đường link", (await f.SaveNotification.Handle(Simple("A", "B", link: link), Ct)).Error.Message);
     }
 
     [Fact]
@@ -437,9 +437,9 @@ public class NotificationTests
     {
         await using var f = new IdentityFixture();
         f.Email.IsConfigured = false;
-        Assert.Equal(NotificationErrors.EmailNotConfigured, (await f.AdminNotifications.Handle(Simple("A", "B", email: true), Ct)).Error);
+        Assert.Equal(NotificationErrors.EmailNotConfigured, (await f.SaveNotification.Handle(Simple("A", "B", email: true), Ct)).Error);
         Assert.Empty(await f.Db.Notifications.ToListAsync(Ct));
-        Assert.True((await f.AdminNotifications.Handle(Save("A", [Item(null, "B")], publish: false, email: true), Ct)).IsSuccess);
+        Assert.True((await f.SaveNotification.Handle(Save("A", [Item(null, "B")], publish: false, email: true), Ct)).IsSuccess);
     }
 
     [Fact]
@@ -452,7 +452,7 @@ public class NotificationTests
         await f.Db.SaveChangesAsync(Ct);
         EmailOf(f, (IdentityFixture.CustomerId, "ops@sgb.vn"));
 
-        var created = await f.AdminNotifications.Handle(Simple("Lịch cut-off", "Thứ 6 cut-off 15:00", email: true), Ct);
+        var created = await f.SaveNotification.Handle(Simple("Lịch cut-off", "Thứ 6 cut-off 15:00", email: true), Ct);
         Assert.Equal(NotificationEmailStatus.Sending, created.Value.EmailStatus);
         await f.Jobs.RunAllAsync(Services(f));
 
@@ -474,7 +474,7 @@ public class NotificationTests
     [Fact]
     public void Nguoi_nhan_bo_email_sai_trung_va_cat_theo_gioi_han()
     {
-        var (emails, skipped) = NotificationRules.Recipients(["a@x.vn", " A@x.vn ", "sai", "b@x", null, "c@x.vn", "d@x.vn"], max: 2);
+        var (emails, skipped) = NotificationEmail.Recipients(["a@x.vn", " A@x.vn ", "sai", "b@x", null, "c@x.vn", "d@x.vn"], max: 2);
         Assert.Equal(["a@x.vn", "c@x.vn"], emails);
         Assert.Equal(1, skipped);
     }

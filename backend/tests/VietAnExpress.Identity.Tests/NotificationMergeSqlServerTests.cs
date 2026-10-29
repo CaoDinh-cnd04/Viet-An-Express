@@ -3,10 +3,9 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Migrations;
-using VietAnExpress.Identity.Application.Commands;
-using VietAnExpress.Identity.Domain;
-using VietAnExpress.Identity.Infrastructure;
-using VietAnExpress.Identity.Infrastructure.Migrations;
+using VietAnExpress.Identity.Migrations;
+using VietAnExpress.Identity.Notifications;
+using VietAnExpress.Identity.Shared;
 using Xunit;
 
 namespace VietAnExpress.Identity.Tests;

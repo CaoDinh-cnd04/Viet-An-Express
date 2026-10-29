@@ -5,17 +5,13 @@ export const orders: Record<string, string> = {
   'Đã đi': 'Shipped',
   'Chưa phát': 'Not delivered',
   'Đã phát': 'Delivered',
-  'Vượt ngày': 'Overdue',
 
   // Trang & bảng
-  'Tra cứu, theo dõi và in bill các đơn đã tạo.': 'Search, track and print bills for your orders.',
   'Lọc theo trạng thái': 'Filter by status',
   'Không tải được danh sách đơn': 'Could not load orders',
   'Kiểm tra kết nối tới máy chủ rồi thử lại.': 'Check the connection to the server and try again.',
   '{n} đơn hàng': '{n} orders',
-  'Nước đến / dịch vụ': 'Destination / service',
   'Ngày gửi': 'Ship date',
-  'POD / dự kiến': 'POD / estimated',
   'Ngày tạo': 'Created',
   'In bill': 'Print bill',
   'Chọn tất cả đơn trên trang': 'Select all orders on this page',
@@ -24,11 +20,8 @@ export const orders: Record<string, string> = {
   'Chưa gửi': 'Not shipped yet',
   'Mã tracking hãng / last-mile': 'Carrier / last-mile tracking number',
   'Mã tracking hãng': 'Carrier tracking number',
-  'Ký: {name}': 'Signed: {name}',
   'Dự kiến': 'Estimated',
   'Dự kiến {date}': 'Estimated {date}',
-  'Người nhận / nước đến': 'Receiver / destination',
-  'Xổ tất cả': 'Expand all',
   'POD dự kiến': 'POD est.',
   'Trạng thái / POD': 'Status / POD',
   'In chứng từ': 'Print',
@@ -36,10 +29,6 @@ export const orders: Record<string, string> = {
   'In nhãn A6': 'Print label A6',
   'In Bill A4': 'Print Bill A4',
   'In Invoice': 'Print Inv.',
-  'Xổ chi tiết người nhận của mọi đơn': 'Show receiver details for every order',
-  'Thu gọn chi tiết người nhận': 'Hide receiver details',
-  'Xem người liên hệ, điện thoại': 'Show contact and phone',
-  'Xem địa chỉ người nhận': 'Show receiver address',
   'Xem liên hệ, địa chỉ người nhận': 'Show receiver contact and address',
   'Thành phố': 'City',
   'Tỉnh / bang': 'State / province',
@@ -57,7 +46,6 @@ export const orders: Record<string, string> = {
   'Tìm theo': 'Search by',
   'Trường tìm kiếm': 'Search field',
   'Tên người nhận': 'Receiver name',
-  'Nhập từ khóa…': 'Enter keyword…',
   'Xóa lọc': 'Clear filters',
 
   // Tổng hợp & thao tác
@@ -86,8 +74,6 @@ export const orders: Record<string, string> = {
   'Xem ảnh kiện hàng ({n})': 'View package photos ({n})',
   'Nhân bản đơn': 'Duplicate order',
   'Báo sự cố': 'Report an issue',
-  'Hủy đơn': 'Cancel order',
-  'Thao tác khác cho đơn {bill}': 'More actions for order {bill}',
   'Đang chuẩn bị bản in…': 'Preparing print…',
   'Không nhận được lệnh in — hãy đóng tab này và bấm in lại': 'No print request received — close this tab and print again',
 
@@ -102,9 +88,6 @@ export const orders: Record<string, string> = {
   'Ảnh kiện hàng · {bill}': 'Package photos · {bill}',
   'Đang tải ảnh…': 'Loading photos…',
   'Chức năng xem ảnh kiện đang được phát triển.': 'Package photo viewing is under development.',
-  'Không tải được ảnh, vui lòng thử lại.': 'Could not load photos, please try again.',
-  'Đơn chưa có ảnh kiện hàng': 'No package photos yet',
-  'Ảnh sẽ có sau khi kho Việt An nhận và cân hàng.': 'Photos will be available once the Viet An warehouse receives and weighs the goods.',
   'Ảnh kiện {n}': 'Package photo {n}',
   'Kiện {n}': 'Piece {n}',
 
@@ -224,16 +207,10 @@ export const orders: Record<string, string> = {
   'Giá mỗi đơn vị sản phẩm': 'Unit price',
   'Nhiều sản phẩm: thêm cột Product_en_2, Product_vn_2, … đến Unit_Price_50.':
     'Several products: add columns Product_en_2, Product_vn_2, … up to Unit_Price_50.',
-  'Mẹo: dán cả cột mã bill từ Excel để lọc nhiều đơn một lần': 'Tip: paste a whole column of bill numbers from Excel to filter many orders at once',
-  'Nhập hoặc dán nhiều giá trị, cách nhau bằng dấu ; hoặc dấu phẩy': 'Type or paste several values, separated by ; or commas',
-  'Xóa ô tìm': 'Clear search',
   'tối đa {max}': 'max {max}',
-  'Đang lọc {n} giá trị (khớp bất kỳ giá trị nào)': 'Filtering {n} values (matches any of them)',
   'Bỏ chọn': 'Clear selection',
-  'Mẹo: nhấn giữ chuột và kéo dọc theo cột để chọn nhiều ô, rồi Ctrl+C để chép sang Excel.': 'Tip: click and drag down a column to select cells, then press Ctrl+C to copy them to Excel.',
   'Đã chọn {n} ô': '{n} cells selected',
   'Đã sao chép {n} ô — dán được vào Excel': 'Copied {n} cells — ready to paste into Excel',
-  'Bấm nhiều trạng thái để lọc cùng lúc': 'Pick several statuses to filter them together',
   'Lọc theo trạng thái (chọn được nhiều)': 'Filter by status (multiple allowed)',
   'Bỏ từ khóa {value}': 'Remove keyword {value}',
   'Cân quy đổi': 'Volumetric weight',
@@ -244,27 +221,26 @@ export const orders: Record<string, string> = {
   'Người ký': 'Signed by',
   'SL / ĐVT': 'Qty / unit',
   'Sao chép mã bill': 'Copy bill number',
-  'Sao chép mã tracking hãng': 'Copy carrier tracking number',
   'Tổng giá trị hàng': 'Total goods value',
   'Đang tải chi tiết đơn…': 'Loading order details…',
   'Đã sao chép mã bill': 'Bill number copied',
-  'Đã sao chép mã tracking hãng': 'Carrier tracking number copied',
   'Gõ từ khóa rồi bấm dấu phẩy (,) hoặc Enter': 'Type a keyword, then press comma (,) or Enter',
-  'Mẹo: đổi "Tìm theo" trước khi gõ để lọc kết hợp, vd người nhận + nước đến. Không phân biệt chữ hoa / thường.':
-    'Tip: change "Search by" before typing to combine filters, e.g. consignee + destination. Not case-sensitive.',
   'Thêm từ khóa…': 'Add keyword…',
   'Xóa hết': 'Clear all',
-  '{n} từ khóa · cùng loại: khớp bất kỳ · khác loại: phải khớp tất cả': '{n} keywords · same type: match any · different types: must match all',
   'Không': 'No',
   // In nhiều loại chứng từ
   'Chọn chứng từ cần in': 'Choose documents to print',
   'Chọn nhiều loại: in lần lượt từng loại, mỗi loại 1 hộp thoại in theo đúng khổ giấy.': 'Several types print one after another, each in its own print dialog with the right paper size.',
   'In {n} đơn': 'Print {n} orders',
+  'In đơn nào': 'Orders to print',
+  'Đơn đã chọn ({n})': 'Selected orders ({n})',
+  'Cả trang đang xem ({n} đơn)': 'Whole current page ({n} orders)',
+  // Xuất bảng kê: trang đang xem / toàn bộ
+  'Trang đang xem ({n} đơn)': 'Current page ({n} orders)',
+  'Toàn bộ dữ liệu ({n} đơn)': 'All data ({n} orders)',
   // Trạng thái đơn
-  'Đơn chưa có thông tin POD': 'Orders without POD information',
   // Thanh thao tác
   'Xuất bảng kê': 'Export manifest',
   // Ô cân bộ lọc
-  'Cân đến (kg)': 'Weight to (kg)',
   '{p} tổng': '{p} of total'
 };

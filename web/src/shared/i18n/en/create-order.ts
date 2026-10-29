@@ -18,12 +18,10 @@ export const createOrder: Record<string, string> = {
   'Invoice & phí': 'Invoice & fees',
   'Khai hàng, shipping fee': 'Goods declaration, shipping fee',
   'Nội dung chứng từ': 'Document contents',
-  'Nội dung, tùy chọn dịch vụ': 'Contents, service options',
   'Lưu nháp': 'Save draft',
   'Tiếp tục: {step}': 'Continue: {step}',
   'Đang kiểm tra phụ phí…': 'Checking surcharges…',
   'Đang lưu…': 'Saving…',
-  'Lưu & sẵn sàng in': 'Save & ready to print',
   '· bấm In để cấp mã bill': '· click Print to get a bill number',
   'Mở trang đầy đủ': 'Open full page',
   'Đã tạo đơn. Bấm "In & cấp bill" để cấp mã bill và in vận đơn A4, invoice, nhãn A6.': 'Order created. Click "Print & issue bill" to get a bill number and print the A4 waybill, invoice and A6 label.',
@@ -46,7 +44,6 @@ export const createOrder: Record<string, string> = {
 
   // Người gửi
   'Thông tin người gửi': 'Shipper information',
-  'Đổi hồ sơ': 'Switch profile',
   'Tên công ty / người gửi': 'Company / shipper name',
   'Người liên hệ (contact name)': 'Contact name',
   'Điện thoại (tel)': 'Phone',
@@ -62,7 +59,6 @@ export const createOrder: Record<string, string> = {
   'Quốc gia gửi': 'Origin country',
   'Chi nhánh gửi hàng': 'Sending branch',
   'Chọn chi nhánh': 'Select branch',
-  'Chọn hồ sơ người gửi': 'Choose a shipper profile',
 
   // Người nhận
   'Thông tin người nhận': 'Receiver information',
@@ -98,39 +94,19 @@ export const createOrder: Record<string, string> = {
   'Số kiện': 'Pieces',
   'kiện': 'pcs',
   'Cân nặng (gross weight)': 'Gross weight',
-  'Chứng từ chỉ cần khai nội dung. Trên {kg}kg sẽ tự chuyển sang hàng hóa (PACK) và khai chi tiết kiện, Invoice.':
-    'Documents only need a description. Over {kg}kg they are switched to parcel (PACK) with package details and an invoice.',
-  'Đơn có nhiều dòng kiện — tổng được tính từ bảng kiện ở bước 2.': 'Multiple package lines — totals come from the package table in step 2.',
-  'Khai kích thước từng kiện ở bước 2 để tính trọng lượng quy đổi.': 'Enter each package size in step 2 to calculate volumetric weight.',
   'Tài liệu trên {kg}kg được xem là hàng hóa. Hệ thống đã chuyển sang PACK — vui lòng khai Invoice đầy đủ.':
     'Documents over {kg}kg count as parcels. Switched to PACK — please complete the invoice.',
   'Tài liệu trên {kg}kg được tính là hàng hóa — đã chuyển sang PACK.': 'Documents over {kg}kg count as parcels — switched to PACK.',
   'Cân nặng không quá {kg}kg — đã chuyển lại chứng từ (DOC).': 'Weight is {kg}kg or less — switched back to documents (DOC).',
 
   // Nội dung hàng
-  'Nội dung hàng hóa': 'Goods contents',
   'Nhóm hàng hóa': 'Goods category',
   'Chọn nhóm hàng': 'Select category',
   'Nhiều loại hàng': 'Mixed goods',
-  '{name} (nhiều nhóm trong 1 kiện)': '{name} (several categories in one package)',
-  'Mô tả sơ bộ mặt hàng chính': 'Brief description of the main goods',
-  'Gõ để xem gợi ý theo nhóm': 'Type to see suggestions for this category',
-  'Chọn nhóm hàng để có gợi ý': 'Select a category to get suggestions',
-  'VD: Hợp đồng, hồ sơ, giấy tờ…': 'e.g. Contracts, files, papers…',
-  'Bảng phân loại nhóm hàng': 'Goods category list',
-  'Bảng phân loại nhóm hàng ({n})': 'Goods category list ({n})',
   'Thêm / sửa nhóm': 'Add / edit categories',
-  'In bảng (đính kèm bill)': 'Print list (attach to bill)',
   'Ghi chú': 'Note',
-  'Ghi chú nhóm {name}': 'Note for {name}',
-  'Bỏ nhóm {name}': 'Remove {name}',
-  'VD: 3 hộp, hàng dễ vỡ…': 'e.g. 3 boxes, fragile…',
-  'Bảng này được in riêng để đính kèm bộ bill vật lý khi kiện gồm nhiều nhóm hàng.':
-    'This list is printed separately and attached to the paper bill when a package has several categories.',
-  'Chọn các nhóm hàng trong kiện': 'Select the categories in the package',
   'Đã chọn {n} nhóm': '{n} selected',
   'Xác nhận': 'Confirm',
-  'Tìm nhóm…': 'Search categories…',
   'Tìm nhóm hàng': 'Search categories',
 
   // Kiện
@@ -219,7 +195,6 @@ export const createOrder: Record<string, string> = {
   'Thành tiền': 'Amount',
   'Tên tiếng Anh (bắt buộc)': 'English name (required)',
   'Tên tiếng Việt': 'Vietnamese name',
-  'Nhà sản xuất, địa chỉ': 'Manufacturer, address',
   'Tên EN mặt hàng {n}': 'English name, item {n}',
   'Tên VN mặt hàng {n}': 'Vietnamese name, item {n}',
   'Nhà sản xuất mặt hàng {n}': 'Manufacturer, item {n}',
@@ -248,7 +223,6 @@ export const createOrder: Record<string, string> = {
   '{n} mặt hàng': '{n} items',
   'Chức năng đang được kết nối máy chủ.': 'This feature is being connected to the server.',
   'Không tải được dữ liệu.': 'Could not load data.',
-  'Chỉ nhận file .csv — với Excel hãy lưu dạng CSV UTF-8': 'Only .csv files — save Excel files as CSV UTF-8',
   'Đã thêm {n} mặt hàng': 'Added {n} items',
   ', bỏ qua {n} dòng lỗi ({list})': ', skipped {n} invalid rows ({list})',
   'Dòng {line}: thiếu DescriptionEN': 'Row {line}: missing DescriptionEN',
@@ -259,7 +233,6 @@ export const createOrder: Record<string, string> = {
   'Chọn chi nhánh gửi': 'Select a sending branch',
   'Số kiện tối thiểu là 1': 'At least 1 piece',
   'Nhập cân nặng (kg)': 'Enter the weight (kg)',
-  'Chọn ít nhất 1 nhóm hàng': 'Select at least 1 category',
   'Cần ít nhất 1 kiện': 'At least 1 package is required',
   'Chọn bao bì': 'Select packaging',
   'Chọn đơn vị tiền tệ': 'Select a currency',
@@ -282,22 +255,7 @@ export const createOrder: Record<string, string> = {
   '· có thể bị hãng thu phụ phí ODA': '· the carrier may charge an ODA surcharge',
   'Người gửi đã dùng': 'Previous senders',
   // Tra cứu nhanh khi tạo đơn
-  'Tra cứu nhanh': 'Quick lookup',
-  'Tên hàng hoặc số HS…': 'Goods name or HS number…',
-  'Tên nước, mã nước, mã ĐT…': 'Country name, code, dial code…',
-  'Mã bưu chính hoặc thành phố…': 'Postal code or city…',
-  'Invoice gần đây': 'Recent invoices',
   'Đã sao chép HS {hs}': 'Copied HS {hs}',
-  'Bấm để sao chép': 'Click to copy',
-  'Đã sao chép mã nước {code}': 'Copied country code {code}',
-  'Mã ĐT': 'Dial code',
-  'Đã sao chép mã bưu chính {code}': 'Copied postal code {code}',
-  'Đang kiểm tra vùng xa…': 'Checking remote area…',
-  'Vùng sâu vùng xa: {carriers}': 'Remote area: {carriers}',
-  'Không thuộc vùng sâu vùng xa': 'Not a remote area',
-  'Đang tìm…': 'Searching…',
-  'Không tìm thấy kết quả.': 'No results found.',
-  'Bấm vào kết quả để sao chép, rồi dán vào ô cần điền.': 'Click a result to copy it, then paste it into the field.',
   // Khung các bước
   'Đã xong': 'Done',
   'Đang điền': 'In progress',
@@ -307,8 +265,6 @@ export const createOrder: Record<string, string> = {
   // Kết quả VSVX
   'Khu vực': 'Area',
   'Bang / tỉnh': 'State / province',
-  'Đang kiểm tra…': 'Checking…',
-  'Chưa kiểm tra được': 'Could not check',
   // Trạng thái bước
   'Còn thiếu': 'Incomplete',
   // Khung Hỗ trợ khách hàng
@@ -316,7 +272,6 @@ export const createOrder: Record<string, string> = {
   'Chọn hàng đã lưu': 'Pick saved goods',
   'Chép từ đơn trước': 'Copy from a past order',
   'Nhập từ Excel': 'Import from Excel',
-  'File CSV theo mẫu': 'CSV file from the template',
   'Đã thêm vào Invoice': 'Added to the invoice',
   'Đã chép invoice {bill}': 'Copied invoice {bill}',
   'Tra mã HS': 'HS lookup',

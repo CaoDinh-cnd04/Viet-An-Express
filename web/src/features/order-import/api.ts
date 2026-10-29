@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { http } from '@/shared/api/http';
-import { orderKeys } from '@/features/orders/api';
+import { orderKeys } from '@/features/orders';
 import { buildImportForm } from './lib/import-rows';
 import type { ImportDefaults, ImportResult } from './types';
 

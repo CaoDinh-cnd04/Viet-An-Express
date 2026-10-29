@@ -1,0 +1,81 @@
+.box {
+  font-size: var(--text-xs);
+}
+
+.box a {
+  font-weight: 600;
+}
+
+.kv {
+  display: grid;
+  gap: 3px;
+  margin: 0;
+}
+
+.kv > div {
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr);
+  gap: var(--space-2);
+}
+
+.kv dt {
+  color: var(--color-text-muted);
+}
+
+.kv dd {
+  margin: 0;
+}
+
+.title {
+  margin: var(--space-2) 0 2px;
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--color-border);
+  font-size: var(--text-xs);
+}
+
+.faq {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.faq li {
+  border-bottom: 1px dashed var(--color-border);
+}
+
+.faq li:last-child {
+  border-bottom: 0;
+}
+
+/* Câu hỏi: dòng bấm được, dấu ▸ / ▾ cho biết đang đóng / mở */
+.q {
+  display: flex;
+  gap: 4px;
+  width: 100%;
+  padding: 4px 0;
+  border: 0;
+  background: none;
+  color: var(--color-brand);
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.q::before {
+  content: '▸';
+  flex: none;
+}
+
+.q.on::before {
+  content: '▾';
+}
+
+.q:hover {
+  text-decoration: underline;
+}
+
+.a {
+  margin: 0 0 6px 12px;
+  color: var(--color-text-muted);
+}

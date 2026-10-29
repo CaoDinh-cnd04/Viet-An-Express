@@ -1,0 +1,56 @@
+/* Mẫu A: form gửi + liên hệ nhanh ở trên, bảng yêu cầu đã gửi rộng hết trang ở dưới */
+.page {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.head h1 {
+  margin: 0;
+  font-size: var(--text-xl);
+}
+
+.head p {
+  margin: 2px 0 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.top {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(240px, 300px);
+  gap: var(--space-3);
+  align-items: stretch;
+}
+
+.box {
+  min-width: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+}
+
+.box > h2 {
+  display: flex;
+  gap: var(--space-2);
+  align-items: baseline;
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface-muted);
+  font-size: var(--text-sm);
+}
+
+.box > h2 small {
+  color: var(--color-text-muted);
+  font-weight: 400;
+}
+
+.pad {
+  padding: var(--space-2) var(--space-3) var(--space-3);
+}
+
+@media (max-width: 900px) {
+  .top {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

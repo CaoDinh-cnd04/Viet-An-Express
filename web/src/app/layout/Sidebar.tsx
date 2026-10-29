@@ -99,7 +99,7 @@ function ChildLink({ item, count, onNavigate }: { item: NavLinkItem; count: numb
   return (
     <NavLink to={item.to} end onClick={onNavigate} className={({ isActive }) => cx(styles.item, styles.child, isActive && styles.active)}>
       <span className={styles.label}>{t(item.label)}</span>
-      {count > 0 && <span className={cx(styles.badge, item.badge === 'troubles' && styles.badgeAlert)}>{count}</span>}
+      {count > 0 && <span className={cx(styles.badge, item.badge === 'support' && styles.badgeAlert)}>{count}</span>}
     </NavLink>
   );
 }

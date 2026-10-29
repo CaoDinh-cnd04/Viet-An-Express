@@ -1,5 +1,5 @@
 import { get, useFormContext, type Path, type RegisterOptions } from 'react-hook-form';
-import type { CreateOrderValues } from '../schema';
+import type { CreateOrderValues } from '@/features/order-form';
 
 export type FieldName = Path<CreateOrderValues>;
 

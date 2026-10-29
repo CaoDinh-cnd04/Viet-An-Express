@@ -1,8 +1,8 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { http } from '@/shared/api/http';
 import { parseTags, serializeTags } from './lib/multi-filter';
-import type { OrderDetail, OrderEvent, OrderFilters, OrderListResponse, OrderPhoto } from './types';
-import type { CreateOrderValues } from '@/features/create-order/schema';
+import type { OrderEvent } from '@/shared/model/shipment';
+import type { ExportScope, OrderDetail, OrderFilters, OrderListResponse, OrderPhoto } from './types';
 
 export const orderKeys = {
   all: ['orders'] as const,
@@ -44,16 +44,6 @@ export function useOrder(ref: string | null) {
   });
 }
 
-/** Full saved form for a new copy, including packages, invoice, addons and original precision. */
-export function useOrderCopy(bill: string | null) {
-  return useQuery({
-    queryKey: [...orderKeys.detail(bill ?? ''), 'copy'],
-    queryFn: () => http.get<{ data: Partial<CreateOrderValues> }>(`/orders/${encodeURIComponent(bill ?? '')}/copy`).then(r => r.data),
-    enabled: !!bill,
-    retry: false
-  });
-}
-
 /** Ảnh kiện hàng — chưa dùng: backend chưa làm (API_CONTRACT.md "Chưa làm"), hộp Ảnh kiện đang báo "đang phát triển". */
 export function useOrderPhotos(bill: string | null) {
   return useQuery({
@@ -79,9 +69,10 @@ export function fetchPrintHtml(bills: readonly string[], doc: string): Promise<s
   return http.getText('/orders/print', { bills: bills.join(','), doc });
 }
 
-/** File Excel bảng kê gửi hàng theo bộ lọc hiện tại — GET /orders/export. */
-export function fetchOrdersExport(f: OrderFilters) {
+/** File Excel bảng kê gửi hàng theo bộ lọc hiện tại — GET /orders/export. `page`: chỉ trang đang xem; `all`: toàn bộ. */
+export function fetchOrdersExport(f: OrderFilters, scope: ExportScope) {
   return http.getFile('/orders/export', {
+    ...(scope === 'page' && { page: f.page, pageSize: f.pageSize }),
     q: serializeTags(parseTags(f.q, f.searchField)),
     searchField: f.searchField,
     status: f.status,

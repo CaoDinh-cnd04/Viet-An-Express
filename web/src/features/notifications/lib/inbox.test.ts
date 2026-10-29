@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { bellItems, excerpt, filterCounts, filterInbox, groupByDay, imagesOf, partsOf, shortTime, troubleIdOf, type InboxItem } from './inbox';
+import { bellItems, excerpt, filterCounts, filterInbox, groupByDay, imagesOf, partsOf, shortTime, ticketIdOf, type InboxItem } from './inbox';
 
 const n = (over: Partial<InboxItem>): InboxItem => ({
   imp: false,
@@ -28,8 +28,8 @@ describe('partsOf / excerpt / imagesOf', () => {
   });
 
   it('mã yêu cầu trong tiêu đề thông báo hỗ trợ', () => {
-    expect(troubleIdOf('Sự cố trb-12: Đang xử lý')).toBe('TRB-12');
-    expect(troubleIdOf('Lịch nghỉ lễ')).toBeNull();
+    expect(ticketIdOf('Sự cố trb-12: Đang xử lý')).toBe('TRB-12');
+    expect(ticketIdOf('Lịch nghỉ lễ')).toBeNull();
   });
 });
 

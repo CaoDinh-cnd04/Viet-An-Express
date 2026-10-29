@@ -50,6 +50,21 @@ export function useNotifications() {
   });
 }
 
+/** Thông báo popup CRM soạn (TConfig ThongBao_NoiDung + ThongBao_Show) — docs/API_CONTRACT.md §6. `html` chưa lọc. */
+export interface PopupNotice {
+  show: boolean;
+  html: string | null;
+}
+
+export function usePopupNotice() {
+  return useQuery({
+    queryKey: [...notificationKeys.all, 'popup'],
+    queryFn: () => http.get<PopupNotice>('/notifications/popup'),
+    staleTime: 5 * 60_000,
+    refetchInterval: 5 * 60_000
+  });
+}
+
 export function useMarkRead() {
   const qc = useQueryClient();
   return useMutation({

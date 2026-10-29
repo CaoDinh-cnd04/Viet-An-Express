@@ -1,9 +1,7 @@
 import { fill } from '@/shared/i18n';
 import { parseCsv } from '@/shared/lib/files';
-import { normalizeUnit, qtyError } from './units';
-import { hasMaxDecimals } from './cell-nav';
-import { RULES } from '../constants';
-import type { InvoiceItemValues } from '../schema';
+import { normalizeUnit, qtyError, hasMaxDecimals, RULES } from '@/features/order-form';
+import type { InvoiceItemValues } from '@/features/order-form';
 
 /** Cột file mẫu import dòng invoice. Đổi cột: sửa ở đây. */
 export const INVOICE_COLUMNS: ReadonlyArray<{ header: string; field: keyof InvoiceItemValues; example: string }> = [

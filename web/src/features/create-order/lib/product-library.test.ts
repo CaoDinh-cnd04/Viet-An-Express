@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { SavedProduct } from '../api';
 import { filterProducts, invoiceItemFromProduct } from './product-library';
-import { emptyInvoiceItem } from '../schema';
+import { emptyInvoiceItem } from '@/features/order-form';
 
 const p = (descEn: string, descVi: string, isFavorite = false, hs = ''): SavedProduct => ({
   id: descEn,

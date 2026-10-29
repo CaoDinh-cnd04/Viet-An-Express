@@ -1,4 +1,4 @@
-import type { OrderEvent, OrderStatus } from '@/features/orders/types';
+import type { OrderEvent, OrderStatus } from '@/shared/model/shipment';
 import { parseBills } from './tracking';
 
 /** Đường dẫn trang chi tiết tra cứu: /tracking/MA1,MA2 — dùng được để chia sẻ. */

@@ -3,7 +3,8 @@ import { useI18n } from '@/shared/i18n';
 import { cx } from '@/shared/lib/cx';
 import { ORDER_STATUS } from '../constants';
 import { ALL_STATUSES, parseStatuses, toggleStatus } from '../lib/multi-filter';
-import type { OrderListResponse, OrderStatus } from '../types';
+import type { OrderStatus } from '@/shared/model/shipment';
+import type { OrderListResponse } from '../types';
 import styles from './OrderOverview.module.css';
 
 interface OrderOverviewProps {

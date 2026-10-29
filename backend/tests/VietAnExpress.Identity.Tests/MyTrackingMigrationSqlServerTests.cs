@@ -1,15 +1,14 @@
+using System.Text.Json;
 using System.Text.Json.Nodes;
-using System.Text.RegularExpressions;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage;
-using VietAnExpress.Identity.Infrastructure;
-using VietAnExpress.Identity.Infrastructure.Migrations;
-using VietAnExpress.Identity.Application.Commands;
-using System.Text.Json;
+using VietAnExpress.Identity.Migrations;
+using VietAnExpress.Identity.MyTracking;
+using VietAnExpress.Identity.Shared;
 using Xunit;
 
 namespace VietAnExpress.Identity.Tests;
@@ -57,8 +56,8 @@ public class MyTrackingMigrationSqlServerTests
             await using var second = new IdentityDbContext(options);
             var config = JsonSerializer.SerializeToElement(MyTrackingStorageTests.FullConfigV2());
             var results = await Task.WhenAll(
-                new MyTrackingHandlers(first, fixture.Customers.Object, fixture.CurrentUser.Object, fixture.Images).Handle(new SaveMyTrackingCommand(config), Ct),
-                new MyTrackingHandlers(second, fixture.Customers.Object, fixture.CurrentUser.Object, fixture.Images).Handle(new SaveMyTrackingCommand(config), Ct));
+                new SaveMyTrackingHandler(first, fixture.Customers.Object, fixture.CurrentUser.Object, fixture.Images).Handle(new SaveMyTrackingCommand(config), Ct),
+                new SaveMyTrackingHandler(second, fixture.Customers.Object, fixture.CurrentUser.Object, fixture.Images).Handle(new SaveMyTrackingCommand(config), Ct));
             Assert.All(results, result => Assert.True(result.IsSuccess, result.Error.Message));
             Assert.Equal(1, await db.MyTrackingPages.CountAsync(Ct));
             Assert.Equal(2, await db.MyTrackingBanners.CountAsync(Ct));

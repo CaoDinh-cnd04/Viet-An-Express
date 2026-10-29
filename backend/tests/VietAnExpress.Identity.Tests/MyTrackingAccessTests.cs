@@ -1,9 +1,9 @@
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
-using VietAnExpress.Identity.Application;
-using VietAnExpress.Identity.Application.Commands;
+using VietAnExpress.Identity.Auth;
 using VietAnExpress.Identity.Contracts;
-using VietAnExpress.Identity.Infrastructure;
+using VietAnExpress.Identity.MyTracking;
+using VietAnExpress.Identity.Shared;
 using Xunit;
 
 namespace VietAnExpress.Identity.Tests;
@@ -34,9 +34,9 @@ public class MyTrackingAccessTests
         Assert.DoesNotContain(IdentityPermissions.MyTracking, user!.Permissions);
         Assert.Contains(IdentityPermissions.ManageStaff, user.Permissions);
 
-        Assert.Equal(IdentityErrors.MyTrackingNotAllowed, (await f.MyTracking.Handle(new GetMyTrackingQuery(), Ct)).Error);
+        Assert.Equal(MyTrackingErrors.MyTrackingNotAllowed, (await f.GetMyTracking.Handle(new GetMyTrackingQuery(), Ct)).Error);
         using var config = JsonDocument.Parse("{}");
-        Assert.Equal(IdentityErrors.MyTrackingNotAllowed, (await f.MyTracking.Handle(new SaveMyTrackingCommand(config.RootElement), Ct)).Error);
+        Assert.Equal(MyTrackingErrors.MyTrackingNotAllowed, (await f.SaveMyTracking.Handle(new SaveMyTrackingCommand(config.RootElement), Ct)).Error);
         Assert.Empty(await f.Db.MyTrackingPages.ToListAsync(Ct));
     }
 
@@ -46,9 +46,9 @@ public class MyTrackingAccessTests
         await using var f = new IdentityFixture();
         var login = await f.Db.Logins.AsNoTracking().SingleAsync(l => l.CustomerId == IdentityFixture.CustomerId, Ct);
         Assert.Contains(IdentityPermissions.MyTracking, (await f.Sessions.BuildUserAsync(login, Ct))!.Permissions);
-        Assert.True((await f.MyTracking.Handle(new GetMyTrackingQuery(), Ct)).IsSuccess);
+        Assert.True((await f.GetMyTracking.Handle(new GetMyTrackingQuery(), Ct)).IsSuccess);
 
         f.SignInAs(55);
-        Assert.Equal(IdentityErrors.AdminOnly, (await f.MyTracking.Handle(new GetMyTrackingQuery(), Ct)).Error);
+        Assert.Equal(IdentityErrors.AdminOnly, (await f.GetMyTracking.Handle(new GetMyTrackingQuery(), Ct)).Error);
     }
 }

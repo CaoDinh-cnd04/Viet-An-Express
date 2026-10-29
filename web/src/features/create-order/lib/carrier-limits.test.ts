@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { emptyPackage } from '../schema';
+import { emptyPackage } from '@/features/order-form';
 import { evaluatePackages, hasCritical } from './carrier-limits';
 
 const pkg = (length: string, width: string, height: string, weight: string, qty = '1') => ({ ...emptyPackage(), qty, length, width, height, weight });

@@ -1,4 +1,4 @@
-﻿// Run with PLAYWRIGHT_MODULE pointing to an installed playwright package.
+// Run with PLAYWRIGHT_MODULE pointing to an installed playwright package.
 // Uses an isolated browser context and stubbed APIs; never modifies customer data.
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 const assert = require('node:assert/strict');
@@ -8,7 +8,18 @@ const results = [];
 const output = process.env.TEST_OUTPUT_DIR || path.join(process.env.TEMP, 'vietan-ui-tests', 'results');
 fs.mkdirSync(output, { recursive: true });
 const base = process.env.TEST_BASE_URL || 'http://127.0.0.1:5174';
-const key = 'mytracking-draft:TEST-MYTRACKING';
+const code = 'TEST-MYTRACKING';
+/** Giả lập GET / PUT /account/mytracking: cấu hình lưu theo mã khách (như dbo.TCustomer_MyTracking). */
+const serverConfigs = new Map();
+function myTrackingRoute(route, customerCode, fail) {
+  const req = route.request();
+  if (req.method() === 'PUT') {
+    if (fail) return route.fulfill({status:500,contentType:'application/json',body:JSON.stringify({message:'Lỗi máy chủ'})});
+    serverConfigs.set(customerCode, JSON.parse(req.postData()).config);
+  }
+  const config = serverConfigs.has(customerCode) ? serverConfigs.get(customerCode) : null;
+  return route.fulfill({contentType:'application/json',body:JSON.stringify({message:'Đã lưu cấu hình MyTracking',data:{config,customerCode}})});
+}
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 async function until(fn, label) {
   for (let i = 0; i < 60; i++) { if (await fn()) return; await sleep(100); }
@@ -28,9 +39,8 @@ async function check(name, fn) {
  await context.route(url=>url.pathname.startsWith('/api/'),route=> {
    const path = new URL(route.request().url()).pathname;
    const me = path.endsWith('/me') || path.endsWith('/auth/session');
-   // Kịch bản này kiểm chế độ lưu bản thử nghiệm trên trình duyệt (backend chưa có API MyTracking → 404).
-   if (path.endsWith('/account/mytracking')) return route.fulfill({status:404,contentType:'application/json',body:'{}'});
-   return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(me ? {data:{customerCode:'TEST-MYTRACKING',companyName:'Test Customer',contactName:'Tester',userName:'test',roles:['customer'],permissions:['account.mytracking']}} : {data:[],count:0})});
+   if (path.endsWith('/account/mytracking')) return myTrackingRoute(route, code);
+   return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(me ? {data:{customerCode:code,companyName:'Test Customer',contactName:'Tester',userName:'test',roles:['customer'],permissions:['account.mytracking']}} : {data:[],count:0})});
  });
  await page.goto(base+'/account/mytracking');
  await page.getByRole('heading',{name:'Thông tin thương hiệu',exact:true}).waitFor();
@@ -44,8 +54,8 @@ async function check(name, fn) {
  const contacts = section('Liên hệ và mạng xã hội');
  const preview = page.locator('section').filter({has:page.getByRole('heading',{name:'Xem trước MyTracking',exact:true})}).last();
  const values = () => ads.locator('input[name$=".title"]').evaluateAll(inputs=>inputs.map(input=>input.value));
- const save = async () => {await page.getByRole('button',{name:'Lưu bản thử nghiệm',exact:true}).click(); await until(()=>page.getByText('Đã lưu bản thử nghiệm trên trình duyệt',{exact:true}).isVisible(),'save feedback');};
- const stored = () => page.evaluate(k=>JSON.parse(localStorage.getItem(k)),key);
+ const save = async () => {await page.getByRole('button',{name:'Lưu',exact:true}).click(); await until(()=>page.getByText('Đã lưu cấu hình MyTracking',{exact:true}).isVisible(),'save feedback');};
+ const stored = async () => structuredClone(serverConfigs.get(code));
  const imageBytes = {};
  for (const mime of ['image/png','image/jpeg','image/webp']) {
    imageBytes[mime] = Buffer.from(await page.evaluate(type=>{const canvas=document.createElement('canvas');canvas.width=80;canvas.height=60;const ctx=canvas.getContext('2d');ctx.fillStyle='#278b45';ctx.fillRect(0,0,80,60);return canvas.toDataURL(type).split(',')[1];},mime),'base64');
@@ -148,7 +158,7 @@ async function check(name, fn) {
      await upload(ads,name,mime,buffer);
      await page.getByText(message,{exact:true}).first().waitFor();
      assert.equal(await ads.getByRole('button',{name:'Xóa ảnh',exact:false}).count(),4);
-     assert(await page.getByRole('button',{name:'Lưu bản thử nghiệm',exact:true}).isEnabled());
+     assert(await page.getByRole('button',{name:'Lưu',exact:true}).isEnabled());
    }
  });
  await check('Chặn javascript URL, URL 404 và URL trang HTML',async()=>{
@@ -157,7 +167,7 @@ async function check(name, fn) {
      ['https://mytracking-assets.test/broken.png','Không tải được ảnh từ URL. Vui lòng dùng link trực tiếp tới ảnh hoặc tải ảnh lên.'],
      ['https://mytracking-assets.test/html','Không tải được ảnh từ URL. Vui lòng dùng link trực tiếp tới ảnh hoặc tải ảnh lên.']]) {
      await addUrl(ads,url); await page.getByText(message,{exact:true}).first().waitFor();
-     await until(()=>page.getByRole('button',{name:'Lưu bản thử nghiệm',exact:true}).isEnabled(),'release editor');
+     await until(()=>page.getByRole('button',{name:'Lưu',exact:true}).isEnabled(),'release editor');
      assert.equal(await ads.getByRole('textbox',{name:'Nhập URL ảnh từ internet',exact:true}).inputValue(),url);
      assert.equal(await ads.getByRole('button',{name:'Xóa ảnh',exact:false}).count(),4);
    }
@@ -165,9 +175,9 @@ async function check(name, fn) {
  await check('URL treo: khóa lúc tải, timeout 15 giây rồi mở lại editor',async()=>{
    await page.getByText('Không tải được ảnh từ URL. Vui lòng dùng link trực tiếp tới ảnh hoặc tải ảnh lên.',{exact:true}).first().waitFor({state:'hidden'});
    await addUrl(ads,'https://mytracking-assets.test/stall.png');
-   assert(await page.getByRole('button',{name:'Lưu bản thử nghiệm',exact:true}).isDisabled());
+   assert(await page.getByRole('button',{name:'Lưu',exact:true}).isDisabled());
    await page.getByText('Không tải được ảnh từ URL. Vui lòng dùng link trực tiếp tới ảnh hoặc tải ảnh lên.',{exact:true}).first().waitFor({timeout:20000});
-   await until(()=>page.getByRole('button',{name:'Lưu bản thử nghiệm',exact:true}).isEnabled(),'timeout releases editor');
+   await until(()=>page.getByRole('button',{name:'Lưu',exact:true}).isEnabled(),'timeout releases editor');
  });
  await check('Tải/thay/xóa nền bằng file và URL',async()=>{
    await upload(background,'bg.webp','image/webp');
@@ -199,12 +209,12 @@ async function check(name, fn) {
  });
  await check('Validation link/tiêu đề, giữ dữ liệu khi lưu bị chặn',async()=>{
    await contacts.getByLabel('Instagram',{exact:true}).fill('javascript:alert(1)');
-   await page.getByRole('button',{name:'Lưu bản thử nghiệm',exact:true}).click();
+   await page.getByRole('button',{name:'Lưu',exact:true}).click();
    assert(await contacts.getByText('Link phải bắt đầu bằng http:// hoặc https://',{exact:true}).isVisible());
    assert.equal(await brand.getByLabel('Tên công ty',{exact:true}).inputValue(),'Công ty kiểm thử');
    await contacts.getByLabel('Instagram',{exact:true}).fill('https://example.com/Instagram');
    await content.getByLabel('Tiêu đề',{exact:false}).fill('');
-   await page.getByRole('button',{name:'Lưu bản thử nghiệm',exact:true}).click();
+   await page.getByRole('button',{name:'Lưu',exact:true}).click();
    assert(await content.getByText('Nhập tiêu đề MyTracking',{exact:true}).isVisible());
    await content.getByLabel('Tiêu đề',{exact:false}).fill('Dịch vụ quốc tế');
  });
@@ -240,76 +250,55 @@ async function check(name, fn) {
  });
  await check('Không có lỗi JavaScript trong các thao tác',async()=>assert.deepEqual(errors,[]));
  await context.close();
- const isolatedPage = async (code, init) => {
+ const isolatedPage = async (customerCode, {config, fail} = {}) => {
+   if (config !== undefined) serverConfigs.set(customerCode, config);
    const isolated = await browser.newContext({viewport:{width:1440,height:900}});
-   await isolated.addInitScript(({code, mode})=>{
-     localStorage.setItem('va.tour.v1.'+code,'1');
-     if(mode==='old') localStorage.setItem('mytracking-draft:'+code,JSON.stringify({title:'Old config',description:'',background:'',images:[{id:'old',src:'https://example.com/photo.png',link:'https://example.com'}]}));
-     if(mode==='broken') localStorage.setItem('mytracking-draft:'+code,'{invalid json');
-     if(mode==='quota') {
-       const set=Storage.prototype.setItem;
-       Storage.prototype.setItem=function(k,v){if(k.startsWith('mytracking-draft:'))throw new DOMException('Quota exceeded','QuotaExceededError');return set.call(this,k,v);};
-     }
-     if(mode==='blocked') {
-       const get=Storage.prototype.getItem,set=Storage.prototype.setItem;
-       Storage.prototype.getItem=function(k){if(k.startsWith('mytracking-draft:')||k.startsWith('va.mytracking.'))throw new DOMException('Blocked','SecurityError');return get.call(this,k);};
-       Storage.prototype.setItem=function(k,v){if(k.startsWith('mytracking-draft:'))throw new DOMException('Blocked','SecurityError');return set.call(this,k,v);};
-     }
-   },{code,mode:init});
+   await isolated.addInitScript(c=>localStorage.setItem('va.tour.v1.'+c,'1'),customerCode);
+   let current = customerCode;
    await isolated.route(url=>url.pathname.startsWith('/api/'),route=>{
      const path=new URL(route.request().url()).pathname;
-     if(path.endsWith('/account/mytracking'))return route.fulfill({status:404,contentType:'application/json',body:'{}'});
+     if(path.endsWith('/account/mytracking'))return myTrackingRoute(route, current, fail);
      const me=path.endsWith('/me')||path.endsWith('/auth/session');
-     return route.fulfill({contentType:'application/json',body:JSON.stringify(me?{data:{customerCode:code,companyName:'Test',roles:['customer'],permissions:['account.mytracking']}}:{data:[],count:0})});
+     return route.fulfill({contentType:'application/json',body:JSON.stringify(me?{data:{customerCode:current,companyName:'Test',roles:['customer'],permissions:['account.mytracking']}}:{data:[],count:0})});
    });
    const p=await isolated.newPage();await p.goto(base+'/account/mytracking');
    await p.getByRole('heading',{name:'Thông tin thương hiệu',exact:true}).waitFor();
-   return {isolated,p};
+   return {isolated,p,switchTo:c=>{current=c;}};
  };
  await check('Đọc cấu hình ảnh cũ không có tiêu đề/chữ nút',async()=>{
-   const {isolated,p}=await isolatedPage('OLD','old');
+   const {isolated,p}=await isolatedPage('OLD',{config:{title:'Old config',description:'',background:'',images:[{id:'old',src:'https://example.com/photo.png',link:'https://example.com'}]}});
    try {assert.equal(await p.locator('input[name=title]').inputValue(),'Old config');assert.equal(await p.locator('input[name="images.0.linkUrl"]').inputValue(),'https://example.com');}
    finally {await isolated.close();}
  });
- await check('JSON cấu hình hỏng vẫn mở form mặc định',async()=>{
-   const {isolated,p}=await isolatedPage('BROKEN','broken');
+ await check('Cấu hình sai dạng vẫn mở form mặc định',async()=>{
+   const {isolated,p}=await isolatedPage('BROKEN',{config:'{invalid json'});
    try {assert.equal(await p.locator('input[name=title]').inputValue(),'DỊCH VỤ TIÊU BIỂU');}
    finally {await isolated.close();}
  });
- for(const mode of ['quota','blocked']) await check('Bộ nhớ '+mode+': báo lỗi, giữ form và bản trong phiên',async()=>{
-   const {isolated,p}=await isolatedPage('STORAGE-'+mode,mode);
+ await check('Máy chủ lỗi khi lưu: báo lỗi, giữ nội dung đang sửa',async()=>{
+   const {isolated,p}=await isolatedPage('SAVE-FAIL',{fail:true});
    try {
      await p.locator('input[name=title]').fill('Retained config');
-     await p.getByRole('button',{name:'Lưu bản thử nghiệm',exact:true}).click();
-     await p.getByText('Không đủ dung lượng lưu hoặc bộ nhớ bị chặn. Bản thử nghiệm vẫn được giữ trong phiên này.',{exact:true}).waitFor();
+     await p.getByRole('button',{name:'Lưu',exact:true}).click();
+     await p.getByText('Lỗi máy chủ',{exact:true}).waitFor();
      assert.equal(await p.locator('input[name=title]').inputValue(),'Retained config');
-     // Menu trái gom nhóm thu gọn: mở nhóm Hỗ trợ rồi sang trang khác trong cùng phiên.
-     await p.getByRole('button',{name:/Hỗ trợ/}).first().click();
-     await p.locator('a[href="/notifications"]').click();
-     await p.waitForURL('**/notifications');
-     await p.getByRole('button',{name:/Tài khoản/}).first().click();
-     await p.locator('a[href="/account/mytracking"]').click();
-     await p.locator('input[name=title]').waitFor();
-     assert.equal(await p.locator('input[name=title]').inputValue(),'Retained config');
-     // A reload clears the in-memory fallback; no claim of server persistence.
-     await p.reload();await p.locator('input[name=title]').waitFor();
-     assert.equal(await p.locator('input[name=title]').inputValue(),'DỊCH VỤ TIÊU BIỂU');
+     assert.equal(serverConfigs.has('SAVE-FAIL'),false);
    } finally {await isolated.close();}
  });
  await check('Cấu hình được tách riêng theo khách sau khi đổi phiên',async()=>{
-   const {isolated,p}=await isolatedPage('ACCOUNT-A');
+   const {isolated,p,switchTo}=await isolatedPage('ACCOUNT-A');
    try {
      await p.locator('input[name=title]').fill('Config account A');
-     await p.getByRole('button',{name:'Lưu bản thử nghiệm',exact:true}).click();
-     await p.getByText('Đã lưu bản thử nghiệm trên trình duyệt',{exact:true}).waitFor();
-     await isolated.route(url=>url.pathname==='/api/v1/me'||url.pathname==='/api/v1/auth/session',route=>route.fulfill({contentType:'application/json',body:JSON.stringify({data:{customerCode:'ACCOUNT-B',companyName:'Test B',roles:['customer'],permissions:['account.mytracking']}})}));
+     await p.getByRole('button',{name:'Lưu',exact:true}).click();
+     await p.getByText('Đã lưu cấu hình MyTracking',{exact:true}).waitFor();
+     switchTo('ACCOUNT-B');
      await p.evaluate(()=>localStorage.setItem('va.tour.v1.ACCOUNT-B','1'));
      await p.reload();await p.locator('input[name=title]').waitFor();
      assert.equal(await p.locator('input[name=title]').inputValue(),'DỊCH VỤ TIÊU BIỂU');
      await p.locator('input[name=title]').fill('Config account B');
-     await p.getByRole('button',{name:'Lưu bản thử nghiệm',exact:true}).click();
-     await p.getByText('Đã lưu bản thử nghiệm trên trình duyệt',{exact:true}).waitFor();
-     assert.deepEqual(await p.evaluate(()=>['ACCOUNT-A','ACCOUNT-B'].map(code=>JSON.parse(localStorage.getItem('mytracking-draft:'+code)).title)),['Config account A','Config account B']);
+     await p.getByRole('button',{name:'Lưu',exact:true}).click();
+     await p.getByText('Đã lưu cấu hình MyTracking',{exact:true}).waitFor();
+     assert.deepEqual(['ACCOUNT-A','ACCOUNT-B'].map(c=>serverConfigs.get(c).title),['Config account A','Config account B']);
    } finally {await isolated.close();}
  });
  } finally {

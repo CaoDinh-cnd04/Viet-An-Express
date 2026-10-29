@@ -7,7 +7,7 @@ import { useAddonFees } from '../api';
 import { ADDONS } from '../constants';
 import { addonFeeRows } from '../lib/addon-fees';
 import { AddonFeesDialog } from './AddonFeesDialog';
-import type { CreateOrderValues } from '../schema';
+import type { CreateOrderValues } from '@/features/order-form';
 import styles from './form.module.css';
 
 /** Nhãn khi không chọn dịch vụ nào (giá trị lưu là danh sách rỗng). */
