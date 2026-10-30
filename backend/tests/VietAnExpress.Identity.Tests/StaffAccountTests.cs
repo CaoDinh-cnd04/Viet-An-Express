@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Moq;
@@ -19,26 +20,26 @@ public class StaffAccountTests
 
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
 
-    private static async Task<long> CreateStaffAsync(IdentityFixture f, string userName = "kho.hn", params string[] permissions)
+    private static async Task<long> CreateStaffAsync(IdentityFixture f, string userName = "kho.hn")
     {
-        var created = await f.CreateStaff.Handle(new CreateStaffCommand(userName, StaffPassword, "Nguyễn Văn Kho", null, null,
-            permissions.Length > 0 ? permissions : ["shipments.view"]), Ct);
+        var created = await f.CreateStaff.Handle(new CreateStaffCommand(userName, StaffPassword, "Nguyễn Văn Kho", null, null), Ct);
         Assert.True(created.IsSuccess, created.Error.Message);
         return created.Value.Id;
     }
 
     [Fact]
-    public async Task Admin_tao_tai_khoan_con_nhan_vien_dang_nhap_chi_co_quyen_duoc_cap()
+    public async Task Admin_tao_tai_khoan_con_nhan_vien_dang_nhap_co_moi_quyen_tru_quyen_tai_khoan_chinh()
     {
         await using var f = new IdentityFixture();
-        var staffId = await CreateStaffAsync(f, "kho.hn", "shipments.view");
+        var staffId = await CreateStaffAsync(f, "kho.hn");
 
         var login = await f.Login.Handle(new LoginCommand("kho.hn", StaffPassword, false), Ct);
 
         Assert.True(login.IsSuccess);
         var user = login.Value.User;
         Assert.Equal(("staff", false, "Nguyễn Văn Kho", "SaigonbayHN"), (user.AccountType, user.IsAdmin, user.FullName, user.CustomerCode));
-        Assert.Equal(["shipments.view", IdentityPermissions.SupportRequests], user.Permissions); // + quyền luôn có
+        // Không phân quyền riêng từng người: mọi quyền của khách trừ quản lý nhân viên / MyTracking / đổi mật khẩu.
+        Assert.Equal([IdentityPermissions.SupportRequests, "shipments.create", "shipments.view"], user.Permissions);
 
         var jwt = new JsonWebToken(login.Value.AccessToken);
         Assert.Equal(IdentityFixture.CustomerId.ToString(), jwt.GetClaim(VaClaimTypes.CustomerId).Value); // thấy dữ liệu của khách cha
@@ -50,8 +51,8 @@ public class StaffAccountTests
     public async Task Tai_khoan_con_dien_san_nguoi_gui_la_nhan_vien_con_cong_ty_dia_chi_MST_cua_khach_cha()
     {
         await using var f = new IdentityFixture();
-        await f.CreateStaff.Handle(new CreateStaffCommand("kho.hn", StaffPassword, "Trần Thị Lan", "lan@sgb.vn", "0901234567", ["shipments.view"]), Ct);
-        await f.CreateStaff.Handle(new CreateStaffCommand("kho.hcm", StaffPassword, "Lê Văn Minh", null, null, ["shipments.view"]), Ct);
+        await f.CreateStaff.Handle(new CreateStaffCommand("kho.hn", StaffPassword, "Trần Thị Lan", "lan@sgb.vn", "0901234567"), Ct);
+        await f.CreateStaff.Handle(new CreateStaffCommand("kho.hcm", StaffPassword, "Lê Văn Minh", null, null), Ct);
 
         var lan = (await f.Login.Handle(new LoginCommand("kho.hn", StaffPassword, false), Ct)).Value.User;
         Assert.Equal(("SGB EXPRESS HN", "Trần Thị Lan", "0901234567", "lan@sgb.vn"), (lan.CompanyName, lan.ContactName, lan.Phone, lan.Email));
@@ -69,11 +70,11 @@ public class StaffAccountTests
     public async Task Di_dong_2_va_email_2_luu_vao_cot_Di_Dong2_Email2_va_xoa_duoc_khi_sua()
     {
         await using var f = new IdentityFixture();
-        var created = (await f.CreateStaff.Handle(new CreateStaffCommand("kho.hn", StaffPassword, "Trần Thị Lan", null, "0901234567", [],
+        var created = (await f.CreateStaff.Handle(new CreateStaffCommand("kho.hn", StaffPassword, "Trần Thị Lan", null, "0901234567",
             Phone2: " 0912345678 ", Email2: "lan2@sgb.vn"), Ct)).Value;
         Assert.Equal(("0912345678", "lan2@sgb.vn"), (created.Phone2, created.Email2));
 
-        var updated = (await f.UpdateStaff.Handle(new UpdateStaffCommand(created.Id, "Trần Thị Lan", null, "0901234567", [], true,
+        var updated = (await f.UpdateStaff.Handle(new UpdateStaffCommand(created.Id, "Trần Thị Lan", null, "0901234567", true,
             Phone2: "", Email2: null), Ct)).Value;
         Assert.Equal((null, null), (updated.Phone2, updated.Email2));
     }
@@ -89,7 +90,7 @@ public class StaffAccountTests
         Assert.Equal(AuthErrors.InvalidCredentials, (await f.Login.Handle(new LoginCommand("kho.hn", "sai-mat-khau", false), Ct)).Error);
 
         // Tài khoản chuyển từ bảng tạm còn lưu mã băm PBKDF2.
-        f.Db.StaffAccounts.Add(new StaffAccount(IdentityFixture.CustomerId, "kho.cu", StaffPasswordHasher.Hash("MatKhauCu1"), "Kho cũ", null, null, [], DateTime.Now));
+        f.Db.StaffAccounts.Add(new StaffAccount(IdentityFixture.CustomerId, "kho.cu", StaffPasswordHasher.Hash("MatKhauCu1"), "Kho cũ", null, null, DateTime.Now));
         await f.Db.SaveChangesAsync(Ct);
         Assert.True((await f.Login.Handle(new LoginCommand("kho.cu", "MatKhauCu1", false), Ct)).IsSuccess);
         Assert.False(StaffPasswordHasher.Matches(StaffPasswordHasher.Hash("MatKhauCu1"), "matkhaucu1"));
@@ -100,7 +101,7 @@ public class StaffAccountTests
     {
         await using var f = new IdentityFixture();
         // Dòng người liên hệ thường của hệ thống cũ: không có TinhCach.
-        f.Db.StaffAccounts.Add(new StaffAccount(IdentityFixture.CustomerId, "", "", "Chị Lan kế toán", null, "0909", [], DateTime.Now));
+        f.Db.StaffAccounts.Add(new StaffAccount(IdentityFixture.CustomerId, "", "", "Chị Lan kế toán", null, "0909", DateTime.Now));
         await f.Db.SaveChangesAsync(Ct);
 
         Assert.Empty((await f.ListStaff.Handle(new ListStaffQuery(), Ct)).Value);
@@ -108,19 +109,19 @@ public class StaffAccountTests
     }
 
     [Fact]
-    public async Task Dong_nguoi_lien_he_cu_de_trong_Ten_Mo_Ta_Quyen_van_doc_duoc_khong_dang_nhap_duoc()
+    public async Task Dong_nguoi_lien_he_cu_de_trong_Ten_Mo_Ta_van_doc_duoc_khong_dang_nhap_duoc()
     {
         await using var f = new IdentityFixture();
-        // Phần mềm cũ ghi TinhCach nhưng để NULL các cột còn lại (Quyen là cột portal thêm sau).
-        var legacy = new StaffAccount(IdentityFixture.CustomerId, "kho.cu", "x", "x", null, null, [], DateTime.Now);
-        foreach (var field in new[] { "_password", "_fullName", "_permissions" })
+        // Phần mềm cũ ghi TinhCach nhưng để NULL các cột còn lại.
+        var legacy = new StaffAccount(IdentityFixture.CustomerId, "kho.cu", "x", "x", null, null, DateTime.Now);
+        foreach (var field in new[] { "_password", "_fullName" })
             typeof(StaffAccount).GetField(field, System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.SetValue(legacy, null);
         f.Db.StaffAccounts.Add(legacy);
         await f.Db.SaveChangesAsync(Ct);
         f.Db.ChangeTracker.Clear();
 
         var list = (await f.ListStaff.Handle(new ListStaffQuery(), Ct)).Value;
-        Assert.Equal(("kho.cu", "", 0), (list[0].UserName, list[0].FullName, list[0].Permissions.Count));
+        Assert.Equal(("kho.cu", ""), (list[0].UserName, list[0].FullName));
         // Không có mật khẩu → không đăng nhập được bằng mật khẩu rỗng.
         Assert.Equal(AuthErrors.InvalidCredentials, (await f.Login.Handle(new LoginCommand("kho.cu", "", false), Ct)).Error);
     }
@@ -140,18 +141,6 @@ public class StaffAccountTests
     }
 
     [Theory]
-    [InlineData("account.staff")]
-    [InlineData("account.mytracking")]
-    [InlineData("internal.only")]
-    [InlineData("khong.ton.tai")]
-    public async Task Khong_cap_duoc_quyen_admin_hoac_quyen_la_cho_tai_khoan_con(string permission)
-    {
-        await using var f = new IdentityFixture();
-        var result = await f.CreateStaff.Handle(new CreateStaffCommand("kho.hn", StaffPassword, "Kho", null, null, [permission]), Ct);
-        Assert.Equal(StaffErrors.UnknownPermission, result.Error);
-    }
-
-    [Theory]
     [InlineData("kho.hn")]
     [InlineData(IdentityFixture.UserName)] // trùng tài khoản chính ở dbo.TCustomer
     public async Task Ten_dang_nhap_khong_duoc_trung(string userName)
@@ -159,7 +148,7 @@ public class StaffAccountTests
         await using var f = new IdentityFixture();
         await CreateStaffAsync(f, "kho.hn");
 
-        var result = await f.CreateStaff.Handle(new CreateStaffCommand(userName, StaffPassword, "Trùng", null, null, []), Ct);
+        var result = await f.CreateStaff.Handle(new CreateStaffCommand(userName, StaffPassword, "Trùng", null, null), Ct);
         Assert.Equal(StaffErrors.UserNameTaken, result.Error);
     }
 
@@ -171,7 +160,7 @@ public class StaffAccountTests
         f.SignInAs(staffId);
 
         Assert.Equal(IdentityErrors.AdminOnly, (await f.ListStaff.Handle(new ListStaffQuery(), Ct)).Error);
-        Assert.Equal(IdentityErrors.AdminOnly, (await f.CreateStaff.Handle(new CreateStaffCommand("x.y", StaffPassword, "X", null, null, []), Ct)).Error);
+        Assert.Equal(IdentityErrors.AdminOnly, (await f.CreateStaff.Handle(new CreateStaffCommand("x.y", StaffPassword, "X", null, null), Ct)).Error);
         Assert.Equal(IdentityErrors.AdminOnly, (await f.DeleteStaff.Handle(new DeleteStaffCommand(staffId), Ct)).Error);
     }
 
@@ -179,7 +168,7 @@ public class StaffAccountTests
     public async Task Admin_khong_sua_duoc_nhan_vien_cua_khach_khac()
     {
         await using var f = new IdentityFixture();
-        f.Db.StaffAccounts.Add(new StaffAccount(999, "khach.khac", StaffPasswordHasher.Hash(StaffPassword), "Khác", null, null, [], DateTime.Now));
+        f.Db.StaffAccounts.Add(new StaffAccount(999, "khach.khac", StaffPasswordHasher.Hash(StaffPassword), "Khác", null, null, DateTime.Now));
         await f.Db.SaveChangesAsync(Ct);
         var otherId = f.Db.StaffAccounts.Single().Id;
 
@@ -194,43 +183,10 @@ public class StaffAccountTests
         var staffId = await CreateStaffAsync(f);
         var session = (await f.Login.Handle(new LoginCommand("kho.hn", StaffPassword, true), Ct)).Value;
 
-        await f.UpdateStaff.Handle(new UpdateStaffCommand(staffId, "Kho", null, null, ["shipments.view"], Active: false), Ct);
+        await f.UpdateStaff.Handle(new UpdateStaffCommand(staffId, "Kho", null, null, Active: false), Ct);
 
         Assert.Equal(AuthErrors.StaffDisabled, (await f.Login.Handle(new LoginCommand("kho.hn", StaffPassword, false), Ct)).Error);
         Assert.Equal(AuthErrors.SessionExpired, (await f.Refresh.Handle(new RefreshSessionCommand(session.RefreshToken), Ct)).Error);
-    }
-
-    [Fact]
-    public async Task Doi_quyen_ap_dung_khi_lam_moi_phien()
-    {
-        await using var f = new IdentityFixture();
-        var staffId = await CreateStaffAsync(f, "kho.hn", "shipments.view");
-        var session = (await f.Login.Handle(new LoginCommand("kho.hn", StaffPassword, false), Ct)).Value;
-
-        await f.UpdateStaff.Handle(new UpdateStaffCommand(staffId, "Kho", null, null, ["shipments.view", "shipments.create"], Active: true), Ct);
-
-        var refreshed = await f.Refresh.Handle(new RefreshSessionCommand(session.RefreshToken), Ct);
-        Assert.Equal(["shipments.create", "shipments.view", IdentityPermissions.SupportRequests], refreshed.Value.User.Permissions);
-    }
-
-    [Fact]
-    public async Task Sua_quyen_gui_lai_quyen_luon_co_van_luu_duoc_va_danh_sach_chi_hien_quyen_da_chon()
-    {
-        await using var f = new IdentityFixture();
-        var staffId = await CreateStaffAsync(f, "kho.hn", "shipments.view", IdentityPermissions.SupportRequests);
-
-        // Trang quản lý chỉ thấy quyền tài khoản chính đã chọn (không có quyền luôn có như hỗ trợ & sự cố).
-        Assert.Equal(["shipments.view"], Assert.Single((await f.ListStaff.Handle(new ListStaffQuery(), Ct)).Value).Permissions);
-
-        // Client cũ gửi kèm quyền luôn có khi sửa / khóa → vẫn lưu được, không báo quyền không hợp lệ.
-        var updated = await f.UpdateStaff.Handle(new UpdateStaffCommand(staffId, "Kho", null, null,
-            ["shipments.view", "shipments.create", IdentityPermissions.SupportRequests], Active: true), Ct);
-        Assert.True(updated.IsSuccess, updated.Error.Message);
-        Assert.Equal(["shipments.create", "shipments.view"], updated.Value.Permissions);
-
-        // Nhân viên đăng nhập vẫn có quyền hỗ trợ & sự cố.
-        var login = await f.Login.Handle(new LoginCommand("kho.hn", StaffPassword, false), Ct);
-        Assert.Contains(IdentityPermissions.SupportRequests, login.Value.User.Permissions);
     }
 
     [Fact]
@@ -270,20 +226,22 @@ public class MyTrackingTests
     private static JsonElement Config(string title) => JsonDocument.Parse($$"""{"title":"{{title}}","images":[]}""").RootElement.Clone();
 
     [Fact]
-    public async Task Chua_cau_hinh_thi_tra_ma_khach_va_cau_hinh_trong()
+    public async Task Chua_cau_hinh_thi_tra_ma_khach_va_thuong_hieu_tu_ho_so_khach()
     {
         await using var f = new IdentityFixture();
         var page = await f.GetMyTracking.Handle(new GetMyTrackingQuery(), Ct);
         Assert.Equal("SaigonbayHN", page.Value.CustomerCode);
-        Assert.Null(page.Value.Config);
+        // Như trang cũ: chưa có dòng TCustomer_MyTracking vẫn có địa chỉ / điện thoại của hồ sơ khách, phần ưu đãi trống.
+        var config = JsonNode.Parse(page.Value.Config!.Value.Json)!;
+        Assert.Equal(("", IdentityFixture.BrandAddress), (config["title"]!.GetValue<string>(), config["brand"]!["address"]!.GetValue<string>()));
     }
 
     [Fact]
-    public async Task Luu_xong_thi_trang_cong_khai_theo_ma_khach_xem_duoc()
+    public async Task Trang_cong_khai_theo_ma_khach_co_ca_khi_chua_cau_hinh()
     {
         await using var f = new IdentityFixture();
-        // Chưa có dòng cấu hình → không có trang.
-        Assert.Equal(MyTrackingErrors.MyTrackingNotFound, (await f.GetCustomerMyTracking.Handle(new GetCustomerMyTrackingQuery("saigonbayhn"), Ct)).Error);
+        // Chưa có dòng cấu hình vẫn có trang (thương hiệu từ hồ sơ khách) như mytracking.top cũ.
+        Assert.True((await f.GetCustomerMyTracking.Handle(new GetCustomerMyTrackingQuery("saigonbayhn"), Ct)).IsSuccess);
 
         await f.SaveMyTracking.Handle(new SaveMyTrackingCommand(Config("Trang cua toi")), Ct);
         var page = await f.GetCustomerMyTracking.Handle(new GetCustomerMyTrackingQuery("saigonbayhn"), Ct);
@@ -325,6 +283,6 @@ public class MyTrackingTests
             .ReturnsAsync(new CustomerSummary(IdentityFixture.CustomerId, "SaigonbayHN", "SGB", null, null, null, null, null, new string('A', 300)));
         var saved = await f.SaveMyTracking.Handle(new SaveMyTrackingCommand(Config("x")), Ct);
         Assert.True(saved.IsSuccess);
-        Assert.Equal(250, (await f.Db.MyTrackingPages.SingleAsync(Ct)).CompanyName!.Length);
+        Assert.Equal(250, JsonNode.Parse(saved.Value.Config!.Value.Json)!["brand"]!["companyName"]!.GetValue<string>().Length);
     }
 }

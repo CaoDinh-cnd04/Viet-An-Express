@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { getErrorMessage, http } from '@/shared/api/http';
 import { useToast } from '@/shared/ui';
-import type { AssignablePermission, NewStaff, StaffAccount, StaffUpdate } from './types';
+import type { NewStaff, StaffAccount, StaffUpdate } from './types';
 
 const staffKey = ['account-staff'] as const;
 
@@ -10,16 +10,6 @@ export function useStaffList() {
   return useQuery({
     queryKey: staffKey,
     queryFn: () => http.get<{ data: StaffAccount[] }>('/account/staff').then(r => r.data),
-    retry: false
-  });
-}
-
-/** Các quyền admin được cấp cho nhân viên. */
-export function useAssignablePermissions() {
-  return useQuery({
-    queryKey: [...staffKey, 'permissions'],
-    queryFn: () => http.get<{ data: AssignablePermission[] }>('/account/staff/permissions').then(r => r.data),
-    staleTime: 10 * 60_000,
     retry: false
   });
 }

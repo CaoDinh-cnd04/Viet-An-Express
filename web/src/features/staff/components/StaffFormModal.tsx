@@ -1,21 +1,18 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { ReactNode } from "react";
-import { Controller, useForm } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { useI18n } from "@/shared/i18n";
-import { Button, Modal, Notice } from "@/shared/ui";
-import {
-  useAssignablePermissions,
-  useCreateStaff,
-  useUpdateStaff,
-} from "../api";
-import { groupPermissions, togglePermission, toProfile } from "../lib/staff";
+import { Button, Modal } from "@/shared/ui";
+import { useCreateStaff, useUpdateStaff } from "../api";
+import { toProfile } from "../lib/staff";
 import { staffSchema, type StaffFormValues } from "../schema";
 import type { StaffAccount } from "../types";
 import styles from "./staff.module.css";
 
 /**
- * Thêm nhân viên (staff = undefined) hoặc sửa thông tin / quyền của nhân viên.
- * 3 nhóm tách bạch: Đăng nhập · Thông tin liên hệ (cột Ten, Di_Dong, Di_Dong2, Email, Email2 của dbo.TCustomer_NguoiLienLac) · Quyền sử dụng.
+ * Thêm nhân viên (staff = undefined) hoặc sửa thông tin của nhân viên.
+ * 2 nhóm: Đăng nhập · Thông tin liên hệ (cột Ten, Di_Dong, Di_Dong2, Email, Email2 của dbo.TCustomer_NguoiLienLac).
+ * Không phân quyền riêng: nhân viên dùng mọi chức năng trừ phần của tài khoản chính, chỉ thấy đơn mình tạo.
  */
 export function StaffFormModal({
   staff,
@@ -26,12 +23,11 @@ export function StaffFormModal({
 }) {
   const { t } = useI18n();
   const isNew = !staff;
-  const permissions = useAssignablePermissions();
   const create = useCreateStaff();
   const update = useUpdateStaff();
   const pending = create.isPending || update.isPending;
 
-  const { register, control, handleSubmit, formState } =
+  const { register, handleSubmit, formState } =
     useForm<StaffFormValues>({
       resolver: zodResolver(staffSchema),
       defaultValues: {
@@ -44,7 +40,6 @@ export function StaffFormModal({
         phone: staff?.phone ?? "",
         email2: staff?.email2 ?? "",
         phone2: staff?.phone2 ?? "",
-        permissions: staff?.permissions ?? [],
       },
     });
   const err = (k: keyof StaffFormValues) => formState.errors[k]?.message;
@@ -192,59 +187,11 @@ export function StaffFormModal({
           </Row>
         </section>
 
-        <section className={styles.section}>
-          <h3>3. {t("Quyền sử dụng")}</h3>
-          <p className={styles.hint}>
-            {t(
-              'Nhân viên chỉ thấy vận đơn và đơn E-commerce do mình tạo, trừ khi được chọn "Xem toàn bộ đơn" ở từng nhóm. Đơn tự đồng bộ từ sàn chỉ người có quyền xem toàn bộ đơn E-commerce thấy. MyTracking và quản lý nhân viên chỉ dành cho tài khoản chính.',
-            )}
-          </p>
-          {permissions.isError ? (
-            <Notice tone="danger">
-              {t("Không tải được danh sách quyền. Vui lòng thử lại.")}
-            </Notice>
-          ) : permissions.isPending ? (
-            <p className={styles.hint}>{t("Đang tải…")}</p>
-          ) : (
-            <Controller
-              control={control}
-              name="permissions"
-              render={({ field }) => (
-                <table className={styles.permTable}>
-                  <tbody>
-                    {groupPermissions(permissions.data).map((group) => (
-                      <tr key={group.key}>
-                        <th>{t(group.label)}</th>
-                        <td>
-                          <div className={styles.checks}>
-                            {group.items.map((p) => (
-                              <label key={p.code} className={styles.check}>
-                                <input
-                                  type="checkbox"
-                                  checked={field.value.includes(p.code)}
-                                  onChange={(e) =>
-                                    field.onChange(
-                                      togglePermission(
-                                        field.value,
-                                        p.code,
-                                        e.target.checked,
-                                      ),
-                                    )
-                                  }
-                                />
-                                <span>{t(p.description)}</span>
-                              </label>
-                            ))}
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            />
+        <p className={styles.hint}>
+          {t(
+            "Nhân viên dùng được mọi chức năng của công ty (tạo, sửa, in đơn, import, E-commerce, Hỗ trợ & sự cố, Thông báo) nhưng chỉ thấy vận đơn và đơn E-commerce do mình tạo. Quản lý nhân viên, MyTracking và đổi mật khẩu chỉ dành cho tài khoản chính.",
           )}
-        </section>
+        </p>
       </form>
     </Modal>
   );

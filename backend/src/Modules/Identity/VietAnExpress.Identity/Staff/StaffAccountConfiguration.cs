@@ -7,7 +7,7 @@ using VietAnExpress.SharedKernel.Persistence;
 namespace VietAnExpress.Identity.Staff;
 
 /// <summary>
-/// dbo.TCustomer_NguoiLienLac — bảng người liên hệ của khách ở hệ thống cũ (không thuộc migration, trừ cột Quyen portal thêm).
+/// dbo.TCustomer_NguoiLienLac — bảng người liên hệ của khách ở hệ thống cũ (không thuộc migration, giữ nguyên cấu trúc).
 /// Chỉ dòng có tên đăng nhập (TinhCach) là tài khoản con; người liên hệ thường bị lọc bỏ.
 /// </summary>
 internal sealed class StaffAccountConfiguration : IEntityTypeConfiguration<StaffAccount>
@@ -26,14 +26,12 @@ internal sealed class StaffAccountConfiguration : IEntityTypeConfiguration<Staff
         b.Property(x => x.Phone).HasColumnName("Di_Dong").HasMaxLength(150);
         b.Property(x => x.Phone2).HasColumnName("Di_Dong2").HasMaxLength(150);
         b.Property(x => x.Email2).HasColumnName("Email2").HasMaxLength(StaffAccount.EmailMaxLength);
-        b.Property(x => x.Permissions).HasColumnName("Quyen").HasMaxLength(StaffAccount.PermissionsMaxLength).IsRequired(false);
         // Trang_Thai của hệ thống cũ: 1 = đang hoạt động.
         b.Property(x => x.IsActive).HasColumnName("Trang_Thai").HasConversion(v => v ? 1 : 0, v => v == 1);
         b.Property(x => x.CreateDate).HasColumnName("Create_Date").HasColumnType("datetime");
         // Cột bắt buộc của bảng cũ portal không dùng — ghi 0 khi tạo tài khoản.
         b.Property<int>("Chuc_Vu");
         b.Property<int>("Phong_Ban");
-        b.Ignore(x => x.PermissionList);
 
         b.HasQueryFilter(x => x.UserName != null && x.UserName != "");
     }

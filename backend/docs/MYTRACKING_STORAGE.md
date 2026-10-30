@@ -1,25 +1,38 @@
 # MyTracking dùng bảng hệ thống cũ
 
-Portal đọc / ghi `dbo.TCustomer_MyTracking` và `dbo.TCustomer_MyTracking_Banner`, mọi thông tin vào **cột có sẵn của bảng cũ**.
-Portal **giữ cấu trúc và độ dài cột gốc**. Ảnh nằm trong thư mục `Upload`, SQL chỉ giữ đường dẫn. Khách có dòng cấu hình là trang hiện công khai (bảng cũ không có trạng thái
-xuất bản). Link công khai: `/tracking/{mã khách}/{số bill}?ref={mã REF}`.
+Như trang mytracking.top cũ (đối chiếu HTML trang cũ 30/10/2026): **thương hiệu + cổng liên lạc nằm ở hồ sơ khách `dbo.TCustomer`**,
+phần mở rộng (ưu đãi, ảnh nền, mạng xã hội, ảnh quảng cáo) ở `dbo.TCustomer_MyTracking` + `dbo.TCustomer_MyTracking_Banner`.
+Portal **giữ cấu trúc và độ dài cột gốc**. Ảnh nằm trong thư mục `Upload`, SQL chỉ giữ đường dẫn. Khách nào cũng có trang công khai
+(thương hiệu từ hồ sơ khách; bảng cũ không có trạng thái xuất bản). Link công khai: `/tracking/{mã khách}/{số bill}?ref={mã REF}`.
+Trang cũ chỉ hiện phần mở rộng khi `TCustomer.ViewLinkTracking = 1`; portal chỉ dùng cột này để mở trang cấu hình.
 
-## Ánh xạ thông tin trang
+## Thương hiệu + cổng liên lạc (`MyTracking/MyTrackingBrand.cs`)
+
+| Dữ liệu API | Cột trong TCustomer |
+|---|---|
+| `brand.companyName` | `InvoiceCustomerName`, trống thì `CustomerName` — chỉ đọc |
+| `brand.address` / `phone` | `Address1` / `Phone` — **chỉ đọc** (thông tin người gửi trên bill; đổi qua yêu cầu hỗ trợ) |
+| `brand.logo` | `Logo_ShippingMark` (bigint) → `TCommonFile.CommonFileID`; ảnh `/Upload/Logo_ShippingMark/{ServerFileName}`. Cũng là shipping mark in trên bill (`p_MVD_Print_Bill_Multi`). Logo mới → thêm 1 dòng `TCommonFile` (`RealFileName` = `ServerFileName` = tên tệp theo mã băm, `ServerFilePath` `/Upload/Logo_ShippingMark/`, `FileSize`, `MimeType`); xóa logo → `Logo_ShippingMark` NULL (giữ dòng `TCommonFile`) |
+| `brand.website` | `Bank` nvarchar(150) — nút Home của trang cũ |
+| `brand.primaryColor` / `secondaryColor` | `Column1` / `Column2` (`--mcolor` / `--scolor` của trang cũ) |
+| `brand.contacts` | `CongLienLac_Hotline` (100), `_Zalo`, `_Messenger`, `_WhatsApp`, `_WeChat`, `_Telegram`, `_Viber`, `_Line`, `_Snapchat`, `_KakaoTalk`, `_Signal` (= Instagram của portal — trang cũ hiện ô Signal bằng icon Instagram), `_Email` (200) |
+
+EF map cùng dòng TCustomer với `CustomerLogin` (table splitting); cột `Staff_ID` (NOT NULL, chỉ đọc) giúp EF nhận ra dòng khi mọi cột thương hiệu đều NULL.
+
+## Phần mở rộng (TCustomer_MyTracking)
 
 | Dữ liệu API | Cột trong TCustomer_MyTracking |
 |---|---|
 | Khách sở hữu | `CustomerID` → `TCustomer.CustomerID` (portal giữ mỗi khách 1 trang bằng khóa transaction, không thêm unique index) |
 | `config.title` / `description` | `UuDai_TieuDe` / `UuDai_NoiDung` |
-| `brand.companyName` / `address` / `phone` / `logo` | `CompanyName` (luôn = `TCustomer.InvoiceCustomerName`, trống thì `CustomerName`) / `Address` / `Tel` / `Logo` |
-| `brand.website` / `primaryColor` / `secondaryColor` | `Website` / `Color_01` / `Color_02` |
-| `brand.contacts` (cổng liên lạc, ≤ 5) | Mỗi ứng dụng 1 ô cố định: `CongTinNhan_01` Hotline, `_02` Zalo, `_03` Messenger, `_04` WhatsApp, `_05` WeChat, `_06` Telegram, `_07` Viber, `_08` Line, `_09` Snapchat, `_10` KakaoTalk, `_11` Instagram; Email → cột `Email` |
 | `brand.socials` (mạng xã hội, ≤ 5) | `CongTruyenThong_01` Facebook, `_02` Instagram, `_03` Youtube, `_04` Tiktok, `_05` Twitter, `_06` Google Maps, `_07` Pinterest |
 | `background` | `Str1`, `nvarchar(250)`, đường dẫn ảnh nền/banner, vd `/Upload/Banner/{tên-file}.jpg` |
 
-Thứ tự ô khớp trang mytracking.top cũ (thanh liên hệ nổi và `social_line01…07`) — `Domain/MyTrackingChannels.cs`; trang hiển thị
-theo thứ tự ô. Mỗi ô / `Email` / `Website` / `Color_*` tối đa 250 ký tự. Thuộc tính JSON lạ không được giữ.
-Chưa dùng: `Banner_QC`, `Str2`, `CongTinNhan_12–15`, `CongTruyenThong_08–15` (bảng chính); `ID_Hinh`, `Str4–6`,
-`PhienBan_Tracking`, `TypeFile`, `FileName` (bảng ảnh) — chưa rõ cách hệ thống cũ dùng.
+Thứ tự ô khớp trang mytracking.top cũ (`social_line01…07`) — `MyTrackingChannels.cs`; mỗi ô tối đa 250 ký tự. Thuộc tính JSON lạ không được giữ.
+Cột thương hiệu của bảng này (`CompanyName`, `Address`, `Tel`, `Logo`, `Website`, `Color_*`, `Email`, `CongTinNhan_*`) trang cũ không dùng —
+portal không đọc / ghi nữa (từ 30/10/2026; dữ liệu portal ghi trước đó còn nguyên, không chuyển sang TCustomer).
+Chưa dùng: `Banner_QC`, `Str2`, `CongTruyenThong_08–15` (bảng chính); `ID_Hinh`, `Str4–6`,
+`PhienBan_Tracking`, `TypeFile`, `FileName` (bảng ảnh) — chưa rõ cách hệ thống cũ dùng (code `Get_TrackingData` của trang cũ không có trong dump).
 
 ## Ánh xạ ảnh quảng cáo
 

@@ -91,6 +91,8 @@ internal static class GeoRegistration
             c.Timeout = TimeSpan.FromSeconds(o.TimeoutSeconds);
             c.DefaultRequestHeaders.UserAgent.ParseAdd(UserAgent);
         });
+        // Hành trình hệ thống cũ: dbo.Orders + dbo.Order_Tracking (chỉ đọc).
+        services.AddScoped<IOrderTracking, OrderTrackingReader>();
         // VSVX: bảng dbo.VungXauVungXa của hệ thống cũ (dùng DbContext → scoped).
         services.AddScoped<IRemoteAreaLookup, RemoteAreaLookup>();
         return services;
@@ -106,7 +108,6 @@ internal sealed class ShipmentsPermissionProvider : IPermissionProvider
         new(ShipmentsPermissions.View, "Xem vận đơn", Customer),
         new(ShipmentsPermissions.Create, "Tạo đơn nháp", Customer),
         new(ShipmentsPermissions.Update, "Sửa đơn nháp", Customer),
-        new(ShipmentsPermissions.IssueBill, "In & cấp mã vận đơn", Customer),
-        new(ShipmentsPermissions.ViewAll, "Xem toàn bộ đơn của công ty", Customer)
+        new(ShipmentsPermissions.IssueBill, "In & cấp mã vận đơn", Customer)
     ];
 }

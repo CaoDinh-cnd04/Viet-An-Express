@@ -21,6 +21,4 @@ public static class EcommercePermissions
     public const string Orders = "ecommerce.orders";
     /// <summary>Kết nối / ngắt kết nối cửa hàng trên sàn.</summary>
     public const string Connect = "ecommerce.connect";
-    /// <summary>Tài khoản con xem mọi đơn E-commerce của công ty; không có thì chỉ thấy đơn mình tạo. Tài khoản chính luôn thấy tất cả.</summary>
-    public const string ViewAll = "ecommerce.view-all";
 }

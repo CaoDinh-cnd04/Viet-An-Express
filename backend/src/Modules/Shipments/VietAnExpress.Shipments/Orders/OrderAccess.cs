@@ -33,7 +33,7 @@ internal sealed record OrderScope(long CustomerId, long? StaffId);
 
 /// <summary>
 /// Phạm vi đơn: khách chỉ thấy / ghi đơn có CustomerID = mã khách của mình (dbo.TCustomer.CustomerID).
-/// Tài khoản con không có quyền <see cref="ShipmentsPermissions.ViewAll"/> chỉ thấy đơn và nháp mình tạo.
+/// Tài khoản con chỉ thấy đơn và nháp mình tạo; tài khoản chính thấy hết.
 /// </summary>
 internal sealed class OrderAccess(ICurrentUser user, ICustomersApi customers)
 {
@@ -46,7 +46,7 @@ internal sealed class OrderAccess(ICurrentUser user, ICustomersApi customers)
     public long? CreatorStaffId => user.StaffId;
 
     public Task<OrderScope> ScopeAsync(CancellationToken ct) =>
-        Task.FromResult(new OrderScope(user.CustomerId ?? NoCustomer, user.RestrictedStaffId(ShipmentsPermissions.ViewAll)));
+        Task.FromResult(new OrderScope(user.CustomerId ?? NoCustomer, user.RestrictedStaffId()));
 
     public IQueryable<LegacyOrder> Apply(IQueryable<LegacyOrder> query, OrderScope scope)
     {

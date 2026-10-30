@@ -16,12 +16,11 @@ public class CopyOrderTests
 {
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
     private static ShipmentsDbContext Db() => new(new DbContextOptionsBuilder<ShipmentsDbContext>().UseInMemoryDatabase(Guid.NewGuid().ToString()).Options);
-    private static OrderAccess Access(ShipmentsDbContext db, long customerId = 42, long? staffId = null, bool viewAll = false)
+    private static OrderAccess Access(ShipmentsDbContext db, long customerId = 42, long? staffId = null)
     {
         var user = new Mock<ICurrentUser>();
         user.SetupGet(x => x.CustomerId).Returns(customerId);
         user.SetupGet(x => x.StaffId).Returns(staffId);
-        user.Setup(x => x.HasPermission(ShipmentsPermissions.ViewAll)).Returns(viewAll);
         return new(user.Object, Mock.Of<ICustomersApi>());
     }
 
@@ -48,7 +47,6 @@ public class CopyOrderTests
         Assert.True((await new CopyOrderHandler(db, Access(db, 99)).Handle(new("90000001"), Ct)).IsFailure);
         Assert.True((await new CopyOrderHandler(db, Access(db, 42, 8)).Handle(new("90000001"), Ct)).IsFailure);
         Assert.True((await new CopyOrderHandler(db, Access(db, 42, 7)).Handle(new("90000001"), Ct)).IsSuccess);
-        Assert.True((await new CopyOrderHandler(db, Access(db, 42, 8, true)).Handle(new("90000001"), Ct)).IsSuccess);
     }
 
     [Fact]

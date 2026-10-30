@@ -3,10 +3,10 @@ using System.Text.Json.Nodes;
 namespace VietAnExpress.Identity.MyTracking;
 
 /// <summary>
-/// Trang MyTracking dùng dbo.TCustomer_MyTracking và các ảnh trong dbo.TCustomer_MyTracking_Banner — mọi thông tin
-/// ghi vào cột có sẵn của bảng cũ (cổng liên lạc / mạng xã hội: xem <see cref="MyTrackingChannels"/>).
-/// Không còn cột portal tự thêm. Khách có dòng cấu hình thì ai có link <c>/tracking/{mã khách}/{số bill}</c>
-/// cũng xem và tra cứu vận đơn được (bảng cũ không có trạng thái xuất bản).
+/// Phần mở rộng của trang MyTracking như trang mytracking.top cũ: ưu đãi, ảnh nền, mạng xã hội ở dbo.TCustomer_MyTracking,
+/// ảnh quảng cáo ở dbo.TCustomer_MyTracking_Banner (mạng xã hội: xem <see cref="MyTrackingChannels"/>).
+/// Thương hiệu + cổng liên lạc nằm ở hồ sơ khách dbo.TCustomer (<see cref="MyTrackingBrand"/>) — các cột thương hiệu
+/// của bảng này (CompanyName, Address, Tel, Logo, Website, Color_*, Email, CongTinNhan_*) hệ thống cũ không dùng, portal không ghi.
 /// </summary>
 internal sealed partial class MyTrackingPage
 {
@@ -26,43 +26,15 @@ internal sealed partial class MyTrackingPage
     public long CustomerId { get; private set; }
     public string? Title { get; private set; }
     public string? Description { get; private set; }
-    public string? CompanyName { get; private set; }
-    public string? Address { get; private set; }
-    public string? Phone { get; private set; }
-    public string? Logo { get; private set; }
-    /// <summary>Website trang home (cột Website) — nút Home và logo trên trang tracking.</summary>
-    public string? Website { get; private set; }
-    /// <summary>Màu thương hiệu / màu phụ (Color_01 / Color_02), dạng #rrggbb.</summary>
-    public string? Color01 { get; private set; }
-    public string? Color02 { get; private set; }
-    /// <summary>Cổng liên lạc Email (cột Email).</summary>
-    public string? Email { get; private set; }
     /// <summary>Đường dẫn ảnh nền/banner, tối đa 250 ký tự (Str1, vd "/Upload/Banner/…jpg").</summary>
     public string? Background { get; private set; }
     public List<MyTrackingBanner> Banners { get; private set; } = [];
 
-    /// <summary>Cấu hình dạng JSON như frontend dùng (features/mytracking/schema.ts), dựng từ các cột.</summary>
-    public string ConfigJson => new JsonObject
-    {
-        ["title"] = Title ?? "",
-        ["description"] = Description ?? "",
-        ["background"] = Background ?? "",
-        ["brand"] = new JsonObject
-        {
-            ["companyName"] = CompanyName ?? "",
-            ["address"] = Address ?? "",
-            ["phone"] = Phone ?? "",
-            ["logo"] = Logo ?? "",
-            ["website"] = Website ?? "",
-            ["primaryColor"] = Color01 ?? "",
-            ["secondaryColor"] = Color02 ?? "",
-            ["contacts"] = MyTrackingChannels.Build(
-                MyTrackingChannels.ContactSlots.Select((type, i) => (type, Slot(false, i + 1))).Append((MyTrackingChannels.Email, Email))),
-            ["socials"] = MyTrackingChannels.Build(MyTrackingChannels.SocialSlots.Select((type, i) => (type, Slot(true, i + 1))))
-        },
-        ["images"] = new JsonArray(Banners.Where(b => !string.IsNullOrWhiteSpace(b.Source))
-            .OrderBy(b => b.SortOrder).ThenBy(b => b.Id).Select(b => (JsonNode)b.Config()).ToArray())
-    }.ToJsonString();
+    /// <summary>Mạng xã hội theo thứ tự ô (social_line01…07 của trang cũ).</summary>
+    public JsonArray Socials() => MyTrackingChannels.Build(MyTrackingChannels.SocialSlots.Select((type, i) => (type, Slot(true, i + 1))));
+
+    public JsonArray Images() => new(Banners.Where(b => !string.IsNullOrWhiteSpace(b.Source))
+        .OrderBy(b => b.SortOrder).ThenBy(b => b.Id).Select(b => (JsonNode)b.Config()).ToArray());
 
     public void Update(string configJson)
     {
@@ -71,24 +43,6 @@ internal sealed partial class MyTrackingPage
         Description = MyTrackingJson.Text(root, "description");
         Background = MyTrackingJson.Text(root, "background");
         var brand = root["brand"] as JsonObject;
-        CompanyName = MyTrackingJson.Text(brand, "companyName");
-        Address = MyTrackingJson.Text(brand, "address");
-        Phone = MyTrackingJson.Text(brand, "phone");
-        Logo = MyTrackingJson.Text(brand, "logo");
-        Website = Blank(MyTrackingJson.Text(brand, "website"));
-        Color01 = Blank(MyTrackingJson.Text(brand, "primaryColor"));
-        Color02 = Blank(MyTrackingJson.Text(brand, "secondaryColor"));
-        if (brand?["contacts"] is JsonArray contacts)
-        {
-            Email = null;
-            for (var slot = 1; slot <= MyTrackingChannels.SlotCount; slot++) SetSlot(false, slot, null);
-            foreach (var item in contacts.OfType<JsonObject>())
-            {
-                var (type, value) = (MyTrackingChannels.Type(item), Blank(MyTrackingChannels.Value(item)));
-                if (type == MyTrackingChannels.Email) Email = value;
-                else if (Array.IndexOf(MyTrackingChannels.ContactSlots, type) is var i and >= 0) SetSlot(false, i + 1, value);
-            }
-        }
         if (brand?["socials"] is JsonArray socials)
         {
             for (var slot = 1; slot <= MyTrackingChannels.SlotCount; slot++) SetSlot(true, slot, null);

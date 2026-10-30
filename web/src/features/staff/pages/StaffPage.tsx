@@ -1,13 +1,13 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { getErrorMessage, isNotImplemented } from '@/shared/api/http';
 import { useI18n } from '@/shared/i18n';
 import { cx } from '@/shared/lib/cx';
 import { Button, Modal, PageHeader } from '@/shared/ui';
 import ws from '@/shared/ui/Workspace.module.css';
-import { useAssignablePermissions, useDeleteStaff, useStaffList, useUpdateStaff } from '../api';
+import { useDeleteStaff, useStaffList, useUpdateStaff } from '../api';
 import { ResetPasswordModal } from '../components/ResetPasswordModal';
 import { StaffFormModal } from '../components/StaffFormModal';
-import { filterStaff, grantedGroups, profileOf, staffStats, type StaffFilter } from '../lib/staff';
+import { filterStaff, profileOf, staffStats, type StaffFilter } from '../lib/staff';
 import type { StaffAccount } from '../types';
 import styles from './StaffPage.module.css';
 
@@ -25,21 +25,18 @@ const FILTERS: ReadonlyArray<{ key: StaffFilter; label: string }> = [
 ];
 
 /**
- * Tài khoản nhân viên — tài khoản chính (admin) của khách tạo tài khoản con và chọn quyền cho từng người.
+ * Tài khoản nhân viên — tài khoản chính (admin) của khách tạo tài khoản con (không phân quyền riêng từng người).
  * Cùng bố cục nghiệp vụ với Hỗ trợ & sự cố: hàng trên có tab lọc + ô tìm + nút thêm, khung bảng nhân viên, lưu ý ở footer.
  */
 export default function StaffPage() {
   const { t } = useI18n();
   const list = useStaffList();
-  const permissions = useAssignablePermissions();
   const update = useUpdateStaff();
   const [dialog, setDialog] = useState<Dialog>();
   const [filter, setFilter] = useState<StaffFilter>('all');
   const [query, setQuery] = useState('');
   const close = () => setDialog(undefined);
 
-  const descriptions = useMemo(() => new Map(permissions.data?.map(p => [p.code, p.description])), [permissions.data]);
-  const describe = (code: string) => t(descriptions.get(code) ?? code);
   const all = list.data ?? [];
   const stats = staffStats(all);
   const counts: Record<StaffFilter, number> = { all: stats.total, active: stats.active, locked: stats.locked };
@@ -52,7 +49,7 @@ export default function StaffPage() {
 
   return (
     <>
-      <PageHeader title="Tài khoản nhân viên" description="Tạo tài khoản đăng nhập riêng cho nhân viên và chọn chức năng từng người được dùng." />
+      <PageHeader title="Tài khoản nhân viên" description="Tạo tài khoản đăng nhập riêng cho nhân viên. Nhân viên dùng mọi chức năng nhưng chỉ thấy đơn do mình tạo." />
 
       {list.isError ? (
         <p className={cx(ws.box, ws.note)}>
@@ -103,7 +100,6 @@ export default function StaffPage() {
                       <th>{t('Họ tên')}</th>
                       <th style={{ width: 140 }}>{t('Tên đăng nhập')}</th>
                       <th style={{ width: 180 }}>{t('SĐT / email')}</th>
-                      <th>{t('Quyền')}</th>
                       <th style={{ width: 120 }}>{t('Trạng thái')}</th>
                       <th style={{ width: 210 }}>{t('Thao tác')}</th>
                     </tr>
@@ -117,13 +113,6 @@ export default function StaffPage() {
                           {[s.phone, s.phone2, s.email, s.email2].some(Boolean)
                             ? [[s.phone, s.phone2], [s.email, s.email2]].map(pair => pair.filter(Boolean).join(' · ')).filter(Boolean).map(v => <div key={v}>{v}</div>)
                             : '—'}
-                        </td>
-                        <td>
-                          {s.permissions.length
-                            ? grantedGroups(s.permissions, describe).map(g => (
-                                <div key={g.label}><span className={styles.group}>{t(g.label)}:</span> {g.items.join(', ')}</div>
-                              ))
-                            : <span className={styles.muted}>{t('Chưa cấp quyền')}</span>}
                         </td>
                         <td className={s.active ? styles.active : styles.locked}>{t(s.active ? 'Đang hoạt động' : 'Đã khóa')}</td>
                         <td>
@@ -145,8 +134,7 @@ export default function StaffPage() {
           {/* Lưu ý */}
           <footer className={ws.footer}>
             <span>{t('Đã dùng')}: <b>{stats.total}/{MAX_STAFF}</b> {t('tài khoản')}</span>
-            <span>{t('Nhân viên chỉ thấy đơn do mình tạo, trừ khi được cấp "Xem toàn bộ đơn".')}</span>
-            <span>{t('Mọi nhân viên luôn dùng được Hỗ trợ & sự cố và Thông báo.')}</span>
+            <span>{t('Nhân viên chỉ thấy đơn do mình tạo, bạn thấy đơn của mọi nhân viên.')}</span>
             <span>{t('Nhân viên không tự đổi mật khẩu — bạn đặt lại giúp khi cần.')}</span>
           </footer>
         </>

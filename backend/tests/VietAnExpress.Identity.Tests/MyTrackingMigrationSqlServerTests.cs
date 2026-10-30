@@ -56,11 +56,38 @@ public class MyTrackingMigrationSqlServerTests
             await using var second = new IdentityDbContext(options);
             var config = JsonSerializer.SerializeToElement(MyTrackingStorageTests.FullConfigV2());
             var results = await Task.WhenAll(
-                new SaveMyTrackingHandler(first, fixture.Customers.Object, fixture.CurrentUser.Object, fixture.Images).Handle(new SaveMyTrackingCommand(config), Ct),
-                new SaveMyTrackingHandler(second, fixture.Customers.Object, fixture.CurrentUser.Object, fixture.Images).Handle(new SaveMyTrackingCommand(config), Ct));
+                new SaveMyTrackingHandler(first, fixture.Customers.Object, fixture.CurrentUser.Object, fixture.Images, fixture.Clock).Handle(new SaveMyTrackingCommand(config), Ct),
+                new SaveMyTrackingHandler(second, fixture.Customers.Object, fixture.CurrentUser.Object, fixture.Images, fixture.Clock).Handle(new SaveMyTrackingCommand(config), Ct));
             Assert.All(results, result => Assert.True(result.IsSuccess, result.Error.Message));
             Assert.Equal(1, await db.MyTrackingPages.CountAsync(Ct));
             Assert.Equal(2, await db.MyTrackingBanners.CountAsync(Ct));
+        });
+    }
+
+    [Fact(Skip = "Set VIETAN_TEST_SQLSERVER to test on a disposable SQL Server database", SkipUnless = nameof(SqlServerAvailable))]
+    public async Task Brand_contacts_and_logo_are_saved_to_TCustomer_and_TCommonFile_like_the_old_system()
+    {
+        await WithDatabase(async db =>
+        {
+            await using var fixture = new IdentityFixture();
+            var config = MyTrackingStorageTests.FullConfigV2();
+            config["brand"]!["logo"] = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jWZkAAAAASUVORK5CYII=";
+            var saved = await new SaveMyTrackingHandler(db, fixture.Customers.Object, fixture.CurrentUser.Object, fixture.Images, fixture.Clock)
+                .Handle(new SaveMyTrackingCommand(JsonSerializer.SerializeToElement(config)), Ct);
+            Assert.True(saved.IsSuccess, saved.Error.Message);
+            var id = IdentityFixture.CustomerId;
+            Assert.Equal("0901234567", await db.Database.SqlQuery<string>($"SELECT CongLienLac_Hotline AS [Value] FROM dbo.TCustomer WHERE CustomerID={id}").SingleAsync(Ct));
+            Assert.Equal("https://sgb.vn", await db.Database.SqlQuery<string>($"SELECT Bank AS [Value] FROM dbo.TCustomer WHERE CustomerID={id}").SingleAsync(Ct));
+            Assert.Equal("#1e6b2c", await db.Database.SqlQuery<string>($"SELECT Column1 AS [Value] FROM dbo.TCustomer WHERE CustomerID={id}").SingleAsync(Ct));
+            // Địa chỉ người gửi không đổi; logo = dòng TCommonFile mới.
+            Assert.Equal(IdentityFixture.BrandAddress, await db.Database.SqlQuery<string>($"SELECT Address1 AS [Value] FROM dbo.TCustomer WHERE CustomerID={id}").SingleAsync(Ct));
+            var fileId = await db.Database.SqlQuery<long>($"SELECT Logo_ShippingMark AS [Value] FROM dbo.TCustomer WHERE CustomerID={id}").SingleAsync(Ct);
+            Assert.Equal("/Upload/Logo_ShippingMark/", await db.Database.SqlQuery<string>($"SELECT ServerFilePath AS [Value] FROM dbo.TCommonFile WHERE CommonFileID={fileId}").SingleAsync(Ct));
+
+            // Khách chưa khai cột thương hiệu nào vẫn đọc ra (không phải null) nhờ cột Staff_ID.
+            await db.Database.ExecuteSqlRawAsync("UPDATE dbo.TCustomer SET Address1=NULL, Phone=NULL, Bank=NULL, Column1=NULL, Column2=NULL, Logo_ShippingMark=NULL, CongLienLac_Hotline=NULL, CongLienLac_WhatsApp=NULL, CongLienLac_Email=NULL", Ct);
+            db.ChangeTracker.Clear();
+            Assert.NotNull((await db.MyTrackingBrandAsync(id, Ct)).Brand);
         });
     }
 
@@ -104,20 +131,12 @@ public class MyTrackingMigrationSqlServerTests
             // Zalo / WhatsApp / X portal ghi theo cách cũ đã sang ô của hệ thống cũ (_02 / _04 / CongTruyenThong_05).
             Assert.Equal(("0901234567", "+84901234567", null), (page.CongTinNhan02, page.CongTinNhan04, page.CongTinNhan01));
             Assert.Equal(("https://facebook.com/example", "https://x.com/example"), (page.CongTruyenThong01, page.CongTruyenThong05));
-            var brand = JsonNode.Parse(page.ConfigJson)!["brand"]!;
-            Assert.Equal("Công ty kiểm thử", brand["companyName"]!.GetValue<string>());
             foreach (var (table, column) in new[] { ("TCustomer_MyTracking", "Hinh_Nen"), ("TCustomer_MyTracking", "Da_Xuat_Ban"), ("TCustomer_MyTracking", "Duong_Dan"), ("TCustomer_MyTracking", "Cau_Hinh_Bo_Sung"),
                 ("TCustomer_MyTracking", "CreateDate"), ("TCustomer_MyTracking", "ModifyDate"), ("TCustomer_MyTracking_Banner", "Cau_Hinh_Bo_Sung") })
                 Assert.Equal(0, await db.Database.SqlQuery<int>(
                     $"SELECT COUNT(*) AS [Value] FROM sys.columns WHERE object_id = OBJECT_ID({"dbo." + table}) AND name = {column}").SingleAsync(Ct));
             Assert.Equal(0, await db.Database.SqlQuery<int>($"SELECT COUNT(*) AS [Value] FROM sys.tables WHERE name = 'MyTrackingCauHinh'").SingleAsync(Ct));
             Assert.Equal("#abcdef", await db.Database.SqlQuery<string>($"SELECT Color_01 AS [Value] FROM dbo.TCustomer_MyTracking WHERE CustomerID=99").SingleAsync(Ct));
-
-            // Đọc lại phải dùng cột cũ: thay đổi từ phần mềm cũ xuất hiện ở cấu hình portal.
-            await db.Database.ExecuteSqlRawAsync("UPDATE dbo.TCustomer_MyTracking SET CompanyName=N'Changed by legacy' WHERE CustomerID=42", Ct);
-            db.ChangeTracker.Clear();
-            var reread = await db.MyTrackingPages.Include(p => p.Banners).SingleAsync(p => p.CustomerId == 42, Ct);
-            Assert.Equal("Changed by legacy", JsonNode.Parse(reread.ConfigJson)!["brand"]!["companyName"]!.GetValue<string>());
 
         });
     }
@@ -189,9 +208,20 @@ public class MyTrackingMigrationSqlServerTests
             await db.Database.ExecuteSqlRawAsync($"""
                 CREATE TABLE dbo.TCustomer (
                     CustomerID bigint NOT NULL PRIMARY KEY, Login_UserName nvarchar(50) NULL, Login_Password nvarchar(150) NULL,
-                    CustomerTypeID int NULL, ViewLinkTracking int NULL);
-                INSERT dbo.TCustomer (CustomerID, Login_UserName, Login_Password, ViewLinkTracking)
-                VALUES ({IdentityFixture.CustomerId}, N'{IdentityFixture.UserName}', N'{IdentityFixture.Password}', 1);
+                    CustomerTypeID int NULL, ViewLinkTracking int NULL,
+                    -- Thương hiệu MyTracking (MyTrackingBrand), đúng kiểu / độ dài DDL gốc.
+                    Staff_ID int NOT NULL, Address1 nvarchar(250) NULL, Phone nvarchar(150) NULL, Bank nvarchar(150) NULL,
+                    Logo_ShippingMark bigint NULL, Column1 nvarchar(500) NULL, Column2 nvarchar(500) NULL,
+                    CongLienLac_Hotline nvarchar(100) NULL, CongLienLac_Zalo nvarchar(200) NULL, CongLienLac_Messenger nvarchar(200) NULL,
+                    CongLienLac_WhatsApp nvarchar(200) NULL, CongLienLac_WeChat nvarchar(200) NULL, CongLienLac_Telegram nvarchar(200) NULL,
+                    CongLienLac_Viber nvarchar(200) NULL, CongLienLac_Line nvarchar(200) NULL, CongLienLac_Snapchat nvarchar(200) NULL,
+                    CongLienLac_KakaoTalk nvarchar(200) NULL, CongLienLac_Signal nvarchar(200) NULL, CongLienLac_Email nvarchar(200) NULL);
+                INSERT dbo.TCustomer (CustomerID, Login_UserName, Login_Password, ViewLinkTracking, Staff_ID, Address1, Phone)
+                VALUES ({IdentityFixture.CustomerId}, N'{IdentityFixture.UserName}', N'{IdentityFixture.Password}', 1, 0,
+                    N'{IdentityFixture.BrandAddress}', N'{IdentityFixture.BrandPhone}');
+                CREATE TABLE dbo.TCommonFile (
+                    CommonFileID bigint IDENTITY(1,1) NOT NULL PRIMARY KEY, RealFileName nvarchar(150) NOT NULL, ServerFileName nvarchar(150) NOT NULL,
+                    ServerFilePath nvarchar(1000) NULL, FileSize int NOT NULL, MimeType varchar(20) NULL, RegDate datetime NOT NULL DEFAULT (getdate()));
                 """, Ct);
             await test(db);
         }

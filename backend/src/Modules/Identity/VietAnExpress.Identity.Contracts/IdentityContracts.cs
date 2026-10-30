@@ -1,6 +1,6 @@
 namespace VietAnExpress.Identity.Contracts;
 
-/// <summary>Quyền chỉ tài khoản chính (admin) của khách có — không cấp được cho tài khoản con.</summary>
+/// <summary>Quyền của khách. Tài khoản con có mọi quyền của khách trừ <see cref="AdminOnly"/> (không phân quyền riêng từng người).</summary>
 public static class IdentityPermissions
 {
     public const string ManageStaff = "account.staff";
@@ -16,8 +16,6 @@ public static class IdentityPermissions
     /// <summary>Xem, trả lời, đổi trạng thái yêu cầu hỗ trợ &amp; sự cố của mọi khách — chỉ quản trị Việt An (vai trò va_admin).</summary>
     public const string AdminSupportRequests = "admin.troubles";
 
+    /// <summary>Chỉ tài khoản chính có: quản lý tài khoản con, MyTracking, tự đổi mật khẩu.</summary>
     public static readonly IReadOnlySet<string> AdminOnly = new HashSet<string>(StringComparer.Ordinal) { ManageStaff, MyTracking, ChangePassword };
-
-    /// <summary>Tài khoản con luôn có (không cần tài khoản chính chọn, không hiện trong danh sách quyền để chọn).</summary>
-    public static readonly IReadOnlySet<string> StaffAlways = new HashSet<string>(StringComparer.Ordinal) { Notifications, SupportRequests };
 }

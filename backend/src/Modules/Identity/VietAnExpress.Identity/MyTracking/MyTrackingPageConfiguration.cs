@@ -17,22 +17,14 @@ internal sealed class MyTrackingPageConfiguration : IEntityTypeConfiguration<MyT
         b.Property(x => x.CustomerId).HasColumnName("CustomerID");
         b.Property(x => x.Title).HasColumnName("UuDai_TieuDe").HasMaxLength(MyTrackingChannels.ValueMaxLength);
         b.Property(x => x.Description).HasColumnName("UuDai_NoiDung").HasMaxLength(MyTrackingChannels.ValueMaxLength);
-        b.Property(x => x.CompanyName).HasColumnName("CompanyName").HasMaxLength(MyTrackingChannels.ValueMaxLength);
-        b.Property(x => x.Address).HasColumnName("Address").HasMaxLength(MyTrackingChannels.ValueMaxLength);
-        b.Property(x => x.Phone).HasColumnName("Tel").HasMaxLength(MyTrackingChannels.ValueMaxLength);
-        b.Property(x => x.Logo).HasColumnName("Logo").HasMaxLength(MyTrackingChannels.ValueMaxLength);
-        // Cổng liên lạc / mạng xã hội: 15 + 15 ô có sẵn, ứng dụng nào ở ô nào xem MyTrackingChannels.
+        // Mạng xã hội: 15 ô CongTruyenThong có sẵn, ứng dụng nào ở ô nào xem MyTrackingChannels.
+        // CongTinNhan_* chỉ đọc (dữ liệu cũ) — cổng liên lạc ghi ở TCustomer.CongLienLac_* (MyTrackingBrand).
         for (var i = 1; i <= MyTrackingChannels.SlotCount; i++)
         {
             b.Property<string?>($"CongTinNhan{i:00}").HasColumnName($"CongTinNhan_{i:00}").HasMaxLength(MyTrackingChannels.ValueMaxLength);
             b.Property<string?>($"CongTruyenThong{i:00}").HasColumnName($"CongTruyenThong_{i:00}").HasMaxLength(MyTrackingChannels.ValueMaxLength);
         }
-        b.Property(x => x.Email).HasColumnName("Email").HasMaxLength(MyTrackingChannels.ValueMaxLength);
-        b.Property(x => x.Website).HasColumnName("Website").HasMaxLength(MyTrackingChannels.ValueMaxLength);
-        b.Property(x => x.Color01).HasColumnName("Color_01").HasMaxLength(MyTrackingChannels.ValueMaxLength);
-        b.Property(x => x.Color02).HasColumnName("Color_02").HasMaxLength(MyTrackingChannels.ValueMaxLength);
         b.Property(x => x.Background).HasColumnName("Str1").HasMaxLength(MyTrackingChannels.ValueMaxLength);
-        b.Ignore(x => x.ConfigJson);
 
         b.HasMany(x => x.Banners).WithOne().HasForeignKey(x => x.MyTrackingId).OnDelete(DeleteBehavior.ClientCascade);
     }

@@ -56,6 +56,8 @@ export const mytracking: Readonly<Record<string, string>> = {
   'Chưa chọn mục nào — phần này sẽ ẩn trên trang tracking.': 'Nothing selected — this section is hidden on the tracking page.',
   'Thêm mục ({n}/{max})': 'Add item ({n}/{max})',
   'Địa chỉ hiển thị trên trang tracking': 'Address shown on the tracking page',
+  'Lấy theo hồ sơ khách hàng (thông tin người gửi trên bill), không sửa ở đây. Cần đổi vui lòng gửi yêu cầu hỗ trợ.': 'Taken from your customer profile (sender details on bills), not editable here. Please send a support request to change it.',
+  'Tối đa 150 ký tự': 'At most 150 characters',
   'Website trang home': 'Home page website',
   'Nút Home cạnh nút Track và logo trên trang tracking sẽ mở website này': 'The Home button next to Track and the logo on the tracking page open this website',
   'Màu thương hiệu': 'Brand color',

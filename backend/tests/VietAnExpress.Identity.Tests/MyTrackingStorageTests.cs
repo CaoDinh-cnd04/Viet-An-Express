@@ -47,7 +47,7 @@ public class MyTrackingStorageTests
             ["companyName"] = "SGB EXPRESS HN", ["address"] = new string('a', 250), ["phone"] = "0901234567",
             ["logo"] = "https://example.test/logo.png",
             ["website"] = "https://sgb.vn", ["primaryColor"] = "#1e6b2c", ["secondaryColor"] = "#e0412f",
-            // Theo thứ tự ô (trang hiển thị theo thứ tự ô của hệ thống cũ).
+            // Theo thứ tự cột (trang hiển thị theo thứ tự cột của hệ thống cũ).
             ["contacts"] = new JsonArray(
                 new JsonObject { ["type"] = "hotline", ["value"] = "0901234567" },
                 new JsonObject { ["type"] = "whatsapp", ["value"] = "+84901234567" },
@@ -59,43 +59,60 @@ public class MyTrackingStorageTests
         return config;
     }
 
+    /// <summary>Cấu hình đọc lại: địa chỉ / điện thoại theo hồ sơ khách (không sửa ở MyTracking), logo ngoài thư mục Logo_ShippingMark không lưu.</summary>
+    private static JsonObject Expected(JsonObject config, string logo = "")
+    {
+        var expected = config.DeepClone().AsObject();
+        expected["brand"]!["address"] = IdentityFixture.BrandAddress;
+        expected["brand"]!["phone"] = IdentityFixture.BrandPhone;
+        expected["brand"]!["logo"] = logo;
+        return expected;
+    }
+
+    private static async Task<JsonNode> ReadAsync(IdentityFixture f)
+    {
+        f.Db.ChangeTracker.Clear();
+        return JsonNode.Parse((await f.GetMyTracking.Handle(new GetMyTrackingQuery(), Ct)).Value.Config!.Value.Json)!;
+    }
+
+    private static async Task<bool> SaveAsync(IdentityFixture f, JsonObject config) =>
+        (await f.SaveMyTracking.Handle(new SaveMyTrackingCommand(JsonSerializer.SerializeToElement(config)), Ct)).IsSuccess;
+
     [Fact]
-    public async Task Channels_colors_and_website_are_written_to_the_legacy_columns()
+    public async Task Brand_and_contacts_are_written_to_TCustomer_like_the_old_system()
     {
         await using var f = new IdentityFixture();
         var config = FullConfigV2();
-        Assert.True((await f.SaveMyTracking.Handle(new SaveMyTrackingCommand(JsonSerializer.SerializeToElement(config)), Ct)).IsSuccess);
+        Assert.True(await SaveAsync(f, config));
         f.Db.ChangeTracker.Clear();
-        var page = await f.Db.MyTrackingPages.Include(p => p.Banners).SingleAsync(Ct);
-        // Ô cố định theo ứng dụng: CongTinNhan_01 Hotline, _04 WhatsApp; Email cột riêng; CongTruyenThong_01 Facebook, _05 Twitter.
-        Assert.Equal("0901234567", page.CongTinNhan01);
-        Assert.Null(page.CongTinNhan02);
-        Assert.Equal("+84901234567", page.CongTinNhan04);
-        Assert.Equal("cs@sgb.vn", page.Email);
-        Assert.Equal("https://facebook.com/example", page.CongTruyenThong01);
-        Assert.Equal("https://x.com/example", page.CongTruyenThong05);
-        Assert.Equal(("#1e6b2c", "#e0412f", "https://sgb.vn"), (page.Color01, page.Color02, page.Website));
-        // Đọc lại đủ cấu hình từ các cột.
-        Assert.True(JsonNode.DeepEquals(config, JsonNode.Parse(page.ConfigJson)));
+        var brand = await f.Db.MyTrackingBrands.SingleAsync(b => b.CustomerId == IdentityFixture.CustomerId, Ct);
+        // Cổng liên lạc ở TCustomer.CongLienLac_*; màu Column1 / Column2; website ở cột Bank (nút Home của trang cũ).
+        Assert.Equal(("0901234567", "+84901234567", "cs@sgb.vn"), (brand["CongLienLac_Hotline"], brand["CongLienLac_WhatsApp"], brand["CongLienLac_Email"]));
+        Assert.Null(brand["CongLienLac_Zalo"]);
+        Assert.Equal(("#1e6b2c", "#e0412f", "https://sgb.vn"), (brand.Color01, brand.Color02, brand.Website));
+        // Địa chỉ / điện thoại là thông tin người gửi trên bill — MyTracking không sửa.
+        Assert.Equal((IdentityFixture.BrandAddress, IdentityFixture.BrandPhone), (brand.Address, brand.Phone));
+        // Mạng xã hội vẫn ở TCustomer_MyTracking (MangXaHoi của trang cũ); CongTinNhan_* không ghi nữa.
+        var page = await f.Db.MyTrackingPages.SingleAsync(Ct);
+        Assert.Equal(("https://facebook.com/example", "https://x.com/example"), (page.CongTruyenThong01, page.CongTruyenThong05));
+        Assert.Null(page.CongTinNhan01);
+        Assert.True(JsonNode.DeepEquals(Expected(config), await ReadAsync(f)));
     }
 
     [Fact]
-    public async Task Old_system_rows_are_read_from_the_slot_columns()
+    public async Task Old_system_TCustomer_values_show_without_a_MyTracking_row()
     {
         await using var f = new IdentityFixture();
-        await f.SaveMyTracking.Handle(new SaveMyTrackingCommand(JsonSerializer.SerializeToElement(FullConfigV2())), Ct);
-        // Giả lập CS sửa thẳng các ô ở phần mềm cũ.
-        var row = f.Db.Entry(await f.Db.MyTrackingPages.SingleAsync(Ct));
-        foreach (var (name, value) in new (string, string?)[]
-        {
-            ("CongTinNhan02", "0909111222"), ("CongTinNhan04", null), ("Email", null),
-            ("CongTruyenThong01", null), ("CongTruyenThong05", null), ("CongTruyenThong03", "https://youtube.com/@sgb")
-        }) row.Property(name).CurrentValue = value;
+        // Giả lập dữ liệu khách nhập ở phần mềm cũ: Zalo + ô Signal (trang cũ hiện bằng icon Instagram).
+        var brand = await f.Db.MyTrackingBrands.SingleAsync(Ct);
+        brand["CongLienLac_Zalo"] = "+84971544822";
+        brand["CongLienLac_Signal"] = "sgb.express";
         await f.Db.SaveChangesAsync(Ct);
-        f.Db.ChangeTracker.Clear();
-        var brand = JsonNode.Parse((await f.Db.MyTrackingPages.SingleAsync(Ct)).ConfigJson)!["brand"]!;
-        Assert.Equal(@"[{""type"":""hotline"",""value"":""0901234567""},{""type"":""zalo"",""value"":""0909111222""}]", brand["contacts"]!.ToJsonString());
-        Assert.Equal(@"[{""type"":""youtube"",""value"":""https://youtube.com/@sgb""}]", brand["socials"]!.ToJsonString());
+        var expected = JsonNode.Parse(@"[{""type"":""zalo"",""value"":""+84971544822""},{""type"":""instagram"",""value"":""sgb.express""}]");
+        Assert.True(JsonNode.DeepEquals(expected, (await ReadAsync(f))["brand"]!["contacts"]));
+        Assert.Empty(await f.Db.MyTrackingPages.ToListAsync(Ct));
+        var published = await f.GetCustomerMyTracking.Handle(new GetCustomerMyTrackingQuery("SaigonbayHN"), Ct);
+        Assert.True(JsonNode.DeepEquals(expected, JsonNode.Parse(published.Value.Config.Json)!["brand"]!["contacts"]));
     }
 
     [Fact]
@@ -103,20 +120,18 @@ public class MyTrackingStorageTests
     {
         await using var f = new IdentityFixture();
         var config = FullConfigV2();
-        var result = await f.SaveMyTracking.Handle(new SaveMyTrackingCommand(JsonSerializer.SerializeToElement(config)), Ct);
-        Assert.True(result.IsSuccess);
+        Assert.True(await SaveAsync(f, config));
         f.Db.ChangeTracker.Clear();
         var page = await f.Db.MyTrackingPages.Include(p => p.Banners).SingleAsync(Ct);
-        Assert.Equal("SGB EXPRESS HN", page.CompanyName);
         Assert.Equal(2, await f.Db.MyTrackingBanners.CountAsync(Ct));
         Assert.All(page.Banners, b => { Assert.Equal(page.Id, b.MyTrackingId); Assert.Equal(page.CustomerId, b.CustomerId); });
-        Assert.True(JsonNode.DeepEquals(config, JsonNode.Parse(page.ConfigJson)));
+        Assert.True(JsonNode.DeepEquals(Expected(config), await ReadAsync(f)));
         var published = await f.GetCustomerMyTracking.Handle(new GetCustomerMyTrackingQuery("SaigonbayHN"), Ct);
-        Assert.True(JsonNode.DeepEquals(config, JsonNode.Parse(published.Value.Config.Json)));
+        Assert.True(JsonNode.DeepEquals(Expected(config), JsonNode.Parse(published.Value.Config.Json)));
     }
 
     [Fact]
-    public async Task Uploads_become_files_while_SQL_keeps_legacy_paths_and_readback_urls_can_be_saved_again()
+    public async Task Uploaded_logo_becomes_a_TCommonFile_row_and_saving_the_readback_again_adds_nothing()
     {
         await using var f = new IdentityFixture();
         var config = FullConfigV2();
@@ -127,41 +142,50 @@ public class MyTrackingStorageTests
         config["images"]![0]!["src"] = source;
         var result = await f.SaveMyTracking.Handle(new SaveMyTrackingCommand(JsonSerializer.SerializeToElement(config)), Ct);
         Assert.True(result.IsSuccess, result.Error.Message);
+        f.Db.ChangeTracker.Clear();
         var page = await f.Db.MyTrackingPages.Include(p => p.Banners).SingleAsync(Ct);
         Assert.StartsWith("/Upload/Banner/", page.Background);
-        Assert.StartsWith("/Upload/Logo_ShippingMark/", page.Logo);
-        Assert.InRange(page.Background!.Length, 1, 250);
         Assert.Equal(page.Background, page.Banners.First().Source);
-        var image = f.Images.Find("Banner", Path.GetFileName(page.Background));
-        Assert.NotNull(image);
-        Assert.Equal(bytes, await File.ReadAllBytesAsync(image.Value.Path, Ct));
-        var display = JsonNode.Parse(result.Value.Config!.Value.Json)!;
-        Assert.StartsWith("https://portal.test" + MyTrackingImageStore.ApiPath, display["background"]!.GetValue<string>());
-        var savedPath = page.Background;
-        Assert.True((await f.SaveMyTracking.Handle(new SaveMyTrackingCommand(JsonSerializer.SerializeToElement(display)), Ct)).IsSuccess);
-        Assert.Equal(savedPath, (await f.Db.MyTrackingPages.SingleAsync(Ct)).Background);
+        Assert.Equal(bytes, await File.ReadAllBytesAsync(f.Images.Find("Banner", Path.GetFileName(page.Background!))!.Value.Path, Ct));
+        // Logo: tệp trong Upload/Logo_ShippingMark + 1 dòng TCommonFile, TCustomer.Logo_ShippingMark trỏ tới dòng đó (như trang cũ).
+        var file = await f.Db.CommonFiles.SingleAsync(Ct);
+        Assert.Equal((file.Id, bytes.Length, "image/png"), ((await f.Db.MyTrackingBrands.SingleAsync(Ct)).LogoFileId!.Value, file.FileSize, file.MimeType));
+        Assert.Equal(file.ServerFileName, file.RealFileName);
+        Assert.NotNull(f.Images.Find("Logo_ShippingMark", file.ServerFileName));
+        var display = JsonNode.Parse(result.Value.Config!.Value.Json)!.AsObject();
+        Assert.StartsWith("https://portal.test" + MyTrackingImageStore.ApiPath, display["brand"]!["logo"]!.GetValue<string>());
+        Assert.True(await SaveAsync(f, display));
+        f.Db.ChangeTracker.Clear();
+        Assert.Equal(1, await f.Db.CommonFiles.CountAsync(Ct));
+        Assert.Equal(page.Background, (await f.Db.MyTrackingPages.SingleAsync(Ct)).Background);
         Assert.Null(f.Images.Find("Banner", "../secret.png"));
         Assert.Null(f.Images.Find("../Banner", "test.png"));
+        // Xóa logo → bỏ liên kết (giữ dòng TCommonFile vì bill in trước đó có thể còn dùng).
+        display["brand"]!["logo"] = "";
+        Assert.True(await SaveAsync(f, display));
+        f.Db.ChangeTracker.Clear();
+        Assert.Null((await f.Db.MyTrackingBrands.SingleAsync(Ct)).LogoFileId);
     }
 
     [Theory]
     [InlineData("description")]
-    [InlineData("address")]
     [InlineData("linkUrl")]
     [InlineData("src")]
     [InlineData("background")]
     [InlineData("logo")]
-    public async Task Values_above_250_do_not_modify_existing_data(string key)
+    [InlineData("website")]
+    public async Task Values_above_column_length_do_not_modify_existing_data(string key)
     {
         await using var f = new IdentityFixture();
         var config = FullConfigV2();
-        Assert.True((await f.SaveMyTracking.Handle(new SaveMyTrackingCommand(JsonSerializer.SerializeToElement(config)), Ct)).IsSuccess);
-        var before = (await f.Db.MyTrackingPages.SingleAsync(Ct)).ConfigJson;
-        var target = key is "address" or "logo" ? config["brand"]!
+        Assert.True(await SaveAsync(f, config));
+        var before = (await ReadAsync(f)).ToJsonString();
+        var target = key is "logo" or "website" ? config["brand"]!
             : key is "src" or "linkUrl" ? config["images"]![0]! : config;
-        target[key] = new string('x', 251);
-        Assert.False((await f.SaveMyTracking.Handle(new SaveMyTrackingCommand(JsonSerializer.SerializeToElement(config)), Ct)).IsSuccess);
-        Assert.Equal(before, (await f.Db.MyTrackingPages.SingleAsync(Ct)).ConfigJson);
+        // website: cột Bank nvarchar(150); còn lại nvarchar(250).
+        target[key] = new string('x', key == "website" ? 151 : 251);
+        Assert.False(await SaveAsync(f, config));
+        Assert.Equal(before, (await ReadAsync(f)).ToJsonString());
     }
 
     [Fact]
@@ -170,14 +194,16 @@ public class MyTrackingStorageTests
         await using var f = new IdentityFixture();
         var config = FullConfigV2();
         config["background"] = "https://mytracking.top/Upload/Banner/legacy.jpg";
+        // Logo cũ không có tệp trên máy chủ portal → giữ nguyên logo đang dùng (không tạo TCommonFile).
         config["brand"]!["logo"] = "https://mytracking.top/upload/Logo_ShippingMark/logo.png";
-        Assert.True((await f.SaveMyTracking.Handle(new SaveMyTrackingCommand(JsonSerializer.SerializeToElement(config)), Ct)).IsSuccess);
+        Assert.True(await SaveAsync(f, config));
+        Assert.Empty(await f.Db.CommonFiles.ToListAsync(Ct));
+        f.Db.ChangeTracker.Clear();
         var page = await f.Db.MyTrackingPages.Include(p => p.Banners).SingleAsync(Ct);
         Assert.Equal("/Upload/Banner/legacy.jpg", page.Background);
-        Assert.Equal("/upload/Logo_ShippingMark/logo.png", page.Logo);
         page.Banners.Add(new MyTrackingBanner(page.CustomerId, 2, new JsonObject()));
         await f.Db.SaveChangesAsync(Ct);
-        Assert.Equal(2, JsonNode.Parse(page.ConfigJson)!["images"]!.AsArray().Count);
+        Assert.Equal(2, page.Images().Count);
         Assert.Equal(3, await f.Db.MyTrackingBanners.CountAsync(Ct));
     }
 
@@ -187,10 +213,11 @@ public class MyTrackingStorageTests
         await using var f = new IdentityFixture();
         var config = FullConfigV2();
         config["background"] = "data:image/png;base64,bm90LWFuLWltYWdl";
-        Assert.False((await f.SaveMyTracking.Handle(new SaveMyTrackingCommand(JsonSerializer.SerializeToElement(config)), Ct)).IsSuccess);
+        Assert.False(await SaveAsync(f, config));
         config["background"] = "data:image/png;base64,invalid";
-        Assert.False((await f.SaveMyTracking.Handle(new SaveMyTrackingCommand(JsonSerializer.SerializeToElement(config)), Ct)).IsSuccess);
+        Assert.False(await SaveAsync(f, config));
         Assert.Empty(await f.Db.MyTrackingPages.ToListAsync(Ct));
+        Assert.Null((await f.Db.MyTrackingBrands.AsNoTracking().SingleAsync(Ct)).Website);
     }
 
     [Fact]
@@ -205,8 +232,7 @@ public class MyTrackingStorageTests
         config["brand"]!["companyName"] = "Tên khách tự sửa";
         var saved = await f.SaveMyTracking.Handle(new SaveMyTrackingCommand(JsonSerializer.SerializeToElement(config)), Ct);
         Assert.Equal("CÔNG TY TNHH SGB EXPRESS", saved.Value.CompanyName);
-        f.Db.ChangeTracker.Clear();
-        Assert.Equal("CÔNG TY TNHH SGB EXPRESS", (await f.Db.MyTrackingPages.SingleAsync(Ct)).CompanyName);
+        Assert.Equal("CÔNG TY TNHH SGB EXPRESS", (await ReadAsync(f))["brand"]!["companyName"]!.GetValue<string>());
         var published = await f.GetCustomerMyTracking.Handle(new GetCustomerMyTrackingQuery("SaigonbayHN"), Ct);
         Assert.Equal("CÔNG TY TNHH SGB EXPRESS", JsonNode.Parse(published.Value.Config.Json)!["brand"]!["companyName"]!.GetValue<string>());
     }
@@ -216,16 +242,16 @@ public class MyTrackingStorageTests
     {
         await using var f = new IdentityFixture();
         var config = FullConfigV2();
-        await f.SaveMyTracking.Handle(new SaveMyTrackingCommand(JsonSerializer.SerializeToElement(config)), Ct);
+        await SaveAsync(f, config);
         config["images"]!.AsArray().RemoveAt(0);
         f.Db.ChangeTracker.Clear();
-        await f.SaveMyTracking.Handle(new SaveMyTrackingCommand(JsonSerializer.SerializeToElement(config)), Ct);
+        await SaveAsync(f, config);
         f.Db.ChangeTracker.Clear();
         Assert.Equal("a", (await f.Db.MyTrackingBanners.SingleAsync(Ct)).ImageKey);
         config["images"] = new JsonArray();
-        await f.SaveMyTracking.Handle(new SaveMyTrackingCommand(JsonSerializer.SerializeToElement(config)), Ct);
+        await SaveAsync(f, config);
         f.Db.ChangeTracker.Clear();
         Assert.Empty(await f.Db.MyTrackingBanners.ToListAsync(Ct));
-        Assert.True(JsonNode.DeepEquals(config, JsonNode.Parse((await f.Db.MyTrackingPages.SingleAsync(Ct)).ConfigJson)));
+        Assert.True(JsonNode.DeepEquals(Expected(config), await ReadAsync(f)));
     }
 }

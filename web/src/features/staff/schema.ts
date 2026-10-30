@@ -10,8 +10,7 @@ const profile = {
   email: z.union([z.literal(''), z.email('Email không hợp lệ').max(150)]),
   phone: z.string().trim().max(30, 'Số điện thoại tối đa 30 ký tự').refine(v => !v || isPhone(v), PHONE_MESSAGE),
   phone2: z.string().trim().max(30, 'Số điện thoại tối đa 30 ký tự').refine(v => !v || isPhone(v), PHONE_MESSAGE),
-  email2: z.union([z.literal(''), z.email('Email không hợp lệ').max(150)]),
-  permissions: z.array(z.string())
+  email2: z.union([z.literal(''), z.email('Email không hợp lệ').max(150)])
 };
 
 export const staffSchema = z

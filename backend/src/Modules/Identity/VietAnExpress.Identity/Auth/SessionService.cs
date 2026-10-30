@@ -7,8 +7,8 @@ namespace VietAnExpress.Identity.Auth;
 
 /// <summary>
 /// Tạo phiên đăng nhập (access + refresh token) cho tài khoản chính của khách (dbo.TCustomer — admin) hoặc tài khoản con (nhân viên).
-/// Quyền khai báo trong code (các module, vai trò "customer") — admin nhận tất cả; tài khoản con chỉ nhận các quyền admin đã chọn
-/// (trong số <see cref="AssignablePermissions"/>).
+/// Quyền khai báo trong code (các module, vai trò "customer") — admin nhận tất cả; tài khoản con nhận mọi quyền
+/// trừ <see cref="IdentityPermissions.AdminOnly"/> (không phân quyền riêng từng người).
 /// </summary>
 internal sealed class SessionService(ITokenService tokens, ICustomersApi customers, IEnumerable<IPermissionProvider> permissionProviders)
 {
@@ -24,8 +24,7 @@ internal sealed class SessionService(ITokenService tokens, ICustomersApi custome
 
     // Tính 1 lần cho mỗi instance (danh sách quyền cố định trong code).
     private IReadOnlyList<string>? _permissions;
-    private IReadOnlyList<PermissionDefinition>? _assignable;
-    private HashSet<string>? _assignableCodes;
+    private IReadOnlyList<string>? _staffPermissions;
 
     /// <summary>Quyền của tài khoản chính (admin).</summary>
     public IReadOnlyList<string> Permissions => _permissions ??= _customerPermissions.Select(p => p.Code).ToList();
@@ -34,26 +33,9 @@ internal sealed class SessionService(ITokenService tokens, ICustomersApi custome
     public IReadOnlyList<string> MainPermissions(CustomerLogin login) =>
         login.MyTrackingAllowed ? Permissions : Permissions.Where(p => p != IdentityPermissions.MyTracking).ToList();
 
-    /// <summary>Quyền admin chọn được cho tài khoản con — mọi quyền của khách trừ <see cref="IdentityPermissions.AdminOnly"/> và quyền tài khoản con luôn có.</summary>
-    public IReadOnlyList<PermissionDefinition> AssignablePermissions =>
-        _assignable ??= _customerPermissions
-            .Where(p => !IdentityPermissions.AdminOnly.Contains(p.Code) && !IdentityPermissions.StaffAlways.Contains(p.Code)).ToList();
-
-    public bool IsAssignable(string code) =>
-        (_assignableCodes ??= AssignablePermissions.Select(p => p.Code).ToHashSet(StringComparer.Ordinal)).Contains(code.Trim());
-
-    /// <summary>Quyền tài khoản chính đã chọn cho tài khoản con (quyền đã lưu ∩ quyền chọn được) — trang quản lý nhân viên hiện và gửi lại đúng danh sách này.</summary>
-    public IReadOnlyList<string> GrantedPermissions(StaffAccount staff)
-    {
-        var granted = staff.PermissionList.ToHashSet(StringComparer.Ordinal);
-        return AssignablePermissions.Select(p => p.Code).Where(granted.Contains).ToList();
-    }
-
-    /// <summary>Quyền thực tế của tài khoản con khi đăng nhập: quyền đã chọn + quyền luôn có (vd gửi góp ý).</summary>
-    public IReadOnlyList<string> StaffPermissions(StaffAccount staff) =>
-        GrantedPermissions(staff)
-            .Concat(_customerPermissions.Select(p => p.Code).Where(IdentityPermissions.StaffAlways.Contains))
-            .ToList();
+    /// <summary>Quyền của tài khoản con: mọi quyền của khách trừ quyền chỉ tài khoản chính có.</summary>
+    public IReadOnlyList<string> StaffPermissions =>
+        _staffPermissions ??= Permissions.Where(p => !IdentityPermissions.AdminOnly.Contains(p)).ToList();
 
     /// <summary>Null nếu tài khoản không còn đăng nhập được (hồ sơ khách không còn / chưa có mật khẩu).</summary>
     /// <param name="authTime">Gia hạn phiên: lần nhập mật khẩu gốc (giữ giới hạn Jwt:MaxSessionDays); null = vừa nhập mật khẩu.</param>
@@ -107,7 +89,7 @@ internal sealed class SessionService(ITokenService tokens, ICustomersApi custome
         return new SessionUserDto(
             staff.CustomerId, staff.UserName, staff.FullName, AccountTypes.Staff,
             customer.Code, customer.CompanyName, staff.FullName, staff.Email,
-            AvatarUrl: null, DefaultBranch: null, StaffRoles, StaffPermissions(staff),
+            AvatarUrl: null, DefaultBranch: null, StaffRoles, StaffPermissions,
             Phone: staff.Phone, Address: customer.Address, TaxCode: customer.TaxCode, IsAdmin: false);
     }
 }

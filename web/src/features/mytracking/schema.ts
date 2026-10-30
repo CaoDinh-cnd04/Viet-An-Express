@@ -41,10 +41,11 @@ export const myTrackingSchema = z.object({
   })).max(MAX_AD_IMAGES, 'Tối đa 5 ảnh quảng cáo'),
   background: optionalImage,
   brand: z.object({
-    logo: optionalImage, companyName: z.string().trim().max(MAX_CHANNEL_VALUE), address: z.string().trim().max(MAX_CHANNEL_VALUE), phone: z.string().trim().max(50),
+    logo: optionalImage, companyName: z.string().trim().max(MAX_CHANNEL_VALUE), address: z.string().trim().max(MAX_CHANNEL_VALUE), phone: z.string().trim().max(150),
     /** Khóa cũ (portal lưu trước 23/10/2026) — chỉ để dựng contacts / socials khi đọc; backend ghi các ô CongTinNhan / CongTruyenThong theo danh sách. */
     facebook: z.string().trim(), instagram: z.string().trim(), x: z.string().trim(), zalo: z.string().trim(), whatsapp: z.string().trim(),
-    website: optionalLink.refine(v => v.length <= MAX_CHANNEL_VALUE, 'Tối đa 250 ký tự'),
+    /** TCustomer.Bank nvarchar(150) — cột hệ thống cũ dùng làm nút Home. */
+    website: optionalLink.refine(v => v.length <= 150, 'Tối đa 150 ký tự'),
     primaryColor: optionalColor,
     secondaryColor: optionalColor,
     contacts: channelList(CONTACT_TYPES, 'Chọn tối đa 5 cổng liên lạc'),
@@ -80,8 +81,22 @@ export function parseConfig(value: unknown): MyTrackingConfig {
   // Mục sai (giá trị cũ không dựng được link, trùng loại, quá 5) bỏ riêng mục đó, không bỏ cả cấu hình.
   brand.contacts = validChannels(brand.contacts, CONTACT_TYPES);
   brand.socials = validChannels(brand.socials, SOCIAL_TYPES);
-  const parsed = myTrackingSchema.safeParse({ ...defaults, ...raw, background: asset(raw.background ?? defaults.background), images, brand });
-  return parsed.success ? parsed.data : defaults;
+  // Khách chưa có dòng TCustomer_MyTracking (thương hiệu lấy từ hồ sơ khách) → tiêu đề trống: dùng tiêu đề mặc định.
+  const title = typeof raw.title === 'string' && raw.title.trim() ? raw.title : defaults.title;
+  const candidate: Record<string, unknown> = { ...defaults, ...raw, title, background: asset(raw.background ?? defaults.background), images, brand };
+  // Ô nào sai (vd ảnh cũ không còn, giá trị vượt độ dài) trả riêng ô đó về mặc định — không bỏ cả cấu hình
+  // (bỏ cả cấu hình làm mất logo, SĐT, cổng liên lạc của hệ thống cũ).
+  for (let attempt = 0; attempt < 20; attempt++) {
+    const parsed = myTrackingSchema.safeParse(candidate);
+    if (parsed.success) return parsed.data;
+    const [key, sub] = parsed.error.issues[0]?.path ?? [];
+    if (key === 'brand' && typeof sub === 'string' && sub in defaults.brand) {
+      candidate.brand = { ...(candidate.brand as object), [sub]: defaults.brand[sub as keyof MyTrackingConfig['brand']] };
+    } else if (typeof key === 'string' && key in defaults) {
+      candidate[key] = defaults[key as keyof MyTrackingConfig];
+    } else break;
+  }
+  return defaults;
 }
 
 function validChannels<T extends ChannelType>(value: unknown, types: readonly T[]): Channel<T>[] {

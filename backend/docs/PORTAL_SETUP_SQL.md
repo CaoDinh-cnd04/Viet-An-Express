@@ -14,13 +14,12 @@ Tạo 9 bảng nghiệp vụ portal nếu chưa có:
 | E-commerce | `KenhTMDT`, `KetNoiTMDT`, `DonTMDT` |
 | Thông báo | `TThongBao`, `TThongBao_DaDoc` (bảng `ThongKeSuDung` đã bỏ 27/10/2026) |
 
-Bổ sung cấu trúc trên 5 bảng đã nạp, không tạo lại bảng:
+Bổ sung cấu trúc trên 4 bảng đã nạp, không tạo lại bảng:
 
 | Bảng | Phần thay đổi |
 |---|---|
 | `MaVanDon` | Thêm `ConsigneeIossNo`, `ConsigneeEoriNo`, `VA_Bill` nếu thiếu |
 | `MaVanDon_ChiTietHang` | Thêm `Kien` (int, NULL = invoice chung) nếu thiếu — invoice riêng từng kiện, thêm 20/10/2026; database đã dựng thì chạy `update-2026-10-20-invoice-kien.sql` |
-| `TCustomer_NguoiLienLac` | Thêm `Quyen` nếu thiếu |
 | `TCustomer_MyTracking` | Thêm slug, trạng thái xuất bản, hình nền, JSON bổ sung, ngày tạo/sửa; mở rộng 11 cột nội dung/thương hiệu sang `nvarchar(max)`; index khách và slug |
 | `TCustomer_MyTracking_Banner` | Thêm JSON bổ sung; mở rộng 5 cột ảnh/liên kết/nhãn; index trang và thứ tự |
 

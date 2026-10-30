@@ -16,7 +16,8 @@ internal static class LegacyTrackingMapper
         || string.Equals(o.CustomerBill?.Trim(), bill, StringComparison.OrdinalIgnoreCase);
 
     /// <param name="carrier">Hành trình HUB-EZ khi đơn đi HUB-EZ (ghép vào hành trình cũ).</param>
-    public static PublicTrackResultDto ToResult(string bill, LegacyOrder o, DateTime todayVn, HubEzTrack? carrier = null)
+    /// <param name="legacy">Vận đơn đã khai thác ở dbo.Orders + hành trình dbo.Order_Tracking (như trang tracking cũ).</param>
+    public static PublicTrackResultDto ToResult(string bill, LegacyOrder o, DateTime todayVn, HubEzTrack? carrier = null, OrderTrack? legacy = null)
     {
         var destination = string.Join(", ", new[] { o.ConsigneeCity, o.ConsigneeCountry }
             .Select(s => s?.Trim())
@@ -25,19 +26,44 @@ internal static class LegacyTrackingMapper
         var service = o.ServiceName?.Split('|')[0].Trim();
 
         return new PublicTrackResultDto(bill, Found: true,
-            LegacyOrderStatus.Of(o, todayVn),
-            string.IsNullOrEmpty(destination) ? null : destination,
+            Status(LegacyOrderStatus.Of(o, todayVn), legacy),
+            string.IsNullOrEmpty(destination) ? legacy?.Destination : destination,
             string.IsNullOrEmpty(service) ? null : service,
             // Trang công khai: không đưa tên người ký nhận.
-            HubEzEvents.Merge(LegacyOrderView.Events(o, hideSigner: true), carrier, !string.IsNullOrWhiteSpace(o.Pod)).Select(e => new PublicTrackEventDto(e.Time, e.Title, e.Location)).ToList(),
+            HubEzEvents.Merge(LegacyOrderView.Events(o, hideSigner: true), Carrier(carrier, legacy), !string.IsNullOrWhiteSpace(o.Pod)).Select(e => new PublicTrackEventDto(e.Time, e.Title, e.Location)).ToList(),
             Origin: Origin(o),
-            ShipDate: Date(o.SentDate),
-            EstimatedDate: Date(o.PodEstimate),
+            ShipDate: Date(o.SentDate ?? legacy?.ShipDate),
+            EstimatedDate: Date(o.PodEstimate ?? legacy?.EstimateDate),
             Pieces: o.Pieces,
             WeightKg: o.WeightKg,
             CarrierBill: CarrierBill(o));
     }
 
+
+    /// <summary>Vận đơn chỉ có ở dbo.Orders (nhân viên tạo thẳng ở hệ thống cũ, không có dòng MaVanDon) — trang tracking cũ vẫn tra được.</summary>
+    public static PublicTrackResultDto FromOrder(string bill, OrderTrack legacy) =>
+        new(bill, Found: true,
+            legacy.Delivered ? LegacyOrderStatus.Delivered : LegacyOrderStatus.InTransit,
+            legacy.Destination,
+            legacy.Service,
+            (legacy.Track?.Events ?? []).Select(e => new PublicTrackEventDto(
+                e.Time?.ToString("dd/MM/yyyy HH:mm", CultureInfo.InvariantCulture) ?? "", e.Description, e.Location)).ToList(),
+            Origin: "Việt Nam",
+            ShipDate: Date(legacy.ShipDate),
+            EstimatedDate: Date(legacy.EstimateDate));
+
+    /// <summary>Hành trình hãng: HUB-EZ nếu có sự kiện, không thì hành trình hệ thống cũ (Order_Tracking).</summary>
+    public static HubEzTrack? Carrier(HubEzTrack? hubEz, OrderTrack? legacy) =>
+        hubEz is { Events.Count: > 0 } ? hubEz : legacy?.Track ?? hubEz;
+
+    /// <summary>Đã có ở dbo.Orders = Việt An đã nhận / khai thác hàng → không còn "chờ gửi"; Order_Tracking báo đã giao → đã giao.</summary>
+    private static string Status(string status, OrderTrack? legacy) => legacy switch
+    {
+        null => status,
+        { Delivered: true } => LegacyOrderStatus.Delivered,
+        _ when status == LegacyOrderStatus.Waiting => LegacyOrderStatus.InTransit,
+        _ => status
+    };
 
     /// <summary>Nơi gửi: Việt An chỉ nhận hàng xuất đi từ Việt Nam; mã quốc gia khác thì chưa có danh mục để đổi tên → bỏ trống.</summary>
     private static string? Origin(LegacyOrder o) =>

@@ -3,14 +3,6 @@
   vertical-align: top;
 }
 
-.group {
-  color: var(--color-text-faint);
-}
-
-.muted {
-  color: var(--color-text-faint);
-}
-
 .active {
   color: var(--color-success);
   font-weight: 600;

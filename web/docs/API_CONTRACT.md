@@ -93,6 +93,13 @@ Phản hồi (`OrderListResponse`):
 
 Đơn thuộc hub đi HUB-EZ (cấu hình backend `HubEz:Hubs`) và có mã hãng: backend chèn hành trình HUB-EZ (giờ theo HUB-EZ, `location` = nơi HUB-EZ ghi) giữa sự kiện giao hàng và các mốc rời kho / tạo vận đơn. Áp dụng cả `events` của tra cứu công khai `POST /public/tracking`. HUB-EZ lỗi → chỉ hành trình của hệ thống cũ.
 
+Hành trình như trang tracking cũ (30/10/2026): bill đã khai thác có dòng `dbo.Orders` (cùng số `OrderNumber`) → ngày gửi = `Orders.OrderDate`
+(khi `MaVanDon` chưa có), trạng thái ít nhất "đang vận chuyển", hành trình hãng lấy ở `dbo.Order_Tracking` (`TrackingData` = JSON web cũ lưu đệm
+từ API hãng — backend tách mảng sự kiện có thời gian + nội dung + địa điểm; không tách được thì dùng `LastEvent_Date` / `_Content` / `_Location`),
+ngày giao dự kiến `EstmateDate`, đã giao khi `DeleveryDate` có / `StatusString` "delivered". HUB-EZ có sự kiện thì ưu tiên HUB-EZ.
+Bill chỉ có ở `dbo.Orders` (không có dòng MaVanDon) vẫn tra được ở `POST /public/tracking` (trang MyTracking: chỉ khi `Orders.CustomerID` đúng khách).
+Hàng nội địa / chuyên tuyến: hành trình web cũ đã sinh ở `Order_Tracking_NoiDong` (mẫu `Carriers_NoiDong`: ngày = ngày gửi + `SortOrder`, giờ = cột `Time`, chỉ sự kiện đã tới ngày) — có thì dùng thay `Order_Tracking`. Portal chỉ đọc (không gọi API hãng, không gọi proc sinh sự kiện `p_Orders_Tracking_NoiDong_New`): bill chưa ai tra ở trang cũ thì chưa có các dòng này.
+
 ### POST `/orders/import/preview` và `/orders/import` — multipart/form-data
 
 | Trường | Bắt buộc | Mô tả |
@@ -265,7 +272,7 @@ Chủ shop thu hồi ủy quyền → kết nối chuyển `status: "revoked"` (
 | POST | `/troubles` | **Mới** | `multipart/form-data`: `kind` (`ho_tro` mặc định = hỗ trợ & sự cố gộp 1; `su_co` cũ cũng nhận như `ho_tro` / `gop_y`), `bill?`, `cnee?`, `ct?`, `type`, `subject?`, `lv?` (`low`\|`mid`\|`high`), `desc` (10–4000), `req?`, `contact`, `file?` (≤ 10 MB: ảnh, PDF, Excel, CSV, Word; chỉ gửi kèm email về hộp thư Việt An, không lưu database — `Content` ghi thêm tên tệp) → `{ data: SupportTicket, message }`. **Hỗ trợ & sự cố:** bắt buộc `type` (vấn đề → `KeyWord`), `contact`; `bill` không bắt buộc — có thì phải là vận đơn của khách (VA Bill, số VA hoặc mã hãng; không có → 400 `TROUBLE_BILL_NOT_FOUND`), ghi `Des01`, `cnee` / `ct` trống thì lấy từ vận đơn; `subject` trống → `Title` = vấn đề; `lv` → `Des02`. **Góp ý:** `desc` + `type` ∈ "Chỉnh sửa phần mềm" / "Cập nhật thông tin" / "Góp ý nâng cấp" / "Khác" (đúng 4 mục form "Yêu cầu" của Bill Online cũ; lưu như form cũ: `KeyWord` = "Feedback", `Title` = loại góp ý; trống → "Khác"; giá trị khác → 400 `TROUBLE_FEEDBACK_TOPIC`). `req` trống → tên đăng nhập. Gửi email báo về hộp thư nhận (ở nền, kèm tệp). Sửa thông tin người gửi = vấn đề "Sửa thông tin người gửi" (CS sửa ở phần mềm cũ) |
 | POST | `/troubles/:id/reply` | **Mới** | `{ text }` (1–4000) → `{ data: SupportTicket, message }`. Khách trả lời yêu cầu đang `waitc` (khác → 400 `TROUBLE_NOT_WAITING`): nối đoạn `--- Khách phản hồi · …` vào `TContact.Content`, chuyển `Status` = 1 (đang xử lý — vẫn ở "Chưa xong"), gửi email báo hộp thư Việt An. Chỉ yêu cầu của khách (tài khoản con: yêu cầu mình gửi). Quyền `account.troubles` |
 | GET | `/notifications` | **Mới** | 50 thông báo khách thấy (ghim trước, rồi theo giờ đăng) → `{ data: [{ id, imp, pin, unread, kind, title, date: "dd/MM/yyyy HH:mm", body, link, items }], unreadCount }`. `kind`: `notice` (Việt An đăng) / `support` (cập nhật hỗ trợ & sự cố gửi riêng khách, `dbo.TThongBao.CustomerID`). `items`: các tin `[{ title?, body, images: string[], link?, detail? }]` — `body` / `detail` là chữ thường hoặc HTML có định dạng (chỉ thẻ `p div br b strong i em u span ul ol li`, `style` chỉ `color` hex/rgb, `font-size` 10–40px, `font-weight`, `font-style`, `text-decoration`; backend đã lọc, frontend lọc lại khi hiện); nút "Xem chi tiết" mở `link` hoặc mở popup `detail` (chỉ 1 trong 2) — `images` là tên tệp, đọc ở `GET /public/notifications/images/:name`; `items` trống = thông báo cũ / hỗ trợ chỉ có `body` + `link`. `body` luôn có bản chữ tóm tắt. `imp: true` hiện popup khi mở portal; `pin: true` nằm nhóm "Đã ghim". Khách thấy: thông báo riêng của mình + thông báo **đã đăng** (`Trang_Thai` 1), đã tới giờ đăng (`Ngay_Dang`), chưa hết hạn (`Ngay_Het_Han`), gửi tới khách — mọi khách / đúng loại khách (`TCustomer.CustomerTypeID` thuộc `Loai_Khach`) / có trong cột `TThongBao.Khach_Nhan` (",id,"). Quyền `account.notifications` (tài khoản con luôn có). Đã đọc lưu riêng từng tài khoản (chính / con) ở `dbo.TThongBao_DaDoc` |
-| GET | `/notifications/popup` | **Mới** | Thông báo popup nhân viên soạn ở CRM (Nội dung › Thông báo popup) → `{ show, html }`. Chỉ đọc 2 dòng bảng cũ `dbo.TConfig`: `ThongBao_Show` (`ConfigValue` "1" = hiện) và `ThongBao_NoiDung` (HTML gốc). `show` false hoặc nội dung trống → `{ show: false, html: null }`; DB không có `TConfig` cũng vậy. `html` chưa lọc — frontend lọc (giữ định dạng, `a href` http/https/mailto/tel/đường dẫn gốc, `img src` http/https/đường dẫn gốc như `/UserFile/editor/images/…`) rồi hiện popup 1 lần mỗi phiên, nội dung đổi thì hiện lại. Quyền `account.notifications` |
+| GET | `/notifications/popup` | **Mới** | Thông báo popup nhân viên soạn ở CRM (Nội dung › Thông báo popup) → `{ show, html }`. Chỉ đọc 2 dòng bảng cũ `dbo.TConfig`: `ThongBao_Show` (`ConfigValue` "1" = hiện) và `ThongBao_NoiDung` (HTML gốc). `show` false hoặc nội dung trống → `{ show: false, html: null }`; DB không có `TConfig` cũng vậy. `html` chưa lọc — frontend lọc (giữ định dạng, `a href` http/https/mailto/tel/đường dẫn gốc, `img src` http/https/đường dẫn gốc như `/UserFile/editor/images/…`) (ảnh / link đường dẫn gốc ghép tên miền site cũ `VITE_LEGACY_SITE_URL`, mặc định `https://vietanexpress.com.vn`) rồi hiện popup khi vừa đăng nhập hoặc mở lại tab / trình duyệt — F5 không hiện lại; nội dung đổi thì hiện lại. Hiện trước, đóng xong mới tới popup tin quan trọng của portal. Quyền `account.notifications` |
 | POST | `/notifications/:id/read` | **Mới** | Đánh dấu đã đọc → `{ message }`; không có → 404 `NOTIFICATION_NOT_FOUND` |
 | POST | `/notifications/mark-all-read` | **Mới** | Đánh dấu đã đọc 50 thông báo mới nhất → `{ message }` |
 | GET | `/public/notifications/images/:name` | **Mới** | Không cần đăng nhập (email cũng tải ảnh). Ảnh của tin trong `Upload/ThongBao` (tên = SHA-256 + `.jpg`/`.png`/`.webp`), cache một năm; không có → 404 |
@@ -280,45 +287,45 @@ Chủ shop thu hồi ủy quyền → kết nối chuyển `status: "revoked"` (
 
 - **Tài khoản chính** = login ở `dbo.TCustomer` (`accountType: "customer"`, `isAdmin: true`): nhận mọi quyền của khách,
   gồm 2 quyền chỉ admin có: `account.staff` (quản lý nhân viên) và `account.mytracking` (cấu hình MyTracking).
-- **Tài khoản con** (`accountType: "staff"`, `isAdmin: false`) là người liên hệ có tên đăng nhập trong bảng cũ `dbo.TCustomer_NguoiLienLac` (`TinhCach` = tên đăng nhập, `Mo_Ta` = mật khẩu lưu như hệ thống cũ; tài khoản tạo trước khi chuyển bảng còn mã băm PBKDF2 vẫn đăng nhập được; quyền ở cột `Quyen` portal thêm; `DELETE` chỉ gỡ đăng nhập, giữ dòng người liên hệ):
+- **Tài khoản con** (`accountType: "staff"`, `isAdmin: false`) là người liên hệ có tên đăng nhập trong bảng cũ `dbo.TCustomer_NguoiLienLac` (`TinhCach` = tên đăng nhập, `Mo_Ta` = mật khẩu lưu như hệ thống cũ; tài khoản tạo trước khi chuyển bảng còn mã băm PBKDF2 vẫn đăng nhập được; `DELETE` chỉ gỡ đăng nhập, giữ dòng người liên hệ):
   đăng nhập cùng `POST /auth/login` (thử `dbo.TCustomer` trước, không khớp thì thử tài khoản con), JWT có thêm claim `staff_id`,
-  `customer_id` là khách cha, nhân viên chỉ có các quyền admin đã chọn.
+  `customer_id` là khách cha. **Không phân quyền riêng từng người** (từ 29/10/2026, bỏ cột `Quyen`): nhân viên có mọi quyền của khách
+  trừ `account.staff`, `account.mytracking`, `account.password`.
   `SessionUser` của tài khoản con: `companyName`, `address`, `taxCode` của công ty; `contactName` = họ tên nhân viên,
   `phone` / `email` = của nhân viên (null nếu chưa khai, không lấy của công ty) — form Tạo đơn điền sẵn người gửi theo đó.
 - **Phạm vi đơn của nhân viên:** chỉ thấy vận đơn và đơn nháp **do mình tạo** (danh sách, chi tiết, hành trình, in, xuất Excel,
   thư viện mặt hàng). Người tạo vận đơn lưu ở cột có sẵn `dbo.MaVanDon.Customer_Staff_ID` (= `TCustomer_NguoiLienLac.ID`; 0 = tài khoản chính / hệ thống cũ),
   nháp cũng là dòng `dbo.MaVanDon` nên dùng chung cột này, sửa nháp không đổi người tạo; in từ nháp thì vận đơn thuộc người tạo nháp (admin in hộ vẫn là đơn của nhân viên).
-  Quyền `shipments.view-all` ("Xem toàn bộ đơn của công ty", admin tick cho từng người) → thấy mọi đơn của công ty.
-  Tài khoản chính luôn thấy tất cả.
+  Tài khoản chính luôn thấy tất cả (đơn của mọi nhân viên và đơn cũ `Customer_Staff_ID` 0).
 - **Quyền E-commerce:** `ecommerce.view` (xem đơn & cửa hàng), `ecommerce.orders` (nhập tay, nhập CSV, sửa, xác nhận / trả về, xóa, đồng bộ),
-  `ecommerce.connect` (kết nối / ngắt cửa hàng), `ecommerce.view-all` (xem toàn bộ đơn E-com của công ty).
-  Tài khoản con không có `ecommerce.view-all` chỉ thấy / xử lý đơn mình nhập tay hoặc nhập CSV (`dbo.DonTMDT.Nhan_Vien_Tao`);
-  đơn tự đồng bộ từ sàn không có người tạo nên chỉ tài khoản chính và người có `ecommerce.view-all` thấy.
-  Tài khoản con cũ chỉ có `ecommerce.connect` cần được admin cấp thêm `ecommerce.orders` để tiếp tục xử lý đơn.
+  `ecommerce.connect` (kết nối / ngắt cửa hàng).
+  Tài khoản con chỉ thấy / xử lý đơn mình nhập tay hoặc nhập CSV (`dbo.DonTMDT.Nhan_Vien_Tao`);
+  đơn tự đồng bộ từ sàn không có người tạo nên chỉ tài khoản chính thấy.
   Tên đăng nhập duy nhất toàn hệ thống (không trùng tài khoản con khác hay `Login_UserName` của khách nào).
   Khóa / đặt lại mật khẩu / xóa → refresh token cũ bị từ chối (nhân viên phải đăng nhập lại khi access token hết hạn).
-  Đổi quyền áp dụng ở lần làm mới phiên tiếp theo. Tài khoản bị khóa đăng nhập trả 401 `ACCOUNT_DISABLED`.
+  Tài khoản bị khóa đăng nhập trả 401 `ACCOUNT_DISABLED`.
 - Frontend ẩn menu / chặn trang theo `SessionUser.permissions` (`features/auth/lib/permissions.ts`); backend vẫn kiểm tra `[HasPermission]`.
 
 | Method | Path | Trạng thái | Mô tả |
 |---|---|---|---|
-| GET | `/account/staff` | Có sẵn | Quyền `account.staff`. `{ data: StaffAccount[] }` của khách đang đăng nhập. `permissions` chỉ gồm quyền tài khoản chính đã chọn (không có quyền tài khoản con luôn có như `account.troubles`; gửi kèm khi tạo / sửa thì backend bỏ qua) |
-| GET | `/account/staff/permissions` | Có sẵn | `{ data: [{ code, description }] }` — quyền admin cấp được cho nhân viên (mọi quyền của khách trừ `account.*`) |
-| POST | `/account/staff` | Có sẵn | `{ userName, password, fullName, email?, phone?, phone2?, email2?, permissions: string[] }` → `{ data: StaffAccount, message }`. `userName` 3–50 ký tự `[A-Za-z0-9._@-]`; mật khẩu ≥ 8 ký tự có chữ và số. Trùng tên → 409 `USERNAME_TAKEN`; quyền không cấp được → 400 `UNKNOWN_PERMISSION`; tối đa 100 tài khoản / khách |
-| PUT | `/account/staff/:id` | Có sẵn | `{ fullName, email?, phone?, phone2?, email2?, permissions, active }` → `{ data: StaffAccount, message }` — `active: false` = khóa; gửi đủ hồ sơ (ô bỏ trống = xóa giá trị) |
+| GET | `/account/staff` | Có sẵn | Quyền `account.staff`. `{ data: StaffAccount[] }` của khách đang đăng nhập |
+| POST | `/account/staff` | Có sẵn | `{ userName, password, fullName, email?, phone?, phone2?, email2? }` → `{ data: StaffAccount, message }`. `userName` 3–50 ký tự `[A-Za-z0-9._@-]`; mật khẩu ≥ 8 ký tự có chữ và số. Trùng tên → 409 `USERNAME_TAKEN`; tối đa 100 tài khoản / khách |
+| PUT | `/account/staff/:id` | Có sẵn | `{ fullName, email?, phone?, phone2?, email2?, active }` → `{ data: StaffAccount, message }` — `active: false` = khóa; gửi đủ hồ sơ (ô bỏ trống = xóa giá trị) |
 | POST | `/account/staff/:id/reset-password` | Có sẵn | `{ newPassword }` → `{ message }` |
 | DELETE | `/account/staff/:id` | Có sẵn | `{ message }` — đơn nhân viên đã tạo vẫn thuộc khách cha |
 
-`StaffAccount`: `{ id, userName, fullName, email?, phone?, phone2?, email2?, permissions: string[], active, createdAt }` (giờ Việt Nam, không offset). Cột bảng cũ: `fullName` = `Ten`, `phone` / `phone2` = `Di_Dong` / `Di_Dong2`, `email` / `email2` = `Email` / `Email2`; `Chuc_Vu`, `Phong_Ban` ghi 0, `Gioi_Tinh` để NULL (portal không dùng).
-Tài khoản con gọi các endpoint trên → 403. Tài khoản con **không tự đổi mật khẩu**: `POST /auth/change-password` cần quyền `account.password` (chỉ tài khoản chính có, không cấp được cho nhân viên) → tài khoản con nhận 403; admin đặt lại qua `POST /account/staff/:id/reset-password`. Frontend ẩn mục Đổi mật khẩu theo quyền này.
+`StaffAccount`: `{ id, userName, fullName, email?, phone?, phone2?, email2?, active, createdAt }` (giờ Việt Nam, không offset). Cột bảng cũ: `fullName` = `Ten`, `phone` / `phone2` = `Di_Dong` / `Di_Dong2`, `email` / `email2` = `Email` / `Email2`; `Chuc_Vu`, `Phong_Ban` ghi 0, `Gioi_Tinh` để NULL (portal không dùng).
+Tài khoản con gọi các endpoint trên → 403. Tài khoản con **không tự đổi mật khẩu**: `POST /auth/change-password` cần quyền `account.password` (chỉ tài khoản chính có) → tài khoản con nhận 403; admin đặt lại qua `POST /account/staff/:id/reset-password`. Frontend ẩn mục Đổi mật khẩu theo quyền này.
 
 ### 7.2 MyTracking cá nhân
 
 Trang `/account/mytracking` (chỉ tài khoản chính, và chỉ khi CMS đã mở: `dbo.TCustomer.ViewLinkTracking = 1` — chưa mở thì phiên không có quyền `account.mytracking`, menu và trang bị ẩn, API trả 403 `MYTRACKING_NOT_ALLOWED`; CMS tắt có hiệu lực ngay với API, menu ẩn ở lần làm mới phiên; tài khoản con không bao giờ vào được; trang công khai của khách vẫn hiện) cấu hình trang tra cứu mang thương hiệu của khách: tiêu đề, mô tả,
 tối đa 5 ảnh quảng cáo có link đích, tiêu đề ảnh (120 ký tự) và chữ nút (40 ký tự) tùy chọn,
-cùng 1 hình nền. Cấu hình lưu trên server trong `dbo.TCustomer_MyTracking` (1 dòng / khách) và
-`dbo.TCustomer_MyTracking_Banner` (1 dòng / ảnh, liên kết bằng `MyTrackingID`), dữ liệu API JSON ≤ 2 MB. Không có trạng thái
-xuất bản (bảng cũ không có cột này): khách đã có dòng cấu hình thì ai có link `{VITE_MYTRACKING_URL}/tracking/{mã khách}/{số bill Việt An}?ref={mã REF}`
+cùng 1 hình nền. Lưu như trang mytracking.top cũ (30/10/2026): **thương hiệu + cổng liên lạc ở hồ sơ khách `dbo.TCustomer`**
+(logo `Logo_ShippingMark` → `dbo.TCommonFile`, website `Bank`, màu `Column1` / `Column2`, cổng liên lạc `CongLienLac_*`;
+địa chỉ `Address1` / điện thoại `Phone` chỉ đọc — thông tin người gửi trên bill); ưu đãi, ảnh nền, mạng xã hội ở `dbo.TCustomer_MyTracking` (1 dòng / khách),
+ảnh quảng cáo ở `dbo.TCustomer_MyTracking_Banner` (1 dòng / ảnh, liên kết bằng `MyTrackingID`), dữ liệu API JSON ≤ 2 MB. Không có trạng thái
+xuất bản (bảng cũ không có cột này): khách nào cũng có trang (thương hiệu từ hồ sơ khách) — ai có link `{VITE_MYTRACKING_URL}/tracking/{mã khách}/{số bill Việt An}?ref={mã REF}`
 (vd `https://mytracking.top/tracking/SPVN/6174086?ref=`) cũng xem được và tra cứu vận đơn. Mã khách = `TCustomer.CustomerCode`
 (cố định, không tự đặt). Chỉ tra đơn của khách đó (`POST /public/tracking/customers/{mã khách}`); không có số bill thì tra theo
 mã REF (`CustomerBill`). Trên tên miền MyTracking, `/tracking/{mã khách}` (chưa có số bill) cũng mở trang của khách.
@@ -326,9 +333,9 @@ Link `/t/{slug}` và cột `Duong_Dan` đã bỏ (23/10/2026).
 
 | Method | Path | Trạng thái | Mô tả |
 |---|---|---|---|
-| GET | `/account/mytracking` | Có sẵn | Quyền `account.mytracking`. `{ data: { config, customerCode, companyName } }` — chưa cấu hình: `config: null`; `customerCode` dựng link `/tracking/{mã khách}/...`; `companyName` = tên công ty theo `TCustomer.InvoiceCustomerName` (trống thì `CustomerName`; khách không sửa: backend ghi đè `config.brand.companyName` khi đọc, lưu và ở trang công khai) |
-| PUT | `/account/mytracking` | Có sẵn | `{ config }` → như GET + `message`. Khóa transaction để hai tab không tạo trùng cấu hình; `config` phải là object, ≤ 2 MB; mọi chuỗi ghi SQL ≤ 250 ký tự, gồm mô tả, địa chỉ, tên công ty, link. Ảnh tải lên ≤ 200 KB được ghi thành tệp; SQL chỉ giữ `/Upload/...`. Sai → 400 `INVALID_MYTRACKING_CONFIG` |
-| GET | `/public/mytracking/customers/:code` | **Mới** | Không cần đăng nhập. Trang của khách có mã `code` (không phân biệt hoa thường): `{ data: { config, customerCode } }`; không có khách / khách chưa cấu hình → 404 |
+| GET | `/account/mytracking` | Có sẵn | Quyền `account.mytracking`. `{ data: { config, customerCode, companyName } }` — `config` luôn có (chưa có dòng TCustomer_MyTracking thì phần ưu đãi / ảnh trống, thương hiệu lấy từ TCustomer); `customerCode` dựng link `/tracking/{mã khách}/...`; `companyName` = tên công ty theo `TCustomer.InvoiceCustomerName` (trống thì `CustomerName`; khách không sửa: backend ghi đè `config.brand.companyName` khi đọc, lưu và ở trang công khai) |
+| PUT | `/account/mytracking` | Có sẵn | `{ config }` → như GET + `message`. Khóa transaction để hai tab không tạo trùng cấu hình; `config` phải là object, ≤ 2 MB; chuỗi không vượt độ dài cột (≤ 250 ký tự; website ≤ 150, cổng liên lạc ≤ 200, hotline ≤ 100). `brand.companyName` / `address` / `phone` gửi lên bị bỏ qua. Logo mới → 1 dòng `TCommonFile` + `TCustomer.Logo_ShippingMark` (cũng là shipping mark in trên bill); logo rỗng → `Logo_ShippingMark` NULL. Ảnh tải lên ≤ 200 KB được ghi thành tệp; SQL chỉ giữ `/Upload/...`. Sai → 400 `INVALID_MYTRACKING_CONFIG` |
+| GET | `/public/mytracking/customers/:code` | **Mới** | Không cần đăng nhập. Trang của khách có mã `code` (không phân biệt hoa thường): `{ data: { config, customerCode } }`; không có khách → 404 (khách chưa cấu hình vẫn có trang, như trang cũ) |
 | GET | `/public/mytracking/images/:folder/:name` | **Mới** | Không cần đăng nhập. Đọc tệp ảnh trong `Upload/Banner` hoặc `Upload/Logo_ShippingMark`; trả đúng MIME ảnh, cache một năm vì tên tệp theo mã băm; không có tệp → 404. Cấu hình trả link API cho ảnh hiện có trên đĩa, khi lưu lại chuyển về đường dẫn tương đối trong SQL. |
 
 `config` theo `myTrackingSchema` (`features/mytracking/schema.ts`); backend ghi mọi trường vào cột có sẵn của bảng cũ và ảnh vào

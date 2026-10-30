@@ -8,16 +8,8 @@ export interface StaffAccount {
   /** Di động 2 / email 2 — cột Di_Dong2, Email2. */
   phone2?: string | null;
   email2?: string | null;
-  /** Mã quyền admin đã cấp, vd "shipments.view". */
-  permissions: string[];
   active: boolean;
   createdAt: string;
-}
-
-/** Quyền admin có thể cấp — GET /account/staff/permissions. */
-export interface AssignablePermission {
-  code: string;
-  description: string;
 }
 
 export interface StaffProfile {
@@ -26,7 +18,6 @@ export interface StaffProfile {
   phone: string | null;
   phone2: string | null;
   email2: string | null;
-  permissions: string[];
 }
 
 export interface NewStaff extends StaffProfile {

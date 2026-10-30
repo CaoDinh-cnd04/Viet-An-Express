@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ApiError, getErrorMessage, http, isNotImplemented, waitForPendingRefresh } from '@/shared/api/http';
+import { markLogin } from '@/shared/lib/login-mark';
 import { useToast } from '@/shared/ui';
 import { can } from './lib/permissions';
 import type { LoginRequest, Session, SessionUser } from './types';
@@ -33,6 +34,7 @@ export function useLogin() {
   return useMutation({
     mutationFn: (body: LoginRequest) => http.post<{ data: SessionUser }>('/auth/login', body),
     onSuccess: res => {
+      markLogin();
       const session: Session = { status: 'authenticated', user: res.data };
       qc.setQueryData(sessionKey, session);
     },

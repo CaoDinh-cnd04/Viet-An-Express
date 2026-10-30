@@ -1,4 +1,4 @@
-/** Tiếng Anh — tài khoản nhân viên (tài khoản con), phân quyền, trang MyTracking công khai. */
+/** Tiếng Anh — tài khoản nhân viên (tài khoản con), trang MyTracking công khai. */
 export const staff: Readonly<Record<string, string>> = {
   // Phân quyền
   'Bạn không có quyền truy cập trang này': 'You do not have access to this page',
@@ -18,8 +18,6 @@ export const staff: Readonly<Record<string, string>> = {
   'Vui lòng liên hệ nhân viên kinh doanh Việt An để nhận báo giá.': 'Please contact your Viet An sales representative for a quote.',
   'Vui lòng thử lại sau.': 'Please try again later.',
   'Nhân viên': 'Staff',
-  'Quyền': 'Permissions',
-  'Chưa cấp quyền': 'No permissions',
   'Đã khóa': 'Locked',
   'Chưa đăng nhập': 'Never signed in',
   'Đặt lại mật khẩu': 'Reset password',
@@ -34,24 +32,11 @@ export const staff: Readonly<Record<string, string>> = {
   'Tạo tài khoản': 'Create account',
   'Nhân viên dùng tên này để đăng nhập portal': 'Staff use this name to sign in to the portal',
   'Nhập lại mật khẩu': 'Confirm password',
-  'Quyền sử dụng': 'Permissions',
-  'Nhân viên chỉ thấy vận đơn và đơn E-commerce do mình tạo, trừ khi được chọn "Xem toàn bộ đơn" ở từng nhóm. Đơn tự đồng bộ từ sàn chỉ người có quyền xem toàn bộ đơn E-commerce thấy. MyTracking và quản lý nhân viên chỉ dành cho tài khoản chính.': 'Staff only see shipments and e-commerce orders they created, unless "View all orders" is selected in each group. Orders synced from marketplaces are visible only to staff who can view all e-commerce orders. MyTracking and staff management are reserved for the main account.',
-  'Không tải được danh sách quyền. Vui lòng thử lại.': 'Unable to load permissions. Please try again.',
-  'Vận đơn & tạo đơn': 'Shipments & orders',
+  'Nhân viên dùng được mọi chức năng của công ty (tạo, sửa, in đơn, import, E-commerce, Hỗ trợ & sự cố, Thông báo) nhưng chỉ thấy vận đơn và đơn E-commerce do mình tạo. Quản lý nhân viên, MyTracking và đổi mật khẩu chỉ dành cho tài khoản chính.': 'Staff can use every company feature (create, edit and print orders, import, e-commerce, Support & issues, Notifications) but only see shipments and e-commerce orders they created. Staff management, MyTracking and password changes are reserved for the main account.',
   'Nhập họ tên nhân viên': "Enter the staff member's full name",
   'Họ tên tối đa 100 ký tự': 'Full name must be at most 100 characters',
   'Số điện thoại tối đa 30 ký tự': 'Phone number must be at most 30 characters',
   'Từ 3 đến 50 ký tự: chữ không dấu, số và . _ - @': '3 to 50 characters: letters without accents, digits and . _ - @',
-  // Mô tả quyền do backend trả (IPermissionProvider)
-  'Xem vận đơn': 'View shipments',
-  'Tạo đơn nháp': 'Create draft orders',
-  'In & cấp mã vận đơn': 'Print & issue bills',
-  'Xem toàn bộ đơn của công ty': 'View all company orders',
-  'Xem cửa hàng đã kết nối': 'View connected stores',
-  'Xem đơn & cửa hàng E-commerce': 'View e-commerce orders & stores',
-  'Tạo & xử lý đơn E-commerce': 'Create & process e-commerce orders',
-  'Xem toàn bộ đơn E-commerce của công ty': 'View all company e-commerce orders',
-  'Kết nối / ngắt kết nối cửa hàng': 'Connect / disconnect stores',
   // MyTracking công khai
   'Trang tra cứu công khai': 'Public tracking page',
   'Đang tải mã khách…': 'Loading customer code…',
@@ -72,14 +57,12 @@ export const staff: Readonly<Record<string, string>> = {
   'Tìm nhân viên': 'Search staff',
   'Không có nhân viên khớp bộ lọc.': 'No staff match the filter.',
   'Lưu ý': 'Notes',
-  'Chọn quyền': 'Choose permissions',
   'Quản lý': 'Manage',
-  'Nhân viên chỉ thấy đơn do mình tạo, trừ khi được cấp "Xem toàn bộ đơn".': 'Staff only see orders they created, unless granted "View all orders".',
-  'Mọi nhân viên luôn dùng được Hỗ trợ & sự cố và Thông báo.': 'All staff can always use Support & issues and Notifications.',
+  'Nhân viên chỉ thấy đơn do mình tạo, bạn thấy đơn của mọi nhân viên.': 'Staff only see orders they created; you see orders from all staff.',
   'Nhân viên không tự đổi mật khẩu — bạn đặt lại giúp khi cần.': 'Staff cannot change their own password — you reset it when needed.',
 
   // Trang tài khoản nhân viên kiểu menu + bảng
-  'Tạo tài khoản đăng nhập riêng cho nhân viên và chọn chức năng từng người được dùng.': 'Create separate sign-in accounts for staff and choose the features each person can use.',
+  'Tạo tài khoản đăng nhập riêng cho nhân viên. Nhân viên dùng mọi chức năng nhưng chỉ thấy đơn do mình tạo.': 'Create separate sign-in accounts for staff. Staff can use every feature but only see orders they created.',
   'Chức năng đang được kết nối máy chủ. Vui lòng thử lại sau.': 'This feature is being connected to the server. Please try again later.',
   'Chưa có tài khoản nhân viên. Thêm nhân viên để họ đăng nhập bằng tài khoản riêng, không cần dùng chung mật khẩu công ty.': 'No staff accounts yet. Add staff so they sign in with their own account instead of sharing the company password.',
   'Khóa': 'Lock',

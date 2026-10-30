@@ -94,14 +94,18 @@ export function safeHtmlUrl(value: string | null, kind: 'href' | 'src'): string 
 
 const escapeAttr = (v: string) => v.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
+/** Đường dẫn gốc ("/UserFile/…") của HTML CRM nằm trên site cũ → ghép tên miền `base`; link tuyệt đối giữ nguyên. */
+const onBase = (url: string | null, base: string | undefined): string | null =>
+  url && base && url.startsWith('/') ? base.replace(/\/+$/, '') + url : url;
+
 /** Thuộc tính giữ lại của thẻ media: a → href (mở tab mới), img → src / alt / width / height (số px). */
-function mediaAttrs(name: string, attrs: string): string | null {
+function mediaAttrs(name: string, attrs: string, base?: string): string | null {
   if (name === 'a') {
-    const href = safeHtmlUrl(attrValue(attrs, 'href'), 'href');
+    const href = onBase(safeHtmlUrl(attrValue(attrs, 'href'), 'href'), base);
     return href ? ` href="${escapeAttr(href)}" target="_blank" rel="noopener noreferrer"` : '';
   }
   if (name === 'img') {
-    const src = safeHtmlUrl(attrValue(attrs, 'src'), 'src');
+    const src = onBase(safeHtmlUrl(attrValue(attrs, 'src'), 'src'), base);
     if (!src) return null;
     let out = ` src="${escapeAttr(src)}"`;
     const alt = attrValue(attrs, 'alt');
@@ -118,8 +122,9 @@ function mediaAttrs(name: string, attrs: string): string | null {
 /**
  * HTML → chỉ còn thẻ / kiểu chữ cho phép, đóng đủ thẻ (khớp RichText.Sanitize ở backend).
  * `media`: giữ thêm liên kết, ảnh, tiêu đề, bảng — chỉ dùng cho HTML CRM soạn (thông báo popup), không có ở backend.
+ * `base`: tên miền site cũ cho đường dẫn gốc của ảnh / link (HTML CRM tham chiếu "/UserFile/…" trên site cũ).
  */
-export function sanitizeHtml(html: string, { media = false }: { media?: boolean } = {}): string {
+export function sanitizeHtml(html: string, { media = false, base }: { media?: boolean; base?: string } = {}): string {
   let out = '';
   const open: string[] = [];
   let skipUntil: string | null = null;
@@ -153,7 +158,7 @@ export function sanitizeHtml(html: string, { media = false }: { media?: boolean 
       out += '<br>';
       continue;
     }
-    const extra = isMedia ? mediaAttrs(name, attrs) : '';
+    const extra = isMedia ? mediaAttrs(name, attrs, base) : '';
     if (extra === null) continue;
     const style = cleanStyle(attrs);
     out += `<${name}${extra}${style ? ` style="${style}"` : ''}>`;

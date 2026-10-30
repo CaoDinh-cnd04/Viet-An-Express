@@ -17,10 +17,9 @@ internal sealed class GetMyTrackingHandler(IdentityDbContext db, ICustomersApi c
         if (user.MainAccountCustomerId() is not { } customerId) return IdentityErrors.AdminOnly;
         if (!await db.IsMyTrackingAllowedAsync(customerId, ct)) return MyTrackingErrors.MyTrackingNotAllowed;
         var page = await db.MyTrackingPages.AsNoTracking().Include(p => p.Banners).FirstOrDefaultAsync(p => p.CustomerId == customerId, ct);
+        var brand = await db.MyTrackingBrandAsync(customerId, ct);
         var customer = await customers.GetByIdAsync(customerId, ct);
-        // Chưa cấu hình: config null — frontend dùng cấu hình mặc định.
-        return page is null
-            ? new MyTrackingDto(null, MyTrackingMapper.CustomerCode(customerId, customer), customer?.TrackingName ?? "")
-            : MyTrackingMapper.ToDto(page, customerId, customer, images);
+        // Chưa có dòng TCustomer_MyTracking vẫn trả thương hiệu / cổng liên lạc của hồ sơ khách như trang cũ.
+        return MyTrackingMapper.ToDto(page, brand, customerId, customer, images);
     }
 }

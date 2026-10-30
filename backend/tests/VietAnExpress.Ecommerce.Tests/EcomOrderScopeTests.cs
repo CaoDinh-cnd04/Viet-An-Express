@@ -60,13 +60,6 @@ public class EcomOrderScopeTests
     }
 
     [Fact]
-    public void Nhan_vien_co_quyen_xem_toan_bo_thay_ca_don_dong_bo_tu_san()
-    {
-        using var db = Seed();
-        Assert.Equal(["#admin", "#csv-a", "#dong-bo", "#tay-b"], Visible(db, User(StaffA, EcommercePermissions.View, EcommercePermissions.ViewAll)));
-    }
-
-    [Fact]
     public void Don_tao_moi_ghi_nhan_vien_tao_don_dong_bo_thi_khong()
     {
         Assert.Equal(StaffA, MarketplaceOrder.Import(CustomerId, null, "tiktok", Imported("x"), Now, StaffA).CreatedByStaffId);

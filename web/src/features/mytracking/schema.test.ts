@@ -94,3 +94,29 @@ describe('MyTracking settings', () => {
     expect(() => validateImageFile({ type: 'image/svg+xml', size: 10 })).toThrow('Chỉ nhận ảnh');
   });
 });
+
+describe('parseConfig — khách chỉ có thương hiệu ở hồ sơ TCustomer (chưa có dòng TCustomer_MyTracking)', () => {
+  const server = {
+    title: '', description: '', background: '', images: [],
+    brand: {
+      companyName: 'Chi Nhánh Công Ty Cổ Phần XNK Sài Gòn Bay', address: '241 Tân Xuân, Đông Ngạc, Bắc Từ Liêm, HN, VN', phone: '0971544822',
+      logo: '/Upload/Logo_ShippingMark/2022_10_07_18_11_44_31.png', website: 'https://saigonbay.vn/', primaryColor: '#007ccc', secondaryColor: '#bfdcee',
+      contacts: [{ type: 'hotline', value: '+84971544822' }, { type: 'zalo', value: '+84971544822' }], socials: []
+    }
+  };
+
+  it('tiêu đề trống dùng tiêu đề mặc định, giữ logo / SĐT / địa chỉ / cổng liên lạc', () => {
+    const config = parseConfig(server);
+    expect(config.title).toBe(emptyConfig().title);
+    expect(config.brand).toMatchObject({
+      address: server.brand.address, phone: '0971544822', website: 'https://saigonbay.vn/', primaryColor: '#007ccc',
+      logo: 'https://mytracking.top/Upload/Logo_ShippingMark/2022_10_07_18_11_44_31.png'
+    });
+    expect(config.brand.contacts.map(c => c.type)).toEqual(['hotline', 'zalo']);
+  });
+
+  it('ô sai chỉ trả ô đó về mặc định, không bỏ cả cấu hình', () => {
+    const config = parseConfig({ ...server, brand: { ...server.brand, primaryColor: 'xanh', website: 'saigonbay.vn' } });
+    expect(config.brand).toMatchObject({ primaryColor: '', website: '', phone: '0971544822', address: server.brand.address });
+  });
+});

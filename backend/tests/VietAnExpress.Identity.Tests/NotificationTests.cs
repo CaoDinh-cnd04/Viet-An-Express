@@ -446,9 +446,9 @@ public class NotificationTests
     public async Task Gui_email_thong_bao_bcc_cho_khach_co_tai_khoan_va_nhan_vien_ghi_ket_qua()
     {
         await using var f = new IdentityFixture();
-        f.Db.StaffAccounts.Add(new StaffAccount(IdentityFixture.CustomerId, "kho", "hash", "Kho", "kho@sgb.vn", null, [], DateTime.Now));
-        f.Db.StaffAccounts.Add(new StaffAccount(IdentityFixture.CustomerId, "trung", "hash", "Trùng", "OPS@sgb.vn", null, [], DateTime.Now));
-        f.Db.StaffAccounts.Add(new StaffAccount(777, "khac", "hash", "Khách khác", "khac@x.vn", null, [], DateTime.Now));
+        f.Db.StaffAccounts.Add(new StaffAccount(IdentityFixture.CustomerId, "kho", "hash", "Kho", "kho@sgb.vn", null, DateTime.Now));
+        f.Db.StaffAccounts.Add(new StaffAccount(IdentityFixture.CustomerId, "trung", "hash", "Trùng", "OPS@sgb.vn", null, DateTime.Now));
+        f.Db.StaffAccounts.Add(new StaffAccount(777, "khac", "hash", "Khách khác", "khac@x.vn", null, DateTime.Now));
         await f.Db.SaveChangesAsync(Ct);
         EmailOf(f, (IdentityFixture.CustomerId, "ops@sgb.vn"));
 

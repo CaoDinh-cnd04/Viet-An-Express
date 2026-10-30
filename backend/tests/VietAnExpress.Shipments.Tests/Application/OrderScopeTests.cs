@@ -10,7 +10,7 @@ using Xunit;
 
 namespace VietAnExpress.Shipments.Tests.Application;
 
-/// <summary>Tài khoản con chỉ thấy vận đơn / nháp mình tạo, trừ khi có quyền xem toàn bộ đơn của công ty.</summary>
+/// <summary>Tài khoản con chỉ thấy vận đơn / nháp mình tạo; tài khoản chính thấy mọi đơn của khách.</summary>
 public class OrderScopeTests
 {
     private const long CustomerId = 201008;
@@ -58,14 +58,6 @@ public class OrderScopeTests
     }
 
     [Fact]
-    public async Task Nhan_vien_co_quyen_xem_toan_bo_thay_moi_don_cua_cong_ty()
-    {
-        var (scope, sql) = await ScopeSqlAsync(User(StaffId, ShipmentsPermissions.View, ShipmentsPermissions.ViewAll));
-        Assert.Equal(new OrderScope(CustomerId, null), scope);
-        Assert.DoesNotContain("[Customer_Staff_ID] =", sql);
-    }
-
-    [Fact]
     public async Task Nhan_vien_chi_thay_nhap_minh_tao_nhap_nam_trong_MaVanDon_Status_0()
     {
         using var db = CreateDb();
@@ -75,7 +67,7 @@ public class OrderScopeTests
             return access.Apply(db.Drafts(), await access.ScopeAsync(Ct)).ToQueryString();
         }
         Assert.Contains("[Customer_Staff_ID] =", await Where(User(StaffId)));
-        Assert.DoesNotContain("[Customer_Staff_ID] =", await Where(User(StaffId, ShipmentsPermissions.ViewAll)));
+        Assert.DoesNotContain("[Customer_Staff_ID] =", await Where(User(null)));
         Assert.Contains("[Status] = 0", await Where(User(null)));
     }
 }

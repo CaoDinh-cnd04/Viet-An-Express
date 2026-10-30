@@ -16,7 +16,4 @@ internal static class StaffErrors
 
     public static readonly Error UserNameTaken =
         Error.Conflict("USERNAME_TAKEN", "Tên đăng nhập đã được sử dụng, vui lòng chọn tên khác");
-
-    public static readonly Error UnknownPermission =
-        Error.Validation("UNKNOWN_PERMISSION", "Có quyền không hợp lệ hoặc không được cấp cho nhân viên");
 }

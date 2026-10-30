@@ -8,8 +8,8 @@ using VietAnExpress.Identity.Support;
 namespace VietAnExpress.Identity.Shared;
 
 /// <summary>
-/// Bảng khách hàng, người liên hệ, liên hệ / form (dbo.TContact — Hỗ trợ &amp; sự cố) và hai bảng TCustomer_MyTracking / TCustomer_MyTracking_Banner
-/// của hệ thống cũ; bảng portal: dbo.TThongBao + dbo.TThongBao_DaDoc.
+/// Bảng khách hàng, người liên hệ, liên hệ / form (dbo.TContact — Hỗ trợ &amp; sự cố), hai bảng TCustomer_MyTracking / TCustomer_MyTracking_Banner
+/// và bảng tệp dbo.TCommonFile của hệ thống cũ; bảng portal: dbo.TThongBao + dbo.TThongBao_DaDoc.
 /// Schema "identity" chỉ chứa lịch sử migration.
 /// </summary>
 internal sealed class IdentityDbContext(DbContextOptions<IdentityDbContext> options) : DbContext(options)
@@ -25,6 +25,9 @@ internal sealed class IdentityDbContext(DbContextOptions<IdentityDbContext> opti
     /// <summary>Trang MyTracking và ảnh quảng cáo trong hai bảng cũ.</summary>
     public DbSet<MyTrackingPage> MyTrackingPages => Set<MyTrackingPage>();
     public DbSet<MyTrackingBanner> MyTrackingBanners => Set<MyTrackingBanner>();
+    /// <summary>Thương hiệu + cổng liên lạc MyTracking ở hồ sơ khách dbo.TCustomer; logo ở dbo.TCommonFile (bảng tệp của hệ thống cũ).</summary>
+    public DbSet<MyTrackingBrand> MyTrackingBrands => Set<MyTrackingBrand>();
+    public DbSet<LegacyCommonFile> CommonFiles => Set<LegacyCommonFile>();
 
     /// <summary>Thông báo quản trị Việt An gửi khách (dbo.TThongBao, các tin ở cột JSON) và lượt đã đọc của từng tài khoản (dbo.TThongBao_DaDoc).</summary>
     public DbSet<Notification> Notifications => Set<Notification>();

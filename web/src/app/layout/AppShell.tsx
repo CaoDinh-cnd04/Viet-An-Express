@@ -3,7 +3,7 @@ import { Outlet, useLocation } from 'react-router-dom';
 import { useLocalStorage } from '@/shared/lib/useLocalStorage';
 import { cx } from '@/shared/lib/cx';
 import { IdleLogout, useSession } from '@/features/auth';
-import { ImportantNoticeModal, PopupNoticeModal } from '@/features/notifications';
+import { LoginNotices } from '@/features/notifications';
 import { OnboardingTour, useOnboardingTour } from '@/features/onboarding';
 import { useI18n } from '@/shared/i18n';
 import { Sidebar } from './Sidebar';
@@ -107,8 +107,7 @@ export function AppShell() {
             <Outlet />
           </Suspense>
         </main>
-        <PopupNoticeModal />
-        <ImportantNoticeModal />
+        <LoginNotices />
         <IdleLogout />
         <OnboardingTour open={tour.open} onClose={tour.close} />
       </div>

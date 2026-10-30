@@ -42,6 +42,17 @@ describe('sanitizeHtml media — HTML thông báo popup của CRM', () => {
     ['<img src="javascript:alert(1)"/>x', 'x'],
     ['<img src=\'https://a.vn/x.png?a=1&amp;b="2"\'/>', '<img src="https://a.vn/x.png?a=1&amp;b=&quot;2&quot;">']
   ])('%s', (input, expected) => expect(sanitizeHtml(input, { media: true })).toBe(expected));
+
+  it('đường dẫn gốc của ảnh / link CRM ghép tên miền site cũ, link tuyệt đối giữ nguyên', () => {
+    const html =
+      '<a href="https://docs.google.com/x"><img src="/UserFile/editor/images/n%C3%BAt%20l%E1%BB%8Bch%20bay.png" width="250"></a>' +
+      '<a href="/tin-tuc">tin</a>';
+    expect(sanitizeHtml(html, { media: true, base: 'https://vietanexpress.com.vn/' })).toBe(
+      '<a href="https://docs.google.com/x" target="_blank" rel="noopener noreferrer">' +
+        '<img src="https://vietanexpress.com.vn/UserFile/editor/images/n%C3%BAt%20l%E1%BB%8Bch%20bay.png" width="250"></a>' +
+        '<a href="https://vietanexpress.com.vn/tin-tuc" target="_blank" rel="noopener noreferrer">tin</a>'
+    );
+  });
 });
 
 describe('isRichText / toPlainText / plainToHtml / editorValue', () => {

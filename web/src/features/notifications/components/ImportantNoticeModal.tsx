@@ -29,8 +29,9 @@ const saveLater = (ids: string[]) => {
  * Popup tin quan trọng: hiện cùng lúc mọi tin quan trọng **chưa đọc** (dù đăng ở các lần khác nhau), xếp nối nhau mới nhất trước.
  * Tin đã đọc không hiện lại; admin đăng thêm tin quan trọng khi khách đang mở portal → popup hiện tin mới đó (danh sách tải lại mỗi 5 phút).
  * "Đã đọc tất cả" đánh dấu đã đọc mọi tin trong popup; "Xem sau" ẩn các tin đó trong phiên làm việc này.
+ * `paused`: đang có popup khác (thông báo hệ thống cũ) — chờ đóng xong mới hiện, không đè nhau.
  */
-export function ImportantNoticeModal() {
+export function ImportantNoticeModal({ paused = false }: { paused?: boolean }) {
   const { t } = useI18n();
   const navigate = useNavigate();
   const { data } = useNotifications();
@@ -59,7 +60,7 @@ export function ImportantNoticeModal() {
 
   return (
     <Modal
-      open={shown.length > 0}
+      open={!paused && shown.length > 0}
       title={shown.length > 1 ? t('Thông báo quan trọng ({n})', { n: shown.length }) : 'Thông báo quan trọng'}
       size="lg"
       onClose={close}

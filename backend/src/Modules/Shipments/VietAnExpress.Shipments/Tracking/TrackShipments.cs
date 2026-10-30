@@ -1,3 +1,4 @@
+using System.Globalization;
 using MediatR;
 using VietAnExpress.Customers.Contracts;
 using VietAnExpress.SharedKernel.Application;
@@ -22,7 +23,8 @@ internal sealed record TrackShipmentsQuery(IReadOnlyList<string> Bills, string? 
             .ToList();
 }
 
-internal sealed class TrackShipmentsHandler(ILegacyBillReader legacyBills, TimeProvider clock, IHubEzTracking hubEz, ICustomersApi customers)
+internal sealed class TrackShipmentsHandler(
+    ILegacyBillReader legacyBills, TimeProvider clock, IHubEzTracking hubEz, ICustomersApi customers, IOrderTracking orderTracking)
     : IRequestHandler<TrackShipmentsQuery, IReadOnlyList<PublicTrackResultDto>>
 {
     public async Task<IReadOnlyList<PublicTrackResultDto>> Handle(TrackShipmentsQuery q, CancellationToken ct)
@@ -43,9 +45,19 @@ internal sealed class TrackShipmentsHandler(ILegacyBillReader legacyBills, TimeP
             .Select(m => m.Row!.BillConnect!.Trim()).ToList();
         var tracks = hawbs.Count == 0 ? new Dictionary<string, HubEzTrack>() : await hubEz.TrackAsync(hawbs, ct);
 
+        // Vận đơn đã khai thác: ngày gửi + hành trình ở dbo.Orders / dbo.Order_Tracking như trang tracking cũ.
+        var numbers = matched.Select(m => m.Row?.OrderNumber?.ToString(CultureInfo.InvariantCulture) ?? m.Bill).ToList();
+        var orders = await orderTracking.FindAsync(numbers, ct);
+        OrderTrack? LegacyOf(LegacyOrder row) =>
+            row.OrderNumber is { } n ? orders.GetValueOrDefault(n.ToString(CultureInfo.InvariantCulture)) : null;
+
         return matched.Select(m => m.Row is { } row
-                ? LegacyTrackingMapper.ToResult(m.Bill, row, today, row.BillConnect is { } connect ? tracks.GetValueOrDefault(connect.Trim()) : null)
-                : new PublicTrackResultDto(m.Bill, Found: false))
+                ? LegacyTrackingMapper.ToResult(m.Bill, row, today,
+                    row.BillConnect is { } connect ? tracks.GetValueOrDefault(connect.Trim()) : null, LegacyOf(row))
+                // Không có dòng MaVanDon: tìm ở dbo.Orders (trang MyTracking chỉ nhận đơn của đúng khách).
+                : orders.GetValueOrDefault(m.Bill) is { } order && (owner is null || order.CustomerId == owner)
+                    ? LegacyTrackingMapper.FromOrder(m.Bill, order)
+                    : new PublicTrackResultDto(m.Bill, Found: false))
             .ToList();
     }
 }

@@ -63,6 +63,8 @@ internal sealed class IdentityFixture : IAsyncDisposable
         CurrentUser.Setup(u => u.HasPermission(It.IsAny<string>())).Returns(true); // tài khoản chính
         Db.Logins.Add(new CustomerLogin(CustomerId, UserName, Password, viewLinkTracking: 1)); // CMS đã mở MyTracking
         Db.Logins.Add(new CustomerLogin(200877, "chua-co-mat-khau", ""));
+        // Thương hiệu MyTracking cùng dòng TCustomer: địa chỉ / điện thoại người gửi (chỉ đọc ở MyTracking).
+        Db.MyTrackingBrands.Add(new MyTrackingBrand(CustomerId, BrandAddress, BrandPhone));
         Db.SaveChanges();
     }
 
@@ -76,14 +78,15 @@ internal sealed class IdentityFixture : IAsyncDisposable
     public RevokedTokenStore NewRevokedTokenStore() =>
         new(Environment.Object, Clock, Microsoft.Extensions.Logging.Abstractions.NullLogger<RevokedTokenStore>.Instance);
     public ChangePasswordHandler ChangePassword => new(Db, Tokens, Sessions, CurrentUser.Object);
-    public ListStaffHandler ListStaff => new(Db, Sessions, CurrentUser.Object);
-    public ListAssignablePermissionsHandler ListAssignablePermissions => new(Sessions, CurrentUser.Object);
-    public CreateStaffHandler CreateStaff => new(Db, Sessions, CurrentUser.Object, Clock);
-    public UpdateStaffHandler UpdateStaff => new(Db, Sessions, CurrentUser.Object);
+    public ListStaffHandler ListStaff => new(Db, CurrentUser.Object);
+    public CreateStaffHandler CreateStaff => new(Db, CurrentUser.Object, Clock);
+    public UpdateStaffHandler UpdateStaff => new(Db, CurrentUser.Object);
     public ResetStaffPasswordHandler ResetStaffPassword => new(Db, CurrentUser.Object);
     public DeleteStaffHandler DeleteStaff => new(Db, CurrentUser.Object);
     public GetMyTrackingHandler GetMyTracking => new(Db, Customers.Object, CurrentUser.Object, Images);
-    public SaveMyTrackingHandler SaveMyTracking => new(Db, Customers.Object, CurrentUser.Object, Images);
+    public SaveMyTrackingHandler SaveMyTracking => new(Db, Customers.Object, CurrentUser.Object, Images, Clock);
+    public const string BrandAddress = "241 Tân Xuân, Đông Ngạc, Bắc Từ Liêm, HN, VN";
+    public const string BrandPhone = "0971544822";
     public GetCustomerMyTrackingHandler GetCustomerMyTracking => new(Db, Customers.Object, Images);
     public SaveNotificationHandler SaveNotification => new(Db, CurrentUser.Object, Customers.Object, Email, Jobs, NotificationImages, Clock);
     public TestNotificationEmailHandler TestNotificationEmail => new(CurrentUser.Object, Email, NotificationImages, Clock, PortalConfig);

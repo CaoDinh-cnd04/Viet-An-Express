@@ -1,6 +1,5 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
-using VietAnExpress.Identity.Auth;
 using VietAnExpress.Identity.Shared;
 using VietAnExpress.SharedKernel.Application;
 using VietAnExpress.SharedKernel.Persistence;
@@ -9,11 +8,11 @@ using VietAnExpress.SharedKernel.Results;
 namespace VietAnExpress.Identity.Staff;
 
 internal sealed record CreateStaffCommand(
-    string UserName, string Password, string FullName, string? Email, string? Phone, IReadOnlyList<string> Permissions,
+    string UserName, string Password, string FullName, string? Email, string? Phone,
     string? Phone2 = null, string? Email2 = null)
     : IRequest<Result<StaffAccountDto>>;
 
-internal sealed class CreateStaffHandler(IdentityDbContext db, SessionService sessions, ICurrentUser user, TimeProvider clock)
+internal sealed class CreateStaffHandler(IdentityDbContext db, ICurrentUser user, TimeProvider clock)
     : IRequestHandler<CreateStaffCommand, Result<StaffAccountDto>>
 {
     /// <summary>Giới hạn số tài khoản con / khách — tránh tạo tràn lan.</summary>
@@ -29,8 +28,6 @@ internal sealed class CreateStaffHandler(IdentityDbContext db, SessionService se
     public async Task<Result<StaffAccountDto>> Handle(CreateStaffCommand cmd, CancellationToken ct)
     {
         if (user.MainAccountCustomerId() is not { } customerId) return IdentityErrors.AdminOnly;
-        var permissions = StaffAccounts.WithoutStaffAlways(cmd.Permissions);
-        if (!StaffAccounts.PermissionsAllowed(permissions, sessions)) return StaffErrors.UnknownPermission;
 
         var userName = cmd.UserName.Trim();
         // Bảng cũ không có index duy nhất cho tên đăng nhập: kiểm tra + thêm trong cùng 1 khóa để 2 người tạo cùng lúc
@@ -42,11 +39,11 @@ internal sealed class CreateStaffHandler(IdentityDbContext db, SessionService se
                 return StaffErrors.TooManyStaff;
 
             // Mật khẩu lưu như hệ thống cũ (cột Mo_Ta dùng chung) — giống dbo.TCustomer.Login_Password.
-            var staff = new StaffAccount(customerId, userName, cmd.Password, cmd.FullName, cmd.Email, cmd.Phone, permissions, Now);
+            var staff = new StaffAccount(customerId, userName, cmd.Password, cmd.FullName, cmd.Email, cmd.Phone, Now);
             staff.SetSecondContact(cmd.Phone2, cmd.Email2);
             db.StaffAccounts.Add(staff);
             await db.SaveChangesAsync(ct);
-            return StaffAccounts.ToDto(staff, sessions);
+            return StaffAccounts.ToDto(staff);
         }, ct);
     }
 }

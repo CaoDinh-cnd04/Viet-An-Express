@@ -42,8 +42,8 @@ export function ConfigForm({ form, onSave, onRestore, disabled }: Props) {
         <div className={styles.brandFields}>
           <TextField label="Tên công ty" readOnly hint="Lấy theo hồ sơ khách hàng tại Việt An, không sửa ở đây. Cần đổi tên vui lòng gửi yêu cầu hỗ trợ."
             error={errors.brand?.companyName?.message} {...register('brand.companyName')} />
-          <TextField label="Số điện thoại" type="tel" placeholder="Số điện thoại liên hệ" maxLength={50} error={errors.brand?.phone?.message} {...register('brand.phone')} />
-        <TextField label="Địa chỉ hiển thị trên trang tracking" placeholder="Địa chỉ công ty" maxLength={250} error={errors.brand?.address?.message} {...register('brand.address')} />
+          <TextField label="Số điện thoại" type="tel" readOnly hint="Lấy theo hồ sơ khách hàng (thông tin người gửi trên bill), không sửa ở đây. Cần đổi vui lòng gửi yêu cầu hỗ trợ." error={errors.brand?.phone?.message} {...register('brand.phone')} />
+        <TextField label="Địa chỉ hiển thị trên trang tracking" readOnly hint="Lấy theo hồ sơ khách hàng (thông tin người gửi trên bill), không sửa ở đây. Cần đổi vui lòng gửi yêu cầu hỗ trợ." error={errors.brand?.address?.message} {...register('brand.address')} />
         <TextField label="Website trang home" type="url" placeholder="https://tencongty.vn" hint="Nút Home cạnh nút Track và logo trên trang tracking sẽ mở website này"
           error={errors.brand?.website?.message} {...register('brand.website')} />
         </div>

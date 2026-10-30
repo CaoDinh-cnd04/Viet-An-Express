@@ -63,7 +63,7 @@ src/
 | notifications | Thông báo (+ popup quan trọng) | `/notifications` |
 | account | API Tracking, Đổi mật khẩu | `/account/api-tracking`, `/account/password` |
 | mytracking | MyTracking cá nhân (admin), trang tra cứu công khai | `/account/mytracking`, `/t/:slug` |
-| staff | Tài khoản nhân viên (tài khoản con, phân quyền — chỉ admin) | `/account/staff` |
+| staff | Tài khoản nhân viên (tài khoản con — chỉ admin; không phân quyền riêng, nhân viên chỉ thấy đơn mình tạo) | `/account/staff` |
 | admin | Trang quản trị Việt An: thông báo gửi khách, xử lý hỗ trợ & góp ý | `/admin` |
 
 ## Quy ước code
