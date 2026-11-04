@@ -7,11 +7,13 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
+using VietAnExpress.Identity.CustomerOtp;
 using VietAnExpress.Identity.Auth;
 using VietAnExpress.Identity.Contracts;
 using VietAnExpress.Identity.MyTracking;
 using VietAnExpress.Identity.Notifications;
 using VietAnExpress.Identity.Shared;
+using VietAnExpress.Identity.VietAnStaff;
 using VietAnExpress.SharedKernel.Authorization;
 using VietAnExpress.SharedKernel.Persistence;
 using VietAnExpress.SharedKernel.Web;
@@ -41,6 +43,13 @@ public static class IdentityModule
         services.AddSingleton<ITokenService, JwtTokenService>();
         services.AddSingleton<RevokedTokenStore>();
         services.AddSingleton<LoginAttemptGuard>();
+        services.AddSingleton<VietAnOtpStore>();
+        services.AddSingleton<VietAnSessionRegistry>();
+        // OTP đăng nhập của khách — mặc định tắt (CustomerOtp:Mode = off), bật "email-only" trong cấu hình.
+        services.AddOptions<CustomerOtpOptions>().Bind(configuration.GetSection(CustomerOtpOptions.Section));
+        services.AddSingleton<CustomerOtpStore>();
+        services.AddSingleton<OtpEmailRegistry>();
+        services.AddScoped<CustomerOtpMailer>();
         services.AddScoped<SessionService>();
         services.AddHttpContextAccessor();
         services.AddSingleton<MyTrackingImageStore>();

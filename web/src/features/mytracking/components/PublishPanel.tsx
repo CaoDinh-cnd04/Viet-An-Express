@@ -1,6 +1,6 @@
 import { useI18n } from '@/shared/i18n';
 import { useCopyToClipboard } from '@/shared/lib/useCopyToClipboard';
-import { Button, Icon } from '@/shared/ui';
+import { Button } from '@/shared/ui';
 import type { Publication } from '../api';
 import { customerTrackingUrl, MYTRACKING_URL } from '../lib/link';
 import styles from '../pages/MyTrackingPage.module.css';
@@ -13,7 +13,7 @@ export function PublishPanel({ publication }: { publication: Publication }) {
   const url = code ? customerTrackingUrl(MYTRACKING_URL, code) : '';
   const sample = code ? customerTrackingUrl(MYTRACKING_URL, code, '6174086', 'PO-123') : '';
 
-  return <section className={`${styles.card} ${styles.publish}`}>
+  return <section className={`${styles.card} ${styles.publish}`} data-tour="mt-publish">
     <div className={styles.publishHead}>
       <h2>{t('Trang tra cứu công khai')}</h2>
     </div>
@@ -23,7 +23,7 @@ export function PublishPanel({ publication }: { publication: Publication }) {
     <div className={styles.linkBox}>
       <code>{url || t('Đang tải mã khách…')}</code>
       <Button size="sm" disabled={!url} onClick={() => void copy(url, t('Đã sao chép link tra cứu'))}>
-        <Icon name="copy" size={14} /> {t('Sao chép')}
+        {t('Sao chép')}
       </Button>
       {url && <a className={styles.openLink} href={url} target="_blank" rel="noreferrer">{t('Mở trang')}</a>}
     </div>

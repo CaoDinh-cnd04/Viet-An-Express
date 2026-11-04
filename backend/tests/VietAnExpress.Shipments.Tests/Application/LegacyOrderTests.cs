@@ -48,12 +48,13 @@ public class LegacyOrderFactoryTests
     }
 
     [Fact]
-    public void Chung_tu_lay_can_tong_va_noi_dung_chung_tu()
+    public void Chung_tu_lay_can_tong_ghi_Document_va_ly_do_khac_nhu_he_thong_cu()
     {
         var o = LegacyOrderFactory.FromPayload(Payload("DOC"), Customer, 90000002, Today);
 
         Assert.Equal(1.5m, o.WeightKg);
-        Assert.Equal("Hồ sơ", o.GoodsName);
+        // Phần mềm cũ nhận DOC khi Ten_hang = 'Document' (nội dung khách gõ khác cũng ghi Document); lý do xuất "khác" = 'ReasonExport'.
+        Assert.Equal(("Document", "ReasonExport"), (o.GoodsName, o.ExportReason));
     }
 
     [Theory]

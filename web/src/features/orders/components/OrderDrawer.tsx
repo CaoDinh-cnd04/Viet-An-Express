@@ -91,7 +91,7 @@ export function OrderDrawer({ order, onClose, actions }: OrderDrawerProps) {
             items={PRINT_DOCUMENTS.map(d => ({ label: d.label, onSelect: () => void print([o.bill], d.key) }))}
             trigger={({ open, toggle }) => (
               <Button size="sm" variant="primary" onClick={toggle} aria-expanded={open} aria-haspopup="menu">
-                <Icon name="printer" size={15} /> {t('In')} <Icon name="chevronDown" size={14} />
+                {t('In')} <Icon name="chevronDown" size={14} />
               </Button>
             )}
           />
@@ -128,7 +128,7 @@ export function OrderDrawer({ order, onClose, actions }: OrderDrawerProps) {
                     <li key={x.id}>
                       <button type="button" className={styles.ticket} onClick={() => setOpenTicketId(x.id)}>
                         <span className={styles.ticketHead}>
-                          <strong className="mono">{x.id}</strong> · {t(x.type)}
+                          <strong className="tabular">{x.id}</strong> · {t(x.type)}
                           <StatusPill tone={SUPPORT_STATUS[x.status].tone}>{t(SUPPORT_STATUS[x.status].label)}</StatusPill>
                         </span>
                         <span className={styles.ticketSub}>

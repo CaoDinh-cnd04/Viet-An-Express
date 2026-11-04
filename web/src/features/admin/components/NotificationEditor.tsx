@@ -156,10 +156,10 @@ export function NotificationEditor({ source, copyOf, onClose, onSaved }: Notific
         <span className={styles.state}>{t(source ? 'Đang sửa thông báo' : copyOf ? 'Bản sao thông báo' : 'Thông báo mới')}</span>
         <span className={styles.spacer} />
         <Button variant="ghost" onClick={() => setPreview(true)}>
-          <Icon name="eye" size={15} /> {t('Xem như khách')}
+          {t('Xem như khách')}
         </Button>
         <Button variant="ghost" onClick={openTest}>
-          <Icon name="mail" size={15} /> {t('Gửi thử email')}
+          {t('Gửi thử email')}
         </Button>
         {!published && (
           <Button onClick={() => submit(false)} disabled={save.isPending}>
@@ -167,7 +167,7 @@ export function NotificationEditor({ source, copyOf, onClose, onSaved }: Notific
           </Button>
         )}
         <Button variant="primary" onClick={() => submit(true)} disabled={save.isPending}>
-          <Icon name="send" size={15} /> {t(save.isPending ? 'Đang lưu…' : publishLabel)}
+          {t(save.isPending ? 'Đang lưu…' : publishLabel)}
         </Button>
       </header>
 
@@ -198,7 +198,7 @@ export function NotificationEditor({ source, copyOf, onClose, onSaved }: Notific
                 {i > 0 && (
                   <div className={styles.insert}>
                     <button type="button" onClick={() => insertAt(i)}>
-                      <Icon name="plus" size={13} /> {t('Chèn tin ở đây')}
+                      {t('Chèn tin ở đây')}
                     </button>
                   </div>
                 )}
@@ -218,7 +218,7 @@ export function NotificationEditor({ source, copyOf, onClose, onSaved }: Notific
             ))}
             {draft.items.length < LIMITS.items && (
               <button type="button" className={styles.addItem} onClick={() => insertAt(draft.items.length)}>
-                <Icon name="plus" size={16} /> {t('Thêm tin')}
+                {t('Thêm tin')}
               </button>
             )}
           </div>

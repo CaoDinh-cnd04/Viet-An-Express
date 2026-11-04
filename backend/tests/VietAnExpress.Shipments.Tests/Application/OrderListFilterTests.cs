@@ -43,16 +43,21 @@ public class OrderListFilterTests
         Assert.Equal(expected, OrderListFilter.Statuses(input));
 
     [Fact]
-    public void ApplyStatus_chon_nhieu_trang_thai_khop_bat_ky()
+    public void ApplyStatus_trong_nhom_khop_bat_ky_giua_2_nhom_phai_khop_ca_hai()
     {
         var orders = new[]
         {
-            new LegacyOrder { Id = 1 },                                                        // chưa đi
-            new LegacyOrder { Id = 2, SentDate = Today.AddDays(-1), PodEstimate = Today.AddDays(2) }, // đã đi
-            new LegacyOrder { Id = 3, Pod = "30/09/2026 10:00 delivered" }                    // đã phát
+            new LegacyOrder { Id = 1 },                                                                    // chưa đi, chưa phát
+            new LegacyOrder { Id = 2, SentDate = Today.AddDays(-1), PodEstimate = Today.AddDays(2) },      // đã đi, chưa phát
+            new LegacyOrder { Id = 3, SentDate = Today.AddDays(-5), Pod = "30/09/2026 10:00 delivered" }   // đã đi, đã phát
         }.AsQueryable();
+        long[] Ids(string status) => OrderListFilter.ApplyStatus(orders, status, Today).Select(o => o.Id).ToArray();
 
-        Assert.Equal([1, 3], OrderListFilter.ApplyStatus(orders, "wait,ok", Today).Select(o => o.Id).ToArray());
+        Assert.Equal([2], Ids("fly,nd"));          // đang trên đường: đã đi VÀ chưa phát
+        Assert.Equal([1, 2], Ids("wait,fly,nd"));  // đủ 2 ô hành trình = không lọc hành trình, chỉ còn chưa phát
+        Assert.Equal([2, 3], Ids("fly"));
+        Assert.Equal([1, 2], Ids("nd"));
+        Assert.Empty(Ids("wait,ok"));
         Assert.Equal(3, OrderListFilter.ApplyStatus(orders, "all", Today).Count());
     }
 }

@@ -98,7 +98,7 @@ export function buildDraftPayload(v: CreateOrderValues, status: 'draft' | 'ready
     branch: v.shipper.branch,
     ref: v.service.reference,
     pcs: fill('{pcs} kiện · {kg} kg', { pcs: (isPack ? summarizePackages(v.packages).pieces : toNumber(v.shipment.pieces)) || 1, kg: weight }),
-    content: isPack ? goodsName(v) || 'Hàng hóa' : v.goods.docContent || 'Documents',
+    content: isPack ? goodsName(v) || 'Hàng hóa' : v.goods.docContent || 'Document',
     payload: v as unknown as Record<string, unknown>
   };
 }

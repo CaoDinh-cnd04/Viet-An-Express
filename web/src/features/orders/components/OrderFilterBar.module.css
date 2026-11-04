@@ -1,74 +1,112 @@
-/* Thanh lọc gọn: mọi ô trên 1 hàng (ngày, loại hàng, cân, tìm theo, xóa lọc); chữ 12px, ô cao 26px */
+/* Thanh lọc 1 hàng, nhãn bên trái ô (mẫu 3 chốt 03/11/2026): Ngày · Loại · Cân · Tìm theo · Xóa lọc · In · Xuất; chữ 11px, ô cao 26px */
 .bar {
   --control-h: 26px;
   --control-h-sm: 26px;
-  --text-sm: 12px;
-  --text-md: 12px;
-  --text-xs: 12px;
-  --field-label-size: 12px;
-  --field-input-size: 12px;
-  /* Nằm trong khung chung với tab trạng thái (OrdersPage .panel) nên không có viền riêng */
-  padding: 5px var(--space-3) 7px;
+  --text-sm: 11px;
+  --text-md: 11px;
+  --text-xs: 11px;
+  --field-label-size: 11px;
+  --field-input-size: 11px;
+  /* Ô cao 26px: bo 6px cho vừa (8px trông gần như tròn) — áp cả nút In / Xuất / Xóa lọc trong thanh */
+  --radius-control: 6px;
+  --radius-sm: 6px;
+  /* Nằm trong khung lọc của trang (OrdersPage .panel) nên không có viền riêng */
+  padding: 7px var(--space-3);
   font-size: var(--text-sm);
 }
 
 .row {
-  display: grid;
-  grid-template-columns: 124px 124px 96px 68px 68px minmax(240px, 1fr) auto;
-  align-items: start;
-  gap: var(--space-2) var(--space-2);
-}
-
-.search {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-  min-width: 0;
-}
-
-.searchLabel {
-  font-size: var(--text-sm);
-  font-weight: 500;
-  color: var(--color-text);
-}
-
-/* "Xóa lọc" + In nhiều bill + Xuất bảng kê ngang hàng ô nhập (bỏ qua chiều cao nhãn) */
-.tail {
   display: flex;
   align-items: center;
-  gap: 6px;
-  margin-top: 21px;
+  gap: 6px 12px;
+}
+
+/* Nhãn + ô (hoặc cặp ô "từ – đến") */
+.group {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 5px;
+}
+
+.label {
+  color: var(--color-text-muted);
+  font-size: 11px;
+  font-weight: 600;
   white-space: nowrap;
 }
 
-/* Màn hình vừa: ô lọc 1 hàng, tìm theo xuống hàng dưới */
+.dash {
+  color: var(--color-text-faint);
+}
+
+.date,
+.select {
+  height: var(--control-h);
+  padding: 0 6px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  font-size: 11px;
+}
+
+.date {
+  width: 112px;
+}
+
+.select {
+  width: 72px;
+}
+
+.date:focus,
+.select:focus {
+  border-color: var(--color-brand);
+  box-shadow: var(--focus-ring);
+  outline: none;
+}
+
+.search {
+  flex: 1;
+  min-width: 220px;
+}
+
+/* Xóa lọc + In bill + Xuất bảng kê cuối hàng */
+.tail {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 2px;
+  white-space: nowrap;
+}
+
+/* Màn hình vừa: ô tìm xuống hàng dưới cùng thao tác */
 @media (max-width: 1280px) {
   .row {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    flex-wrap: wrap;
   }
 
   .search {
-    grid-column: 1 / 5;
+    order: 1;
+    flex-basis: 60%;
   }
 
   .tail {
-    grid-column: 5;
+    order: 2;
+    margin-left: auto;
   }
 }
 
 @media (max-width: 720px) {
-  .row {
-    grid-template-columns: 1fr 1fr;
-  }
-
-  .search {
-    grid-column: 1 / -1;
+  .group,
+  .search,
+  .tail {
+    flex-basis: 100%;
   }
 
   .tail {
-    grid-column: 1 / -1;
     flex-wrap: wrap;
-    margin-top: 0;
   }
 }
 
@@ -85,25 +123,10 @@
 }
 
 /* ---------- Ô cân (kg): số + nút tăng/giảm xếp dọc ở mép phải ---------- */
-.weight {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-  min-width: 0;
-}
-
-.weightLabel {
-  font-size: var(--text-sm);
-  font-weight: 500;
-  color: var(--color-text);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .weightBox {
   display: flex;
   align-items: stretch;
+  width: 60px;
   height: var(--control-h);
   border: 1px solid var(--color-border-strong);
   border-radius: var(--radius-control);
@@ -165,4 +188,36 @@
 .weightBox:hover .stepper,
 .weightBox:focus-within .stepper {
   opacity: 1;
+}
+
+/* Xóa lọc: nút chỉ icon, rê chuột đỏ nhạt */
+.clear {
+  display: inline-grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: background-color 0.12s, color 0.12s;
+}
+
+.clear:hover {
+  background: color-mix(in srgb, var(--color-status-nd) 10%, var(--color-surface));
+  color: var(--color-status-nd);
+}
+
+.clear:focus-visible {
+  outline: 2px solid var(--color-status-nd);
+  outline-offset: 1px;
+}
+
+/* Vạch ngăn Xóa lọc với In / Xuất */
+.sep {
+  width: 1px;
+  height: 18px;
+  margin: 0 2px;
+  background: var(--color-border);
 }

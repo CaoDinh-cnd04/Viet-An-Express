@@ -30,7 +30,8 @@ export function ConfigForm({ form, onSave, onRestore, disabled }: Props) {
 
   return <form className={styles.editor} onSubmit={onSave} noValidate aria-busy={busy}>
     <fieldset className={styles.formBody} disabled={busy}>
-      <section className={styles.group}>
+      {/* data-tour: mốc cho hướng dẫn từng nút của trang (features/onboarding) */}
+      <section className={styles.group} data-tour="mt-brand">
         <h2>{t('Thông tin thương hiệu')}</h2>
         <div className={styles.brandEditor}>
         <div className={styles.logoEditor}>
@@ -40,17 +41,17 @@ export function ConfigForm({ form, onSave, onRestore, disabled }: Props) {
           <Button variant="danger" disabled={!config.brand.logo} onClick={() => setImage('brand.logo', '')}>{t('Xóa logo')}</Button>
         </div>
         <div className={styles.brandFields}>
-          <TextField label="Tên công ty" readOnly hint="Lấy theo hồ sơ khách hàng tại Việt An, không sửa ở đây. Cần đổi tên vui lòng gửi yêu cầu hỗ trợ."
-            error={errors.brand?.companyName?.message} {...register('brand.companyName')} />
-          <TextField label="Số điện thoại" type="tel" readOnly hint="Lấy theo hồ sơ khách hàng (thông tin người gửi trên bill), không sửa ở đây. Cần đổi vui lòng gửi yêu cầu hỗ trợ." error={errors.brand?.phone?.message} {...register('brand.phone')} />
-        <TextField label="Địa chỉ hiển thị trên trang tracking" readOnly hint="Lấy theo hồ sơ khách hàng (thông tin người gửi trên bill), không sửa ở đây. Cần đổi vui lòng gửi yêu cầu hỗ trợ." error={errors.brand?.address?.message} {...register('brand.address')} />
+          <TextField label="Tên công ty" error={errors.brand?.companyName?.message} {...register('brand.companyName')} />
+          <TextField label="Số điện thoại" type="tel" error={errors.brand?.phone?.message} {...register('brand.phone')} />
+        <TextField label="Địa chỉ hiển thị trên trang tracking" error={errors.brand?.address?.message} {...register('brand.address')} />
+        <p className={styles.hint}>{t('Tên công ty, số điện thoại, địa chỉ mặc định theo hồ sơ khách hàng tại Việt An. Sửa ở đây chỉ đổi trên trang tracking, không đổi thông tin người gửi trên bill; để trống = theo hồ sơ.')}</p>
         <TextField label="Website trang home" type="url" placeholder="https://tencongty.vn" hint="Nút Home cạnh nút Track và logo trên trang tracking sẽ mở website này"
           error={errors.brand?.website?.message} {...register('brand.website')} />
         </div>
         </div>
         <div className={styles.logoSource}><ImagePicker label="Logo" allowUrl={false} onAdd={src => setImage('brand.logo', src)} onBusy={onBusy} /></div>
       </section>
-      <section className={styles.group}>
+      <section className={styles.group} data-tour="mt-colors">
         <h2>{t('Màu thương hiệu')}</h2>
         <p className={styles.hint}>{t('Màu thương hiệu: các nút (Track, Home, hotline, nút trên ảnh quảng cáo), thanh TRACKING DETAIL, tiêu đề bảng hành trình và khung tiêu đề quảng cáo. Màu phụ: nền các dòng trong nội dung tracking (thông tin vận đơn, dòng ngày). Để trống = màu mặc định.')}</p>
         <div className={styles.twoColumns}>
@@ -58,12 +59,12 @@ export function ConfigForm({ form, onSave, onRestore, disabled }: Props) {
           <ColorField form={form} name="brand.secondaryColor" label="Màu phụ thương hiệu" fallback="#f8f3e1" />
         </div>
       </section>
-      <section className={styles.group}>
+      <section className={styles.group} data-tour="mt-content">
         <h2>{t('Nội dung hiển thị chính')}</h2>
         <TextField label="Tiêu đề" required maxLength={120} error={errors.title?.message} {...register('title')} />
         <TextAreaField label="Mô tả" rows={4} maxLength={250} error={errors.description?.message} {...register('description')} />
       </section>
-      <section className={styles.group}>
+      <section className={styles.group} data-tour="mt-banners">
         <div className={styles.groupHeading}><h2>{t('Hình ảnh quảng cáo')}</h2><span>{t('Số lượng: {n}/5', { n: fields.length })}</span></div>
         <p className={styles.hint}>{t('Nhập link website cho từng ảnh. Khách bấm vào ảnh hoặc nút sẽ mở website trong tab mới. Tối đa 5 ảnh.')}</p>
         <p className={styles.hint}>{t('Không bắt buộc: không thêm ảnh và để trống mô tả thì cột quảng cáo tự ẩn, khung tra cứu rộng hết trang.')}</p>
@@ -98,7 +99,7 @@ export function ConfigForm({ form, onSave, onRestore, disabled }: Props) {
           </div>
         </div>)}
       </section>
-      <section className={styles.group}>
+      <section className={styles.group} data-tour="mt-background">
         <h2>{t('Hình ảnh nền trang')}</h2>
         <ImagePicker onAdd={src => setImage('background', src)} onBusy={onBusy} />
         {config.background
@@ -106,7 +107,7 @@ export function ConfigForm({ form, onSave, onRestore, disabled }: Props) {
           : <div className={styles.backgroundPlaceholder}><Icon name="image" size={28} /><span>{t('Xem trước ảnh nền')}</span></div>}
         <div className={styles.removeBackground}><Button variant="danger" disabled={!config.background} onClick={() => setImage('background', '')}>{t('Xóa ảnh nền')}</Button></div>
       </section>
-      <section className={styles.group}>
+      <section className={styles.group} data-tour="mt-channels">
         <div className={styles.groupHeading}><h2>{t('Cổng liên lạc')}</h2><span>{t('Chọn tối đa {n} mục', { n: MAX_CHANNELS })}</span></div>
         <p className={styles.hint}>{t('Hiện thành các nút liên hệ nổi bên trái trang tracking. Nhập số điện thoại, tên tài khoản hoặc link.')}</p>
         <ChannelListEditor form={form} name="brand.contacts" types={CONTACT_TYPES} />
@@ -116,7 +117,7 @@ export function ConfigForm({ form, onSave, onRestore, disabled }: Props) {
         <p className={styles.hint}>{t('Hiện ở cuối trang tracking (Connect with us). Nhập link trang hoặc tên tài khoản.')}</p>
         <ChannelListEditor form={form} name="brand.socials" types={SOCIAL_TYPES} />
       </section>
-      <div className={styles.actions}>
+      <div className={styles.actions} data-tour="mt-save">
         <Button type="submit" variant="primary">{t('Lưu')}</Button>
         <Button onClick={onRestore}>{t('Khôi phục mặc định')}</Button>
         <span className={styles.saveStatus} role="status">{t(isDirty ? 'Có thay đổi chưa lưu' : 'Không có thay đổi chưa lưu')}</span>

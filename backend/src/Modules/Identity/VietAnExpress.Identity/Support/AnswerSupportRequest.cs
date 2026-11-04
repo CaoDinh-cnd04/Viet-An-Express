@@ -8,7 +8,7 @@ using VietAnExpress.SharedKernel.Results;
 namespace VietAnExpress.Identity.Support;
 
 /// <summary>
-/// Khách trả lời yêu cầu đang "Chờ khách phản hồi": nối vào TContact.Content, chuyển lại "Đang xử lý" và báo hộp thư Việt An qua email.
+/// Khách trả lời yêu cầu đang "Chờ khách phản hồi": nối vào TContact.Content, chuyển lại "Đang xử lý" và báo nhân viên phụ trách khách qua email.
 /// </summary>
 internal sealed record AnswerSupportRequestCommand(string Id, string? Text) : IRequest<Result<SupportRequestDto>>;
 
@@ -28,7 +28,8 @@ internal sealed class AnswerSupportRequestHandler(IdentityDbContext db, ICurrent
         ticket.AddCustomerReply(text, VietnamTime.Now(clock));
         await db.SaveChangesAsync(ct);
         var customer = await customers.GetByIdAsync(customerId, ct);
-        jobs.EnqueueEmail($"email {ticket.Code} reply", SupportRequestRules.CustomerReplyEmail(ticket, text, customer, user.UserName, company));
+        var cs = SupportRequestRules.CsRecipients(await customers.GetAccountManagerAsync(customerId, ct));
+        jobs.EnqueueEmail($"email {ticket.Code} reply", SupportRequestRules.CustomerReplyEmail(ticket, text, customer, user.UserName, company) with { To = cs });
         return SupportRequestRules.ToDto(ticket);
     }
 }

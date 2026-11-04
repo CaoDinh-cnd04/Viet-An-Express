@@ -37,6 +37,8 @@ export interface Order {
   remoteArea?: string | null;
   /** Người nhận đầy đủ (người liên hệ, SĐT, địa chỉ) — bảng xổ chi tiết. Backend cũ có thể chưa trả. */
   receiver?: OrderReceiver | null;
+  /** Nhân viên Việt An tạo giúp khách (MaVanDon.CreateUser > 0). */
+  createdByVietAn?: boolean;
 }
 
 export type OrderSearchField = 'all' | 'cnee' | 'bill' | 'ref' | 'ct' | 'svc';

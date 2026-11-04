@@ -1,6 +1,6 @@
 /** Hằng số nghiệp vụ tạo đơn. Thêm hãng / hub / đơn vị mới: sửa ở đây, UI tự cập nhật. */
 
-export { CARRIER_HUBS, CARRIERS, DEFAULT_SERVICE, defaultHub, hubOptions, COUNTRIES } from '@/shared/config/domain';
+export { CARRIER_HUBS, CARRIERS, carriersFor, defaultHub, hubOptions, COUNTRIES, stateRequired } from '@/shared/config/domain';
 
 
 export const PACKAGING_TYPES = ['Thùng carton', 'Bao / túi', 'Pallet', 'Kiện gỗ'] as const;
@@ -59,9 +59,10 @@ export const ADDONS = [
 ] as const;
 
 export const WIZARD_STEPS = [
-  { title: 'Thông tin bill', description: 'Người gửi, người nhận, dịch vụ' },
-  { title: 'Kiện & nội dung hàng', description: 'Kích thước, nhóm hàng, tùy chọn dịch vụ' },
-  { title: 'Invoice & phí', description: 'Khai hàng, shipping fee' }
+  // Chữ ngắn cho vừa cột các bước 180px
+  { title: 'Thông tin bill', description: 'Gửi, nhận, dịch vụ' },
+  { title: 'Kiện hàng', description: 'Kích thước, tùy chọn' },
+  { title: 'Invoice & phí', description: 'Khai hàng, phí ship' }
 ] as const;
 
 /** Chứng từ (DOC): không khai kiện / Invoice → chỉ 2 bước. */

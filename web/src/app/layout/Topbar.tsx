@@ -13,7 +13,16 @@ const MOD_KEY = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navig
 /** Tên ngôn ngữ hiện bằng chính ngôn ngữ đó (không dịch). */
 const LANG_NAMES = { vi: 'Tiếng Việt', en: 'English' } as const;
 
-export function Topbar({ onMenu, menuCollapsed, onStartTour }: { onMenu: () => void; menuCollapsed: boolean; onStartTour: () => void }) {
+interface TopbarProps {
+  onMenu: () => void;
+  menuCollapsed: boolean;
+  /** Mở lại hướng dẫn tổng quát. */
+  onStartTour: () => void;
+  /** Mở hướng dẫn từng nút của trang đang xem; trang không có hướng dẫn riêng thì không truyền (ẩn nút). */
+  onStartPageTour?: () => void;
+}
+
+export function Topbar({ onMenu, menuCollapsed, onStartTour, onStartPageTour }: TopbarProps) {
   const matches = useMatches();
   const title = [...matches].reverse().map(m => (m.handle as RouteHandle | undefined)?.title).find(Boolean) ?? '';
   const { theme, toggle } = useTheme();
@@ -24,7 +33,9 @@ export function Topbar({ onMenu, menuCollapsed, onStartTour }: { onMenu: () => v
   const allowed = useCan();
   const user = session.data?.status === 'authenticated' ? session.data.user : undefined;
   // Tài khoản con: hiện tên nhân viên kèm tên công ty để biết đang dùng tài khoản nào.
-  const accountLabel = user && (user.accountType === 'staff' ? `${user.fullName ?? user.userName ?? ''} · ${user.companyName}` : user.companyName);
+  const accountLabel = user && (user.accountType === 'vietan'
+    ? [user.agentName ?? user.agentUserName, user.companyName].filter(Boolean).join(' · ')
+    : user.accountType === 'staff' ? `${user.fullName ?? user.userName ?? ''} · ${user.companyName}` : user.companyName);
   const initials = initialsOf(user?.companyName);
 
   const menu: MenuItem[] = [
@@ -63,7 +74,6 @@ export function Topbar({ onMenu, menuCollapsed, onStartTour }: { onMenu: () => v
           items={(['vi', 'en'] as const).map(l => ({ label: LANG_NAMES[l], onSelect: () => setLang(l) }))}
           trigger={({ open, toggle: toggleLang }) => (
             <button type="button" className={styles.langBtn} onClick={toggleLang} aria-expanded={open} aria-haspopup="menu" aria-label={t('Ngôn ngữ')}>
-              <Icon name="globe" size={15} />
               <span className={styles.langName}>{LANG_NAMES[lang]}</span>
               <Icon name="chevronDown" size={14} />
             </button>
@@ -73,6 +83,11 @@ export function Topbar({ onMenu, menuCollapsed, onStartTour }: { onMenu: () => v
           <Icon name={theme === 'dark' ? 'sun' : 'moon'} size={16} />
         </button>
         {/* Chuông: bấm mở popup danh sách thông báo */}
+        {onStartPageTour && (
+          <button type="button" className={styles.iconBtn} onClick={onStartPageTour} aria-label={t('Hướng dẫn trang này')} title={t('Hướng dẫn trang này')}>
+            <Icon name="help" size={16} />
+          </button>
+        )}
         <NotificationBell className={styles.iconBtn} badgeClassName={styles.dot} />
         <DropdownMenu
           items={menu}

@@ -1,11 +1,12 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using VietAnExpress.Customers.Contracts;
 using VietAnExpress.Customers.Profiles;
 using VietAnExpress.Customers.VietAnUsers;
 
 namespace VietAnExpress.Customers.Shared;
 
-internal sealed class CustomersApi(CustomersDbContext db) : ICustomersApi
+internal sealed class CustomersApi(CustomersDbContext db, ILogger<CustomersApi> logger) : ICustomersApi
 {
     public async Task<CustomerSummary?> GetByIdAsync(long customerId, CancellationToken cancellationToken = default)
     {
@@ -56,6 +57,43 @@ internal sealed class CustomersApi(CustomersDbContext db) : ICustomersApi
     public async Task<IReadOnlyList<long>> GetCustomerIdsOfManagerAsync(int managerId, CancellationToken cancellationToken = default) =>
         managerId <= 0 ? [] : await db.Customers.AsNoTracking().Where(c => c.AccountManagerId == managerId).Select(c => c.Id).ToListAsync(cancellationToken);
 
+    public async Task<IReadOnlyList<VietAnUserLogin>> FindVietAnUsersAsync(string userName, CancellationToken cancellationToken = default)
+    {
+        var name = userName.Trim();
+        if (name.Length == 0) return [];
+        var rows = await db.VietAnUsers.AsNoTracking().Where(u => u.UserName == name).ToListAsync(cancellationToken);
+        var logins = rows.Select(ToLogin).OfType<VietAnUserLogin>().ToList();
+        // Có dòng USERS mà không đăng nhập được → ghi lý do (không ghi mật khẩu) để tra trên máy chủ.
+        if (logins.Count == 0)
+            logger.LogWarning("USERS '{UserName}': {Rows}", name, rows.Count == 0 ? "không có dòng nào" : string.Join("; ", rows.Select(u =>
+                $"ID {u.Id} DELETED={u.Deleted} STATUS='{u.Status}' USER_PASSWORD {(string.IsNullOrEmpty(u.Password) ? "trống" : "có")}")));
+        return logins;
+    }
+
+    public async Task<VietAnUserLogin?> GetVietAnUserAsync(int userId, CancellationToken cancellationToken = default) =>
+        ToLogin(await db.VietAnUsers.AsNoTracking().FirstOrDefaultAsync(u => u.Id == userId, cancellationToken));
+
+    public async Task<IReadOnlyList<CustomerSummary>> SearchCustomersAsync(string? query, int? managerId, int take,
+        CancellationToken cancellationToken = default)
+    {
+        var customers = db.Customers.AsNoTracking();
+        if (managerId is { } id) customers = customers.Where(c => c.AccountManagerId == id);
+        if (Clean(query) is { } q)
+            customers = customers.Where(c => c.Code!.Contains(q) || c.CompanyName!.Contains(q) || c.InvoiceName!.Contains(q)
+                || c.ContactName!.Contains(q) || c.Phone!.Contains(q) || c.Tel!.Contains(q) || c.LoginUserName!.Contains(q));
+        var rows = await customers.OrderBy(c => c.Code).Take(Math.Clamp(take, 1, 200)).ToListAsync(cancellationToken);
+        return rows.Select(ToSummary).ToList();
+    }
+
+    /// <summary>
+    /// Nhân viên đăng nhập được khi chưa xóa, STATUS = ACTIVE và có mật khẩu. Hàm thuần — có test.
+    /// </summary>
+    internal static VietAnUserLogin? ToLogin(VietAnUser? u)
+    {
+        if (u is null || ToAccountManager(u) is not { Active: true } manager || string.IsNullOrEmpty(u.Password)) return null;
+        return new VietAnUserLogin(u.Id, manager.UserName, manager.FullName, u.IsAdmin == true || u.ViewCustomerAll == 1, u.Password, manager.Email);
+    }
+
     /// <summary>
     /// Nhân viên CMS → thông tin hiển thị: họ tên = FIRST_NAME + LAST_NAME (thiếu thì tên đăng nhập), SĐT di động → SĐT cơ quan (bỏ giá trị không phải số điện thoại),
     /// đang hoạt động khi STATUS = ACTIVE. Nhân viên đã xóa (DELETED) coi như chưa phân công → null. Hàm thuần — có test.
@@ -86,7 +124,8 @@ internal sealed class CustomersApi(CustomersDbContext db) : ICustomersApi
         Clean(c.ContactPhone) ?? Clean(c.Tel) ?? Clean(c.Phone),
         Clean(c.Address1),
         Clean(c.TaxCode),
-        Clean(c.InvoiceName));
+        Clean(c.InvoiceName),
+        Clean(c.LoginUserName));
 
     private static string? Clean(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }

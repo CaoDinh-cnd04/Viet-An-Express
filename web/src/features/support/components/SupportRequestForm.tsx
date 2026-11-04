@@ -160,7 +160,7 @@ export function SupportRequestForm({ preset = {}, onSent, onCancel }: SupportReq
           {tried && error && <span className={styles.error} role="alert">{t(error)}</span>}
           {onCancel && <Button variant="ghost" onClick={onCancel}>{t('Hủy')}</Button>}
           <Button variant="primary" type="submit" disabled={create.isPending}>
-            <Icon name="send" size={14} /> {t(create.isPending ? 'Đang gửi…' : 'Gửi yêu cầu')}
+            {t(create.isPending ? 'Đang gửi…' : 'Gửi yêu cầu')}
           </Button>
         </span>
       </div>

@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 import { useI18n } from '@/shared/i18n';
+import { cx } from '@/shared/lib/cx';
 import { Button, DropdownMenu, Icon } from '@/shared/ui';
 import { PAGE_SIZES, PRINT_DOCUMENTS } from '../constants';
 import type { PrintDoc } from '../mutations';
@@ -35,7 +36,7 @@ export function PageSizeSelect({ value, onChange }: { value: number; onChange: (
   );
 }
 
-/** Thao tác trên các đơn: in nhiều đơn (chọn loại chứng từ), xuất bảng kê — đặt cuối hàng bộ lọc. */
+/** Thao tác trên các đơn: in nhiều đơn (chọn loại chứng từ), xuất bảng kê — đặt cuối hàng bộ lọc; nút không khung, icon + chữ màu. */
 export function OrderSummaryBar(p: OrderSummaryBarProps) {
   return (
     <div className={styles.bar}>
@@ -48,7 +49,7 @@ export function OrderSummaryBar(p: OrderSummaryBarProps) {
 }
 
 /**
- * Nút "In nhiều bill": chọn in đơn đã tick hay cả trang đang xem (20 / 50 / 100 đơn theo số dòng / trang),
+ * Nút "In bill" (in nhiều đơn): chọn in đơn đã tick hay cả trang đang xem (20 / 50 / 100 đơn theo số dòng / trang),
  * tick các loại chứng từ rồi bấm In — nhiều loại in chung 1 lần.
  */
 function BulkPrintMenu({ selectedCount, pageCount, onPrint }: { selectedCount: number; pageCount: number; onPrint: (docs: readonly PrintDoc[], scope: PrintScope) => void }) {
@@ -69,10 +70,12 @@ function BulkPrintMenu({ selectedCount, pageCount, onPrint }: { selectedCount: n
       trigger={({ open, toggle }) => {
         close.current = () => open && toggle();
         return (
-          <Button size="sm" onClick={toggle} disabled={!pageCount && !selectedCount} aria-expanded={open} aria-haspopup="dialog">
-            {selectedCount ? t('In nhiều bill ({n})', { n: selectedCount }) : t('In nhiều bill')}
-            <Icon name="chevronDown" size={14} />
-          </Button>
+          <button type="button" className={cx(styles.action, styles.print)} onClick={toggle} disabled={!pageCount && !selectedCount}
+            aria-expanded={open} aria-haspopup="dialog" data-tour="orders-bulk-print">
+            <Icon name="printer" size={15} />
+            {selectedCount ? t('In bill ({n})', { n: selectedCount }) : t('In bill')}
+            <Icon name="chevronDown" size={12} className={styles.caret} />
+          </button>
         );
       }}
     >
@@ -95,7 +98,7 @@ function BulkPrintMenu({ selectedCount, pageCount, onPrint }: { selectedCount: n
         ))}
         <p className={styles.printHint}>{t('Chọn nhiều loại: in lần lượt từng loại, mỗi loại 1 hộp thoại in theo đúng khổ giấy.')}</p>
         <Button variant="primary" size="sm" onClick={print} disabled={!docs.length || !count}>
-          <Icon name="printer" size={14} /> {t('In {n} đơn', { n: count })}
+          {t('In {n} đơn', { n: count })}
         </Button>
       </div>
     </DropdownMenu>
@@ -115,10 +118,12 @@ function ExportMenu({ pageCount, total, onExport, exporting }: { pageCount: numb
       trigger={({ open, toggle }) => {
         close.current = () => open && toggle();
         return (
-          <Button size="sm" onClick={toggle} disabled={exporting || !total} aria-expanded={open} aria-haspopup="menu">
+          <button type="button" className={cx(styles.action, styles.export)} onClick={toggle} disabled={exporting || !total}
+            aria-expanded={open} aria-haspopup="menu" data-tour="orders-export">
+            <Icon name="download" size={15} />
             {t(exporting ? 'Đang xuất…' : 'Xuất bảng kê')}
-            <Icon name="chevronDown" size={14} />
-          </Button>
+            <Icon name="chevronDown" size={12} className={styles.caret} />
+          </button>
         );
       }}
     >

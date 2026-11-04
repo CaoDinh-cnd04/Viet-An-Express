@@ -29,6 +29,18 @@ public class AccountManagerTests
         Assert.Null(CustomersApi.ToAccountManager(new VietAnUser { Id = 3, UserName = "cu", Deleted = true }));
     }
 
+    [Fact]
+    public void Nhan_vien_dang_nhap_portal_khi_ACTIVE_chua_xoa_co_mat_khau_xem_moi_khach_khi_IS_ADMIN_hoac_VIEW_CUSTOMER_ALL()
+    {
+        var u = new VietAnUser { Id = 7, UserName = "vo.hanh", Status = "ACTIVE", Password = "246810" };
+        Assert.Equal(new VietAnUserLogin(7, "vo.hanh", "vo.hanh", false, "246810"), CustomersApi.ToLogin(u));
+        Assert.True(CustomersApi.ToLogin(new VietAnUser { Id = 7, UserName = "a", Status = "ACTIVE", Password = "1", IsAdmin = true })!.ViewAllCustomers);
+        Assert.True(CustomersApi.ToLogin(new VietAnUser { Id = 7, UserName = "a", Status = "ACTIVE", Password = "1", ViewCustomerAll = 1 })!.ViewAllCustomers);
+        Assert.Null(CustomersApi.ToLogin(new VietAnUser { Id = 7, UserName = "a", Status = "INACTIVE", Password = "1" }));
+        Assert.Null(CustomersApi.ToLogin(new VietAnUser { Id = 7, UserName = "a", Status = "ACTIVE", Password = "1", Deleted = true }));
+        Assert.Null(CustomersApi.ToLogin(new VietAnUser { Id = 7, UserName = "a", Status = "ACTIVE", Password = "" }));
+    }
+
     [Theory]
     [InlineData("0909 123 456", "0909 123 456")]
     [InlineData("+84 28 3948 3949", "+84 28 3948 3949")]

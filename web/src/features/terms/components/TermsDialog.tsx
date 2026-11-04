@@ -81,15 +81,3 @@ export function TermsDialog({ open, onClose, onAccept, acceptLabel = 'Đồng ý
     </Modal>
   );
 }
-
-/** Nút mở Điều khoản dịch vụ (chỉ xem). */
-export function TermsButton({ size = 'sm' }: { size?: 'sm' | 'md' }) {
-  const { t } = useI18n();
-  const [open, setOpen] = useState(false);
-  return (
-    <>
-      <Button size={size} onClick={() => setOpen(true)}>{t('Điều khoản dịch vụ')}</Button>
-      <TermsDialog open={open} onClose={() => setOpen(false)} />
-    </>
-  );
-}

@@ -2,6 +2,7 @@ using VietAnExpress.Customers.Contracts;
 using VietAnExpress.Identity.Contracts;
 using VietAnExpress.Identity.Staff;
 using VietAnExpress.SharedKernel.Authorization;
+using VietAnExpress.Identity.VietAnStaff;
 
 namespace VietAnExpress.Identity.Auth;
 
@@ -10,10 +11,21 @@ namespace VietAnExpress.Identity.Auth;
 /// Quyền khai báo trong code (các module, vai trò "customer") — admin nhận tất cả; tài khoản con nhận mọi quyền
 /// trừ <see cref="IdentityPermissions.AdminOnly"/> (không phân quyền riêng từng người).
 /// </summary>
-internal sealed class SessionService(ITokenService tokens, ICustomersApi customers, IEnumerable<IPermissionProvider> permissionProviders)
+internal sealed class SessionService(
+    ITokenService tokens, ICustomersApi customers, IEnumerable<IPermissionProvider> permissionProviders, VietAnSessionRegistry? vietAnSessions = null)
 {
+    /// <summary>
+    /// "Dấu mật khẩu" refresh token của nhân viên Việt An: mật khẩu + mã phiên hiện hành (<see cref="VietAnSessionRegistry"/>) — đổi mật khẩu
+    /// hoặc đăng nhập ở máy khác đều làm token cũ hết làm mới được.
+    /// </summary>
+    public string VietAnStamp(VietAnUserLogin agent) =>
+        tokens.VietAnPasswordStamp(agent.Id, vietAnSessions?.Current(agent.Id) is { Length: > 0 } sid ? $"{agent.Password}|{sid}" : agent.Password);
+
     private static readonly string[] AdminRoles = [SystemRoles.Customer];
     private static readonly string[] StaffRoles = [SystemRoles.CustomerStaff];
+    private static readonly string[] VietAnRoles = [SystemRoles.VietAnStaff];
+    /// <summary>Quyền riêng của nhân viên Việt An, có cả khi chưa chọn khách.</summary>
+    private static readonly string[] VietAnOwnPermissions = [IdentityPermissions.ActForCustomer, IdentityPermissions.ManageSupportRequests];
 
     private readonly IReadOnlyList<PermissionDefinition> _customerPermissions = permissionProviders
         .SelectMany(p => p.GetPermissions())
@@ -61,6 +73,40 @@ internal sealed class SessionService(ITokenService tokens, ICustomersApi custome
             tokens.PasswordStamp(staff.CustomerId, staff.Password, staff.Id), persistent, authTime);
         return new AuthSession(user, access.Token, access.ExpiresAt, refresh.Token, refresh.ExpiresAt, persistent);
     }
+
+    /// <summary>
+    /// Quyền nhân viên Việt An làm thay khách: như tài khoản chính trừ nhóm Tài khoản của khách (MyTracking, tài khoản con, đổi mật khẩu —
+    /// người dùng chốt 02/11/2026), thêm chọn khách + quản lý hỗ trợ. Chưa chọn khách → chỉ quyền riêng.
+    /// </summary>
+    public IReadOnlyList<string> VietAnPermissions(CustomerSummary? customer) =>
+        customer is null
+            ? VietAnOwnPermissions
+            : [.. Permissions.Where(p => !IdentityPermissions.AdminOnly.Contains(p)), .. VietAnOwnPermissions];
+
+    /// <summary>
+    /// Phiên nhân viên Việt An (dbo.USERS). <paramref name="customer"/> null = chưa chọn khách; phạm vi khách do nơi gọi kiểm tra
+    /// (<c>VietAnScope</c>). Refresh token mang dấu mật khẩu nhân viên — đổi mật khẩu ở CMS / khóa nhân viên thì phiên hết hiệu lực.
+    /// </summary>
+    public AuthSession Start(VietAnUserLogin agent, CustomerSummary? customer, bool persistent, DateTimeOffset? authTime = null)
+    {
+        var user = BuildUser(agent, customer);
+        var customerId = customer?.Id ?? 0;
+        var access = tokens.CreateAccessToken(customerId, null, agent.UserName, VietAnRoles, user.Permissions, vietAnUserId: agent.Id);
+        var refresh = tokens.CreateRefreshToken(customerId, null, VietAnStamp(agent), persistent, authTime, agent.Id);
+        return new AuthSession(user, access.Token, access.ExpiresAt, refresh.Token, refresh.ExpiresAt, persistent);
+    }
+
+    /// <summary>Hồ sơ khách đang làm thay (điền sẵn người gửi như tài khoản chính) + tên nhân viên Việt An.</summary>
+    public SessionUserDto BuildUser(VietAnUserLogin agent, CustomerSummary? customer) =>
+        customer is null
+            ? new SessionUserDto(0, agent.UserName, agent.FullName, AccountTypes.VietAn, "", "", null, null,
+                AvatarUrl: null, DefaultBranch: null, VietAnRoles, VietAnPermissions(null),
+                IsAdmin: false, AgentUserName: agent.UserName, AgentName: agent.FullName)
+            : new SessionUserDto(customer.Id, agent.UserName, agent.FullName, AccountTypes.VietAn,
+                customer.Code, customer.CompanyName, customer.ContactName, customer.Email,
+                AvatarUrl: null, DefaultBranch: null, VietAnRoles, VietAnPermissions(customer),
+                Phone: customer.Phone, Address: customer.Address, TaxCode: customer.TaxCode, IsAdmin: true,
+                AgentUserName: agent.UserName, AgentName: agent.FullName);
 
     public async Task<SessionUserDto?> BuildUserAsync(CustomerLogin login, CancellationToken ct)
     {

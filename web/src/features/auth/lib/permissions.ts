@@ -13,7 +13,11 @@ export const PERMISSIONS = {
   manageStaff: 'account.staff',
   myTracking: 'account.mytracking',
   /** Tự đổi mật khẩu — tài khoản con không có (admin đặt lại). */
-  changePassword: 'account.password'
+  changePassword: 'account.password',
+  /** Nhân viên Việt An: chọn / đổi khách để làm thay. */
+  actForCustomer: 'vietan.act',
+  /** Nhân viên Việt An: Hỗ trợ & góp ý thành trang quản lý yêu cầu của khách mình phụ trách. */
+  manageSupport: 'vietan.troubles'
 } as const;
 
 export type Permission = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];

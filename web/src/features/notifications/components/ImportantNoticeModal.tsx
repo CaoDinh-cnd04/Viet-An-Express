@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useI18n } from '@/shared/i18n';
-import { Button, Icon, Modal } from '@/shared/ui';
+import { Button, Modal } from '@/shared/ui';
 import { useMarkRead, useNotifications } from '../api';
 import { partsOf } from '../lib/inbox';
 import { NoticeContent } from './NoticeContent';
@@ -69,7 +69,7 @@ export function ImportantNoticeModal({ paused = false }: { paused?: boolean }) {
           <Button variant="ghost" onClick={close}>{t('Xem sau')}</Button>
           <Button onClick={() => { close(); void navigate('/notifications'); }}>{t('Xem tất cả')}</Button>
           <Button variant="primary" onClick={readAll}>
-            <Icon name="check" size={15} /> {t(shown.length > 1 ? 'Đã đọc tất cả' : 'Đã đọc')}
+            {t(shown.length > 1 ? 'Đã đọc tất cả' : 'Đã đọc')}
           </Button>
         </>
       }

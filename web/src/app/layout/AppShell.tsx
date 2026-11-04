@@ -2,7 +2,7 @@ import { Suspense, useEffect, useRef, useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { useLocalStorage } from '@/shared/lib/useLocalStorage';
 import { cx } from '@/shared/lib/cx';
-import { IdleLogout, useSession } from '@/features/auth';
+import { ActingBanner, IdleLogout, useSession } from '@/features/auth';
 import { LoginNotices } from '@/features/notifications';
 import { OnboardingTour, useOnboardingTour } from '@/features/onboarding';
 import { useI18n } from '@/shared/i18n';
@@ -27,7 +27,7 @@ export function AppShell() {
   const { t } = useI18n();
   const session = useSession();
   const customerCode = session.data?.status === 'authenticated' ? session.data.user.customerCode : undefined;
-  const tour = useOnboardingTour(customerCode);
+  const tour = useOnboardingTour(customerCode, pathname);
 
   const menuCollapsed = collapsed || autoCollapsed;
 
@@ -101,7 +101,8 @@ export function AppShell() {
       />
       {mobileOpen && <div className={styles.scrim} onClick={() => setMobileOpen(false)} />}
       <div className={styles.main}>
-        <Topbar onMenu={toggleMenu} menuCollapsed={menuCollapsed} onStartTour={tour.start} />
+        <Topbar onMenu={toggleMenu} menuCollapsed={menuCollapsed} onStartTour={tour.start} onStartPageTour={tour.pageTour ? tour.startPage : undefined} />
+        <ActingBanner />
         <main className={cx(styles.content, FULL_SCREEN_PATHS.includes(pathname) && styles.fullScreen)} onInput={onContentInput}>
           <Suspense fallback={<p className={styles.loading}>{t('Đang tải…')}</p>}>
             <Outlet />
@@ -109,7 +110,7 @@ export function AppShell() {
         </main>
         <LoginNotices />
         <IdleLogout />
-        <OnboardingTour open={tour.open} onClose={tour.close} />
+        <OnboardingTour tour={tour.active} onClose={tour.close} />
       </div>
     </div>
   );

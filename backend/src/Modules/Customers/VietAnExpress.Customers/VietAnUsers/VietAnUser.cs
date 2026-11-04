@@ -7,7 +7,8 @@ namespace VietAnExpress.Customers.VietAnUsers;
 /// <summary>
 /// Nhân viên Việt An — bảng <c>dbo.USERS</c> của hệ thống cũ / CMS (giám đốc đến nhân viên; không migration, portal chỉ đọc).
 /// Khách được phân công cho 1 nhân viên qua <c>dbo.TCustomer.Staff_ID</c> → <c>USERS.ID</c>.
-/// Không map cột mật khẩu (USER_PASSWORD, USER_HASH, MAIL_SMTPPASS): portal không đăng nhập bằng tài khoản CMS.
+/// Nhân viên đăng nhập portal để làm thay khách bằng USER_NAME / USER_PASSWORD (hệ thống cũ lưu chữ thường, USER_HASH trống —
+/// người dùng xác nhận 02/11/2026). Không map USER_HASH, MAIL_SMTPPASS.
 /// </summary>
 internal sealed class VietAnUser
 {
@@ -26,6 +27,7 @@ internal sealed class VietAnUser
     /// <summary>1 = xem mọi khách (không chỉ khách mình phụ trách) — quy tắc của CMS.</summary>
     public int? ViewCustomerAll { get; init; }
     public int? BranchId { get; init; }
+    public string? Password { get; init; }
 }
 
 internal sealed class VietAnUserConfiguration : IEntityTypeConfiguration<VietAnUser>
@@ -47,5 +49,6 @@ internal sealed class VietAnUserConfiguration : IEntityTypeConfiguration<VietAnU
         b.Property(x => x.IsAdmin).HasColumnName("IS_ADMIN");
         b.Property(x => x.ViewCustomerAll).HasColumnName("VIEW_CUSTOMER_ALL");
         b.Property(x => x.BranchId).HasColumnName("BRANCH_ID");
+        b.Property(x => x.Password).HasColumnName("USER_PASSWORD").HasMaxLength(60);
     }
 }

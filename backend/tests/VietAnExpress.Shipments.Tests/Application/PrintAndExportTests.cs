@@ -30,6 +30,7 @@ public class OrderDocumentRendererTests
             var model = new OrderPrintModel(Order(), [new PrintItem("METAL SIGN LOGO", 1, "PCS", 8, null, "Vietnam")], [new PrintPackage(1, 32, 54, 23, 8)]);
             File.WriteAllText(Path.Combine(output, "bill-a4.html"), Render(PrintDocs.BillA4, model));
             File.WriteAllText(Path.Combine(output, "label-a6.html"), Render(PrintDocs.LabelA6, model));
+            File.WriteAllText(Path.Combine(output, "invoice.html"), Render(PrintDocs.Invoice, model));
             File.WriteAllText(Path.Combine(output, "qr.svg"), BillA4.Qr(model.Bill));
             File.WriteAllText(Path.Combine(output, "qr-expected.txt"), model.Bill);
         }
@@ -46,6 +47,45 @@ public class OrderDocumentRendererTests
         var groups = System.Text.RegularExpressions.Regex.Matches(html, "<div class=\"qr-frame\">(.*?)</div>", System.Text.RegularExpressions.RegexOptions.Singleline);
         Assert.NotEmpty(groups);
         foreach (System.Text.RegularExpressions.Match group in groups) Assert.Equal(expected, group.Groups[1].Value);
+    }
+
+    [Fact]
+    public void Don_chung_tu_khong_in_invoice()
+    {
+        var docOrder = Order();
+        docOrder.GoodsName = "Document";
+        var doc = new OrderPrintModel(docOrder, []);
+        var pack = new OrderPrintModel(Order(), []);
+
+        Assert.Equal([pack], OrderDocumentRenderer.For(PrintDocs.Invoice, [doc, pack]));
+        Assert.Equal(2, OrderDocumentRenderer.For(PrintDocs.BillA4, [doc, pack]).Count);
+        // In & cấp bill đơn chứng từ (bill + invoice + nhãn): bỏ invoice, còn 2 loại
+        var html = OrderDocumentRenderer.RenderMany([PrintDocs.BillA4, PrintDocs.Invoice, PrintDocs.LabelA6], [doc], Company, Now);
+        Assert.Contains("2 loại", html);
+        Assert.Contains("không có gì để in", OrderDocumentRenderer.RenderMany([PrintDocs.Invoice], [doc], Company, Now));
+    }
+
+    /// <summary>
+    /// Trang in chịu CSP của portal (script-src 'self' + mã băm): không có onclick / script inline nào ngoài 2 script cố định,
+    /// và mã băm của chúng khớp danh sách đã khai ở frontend.web.config + SecurityHeaders.PortalCsp (sửa script thì cập nhật 2 chỗ đó).
+    /// </summary>
+    [Fact]
+    public void Trang_in_chi_co_script_da_khai_ma_bam_trong_CSP()
+    {
+        Assert.Equal(["'sha256-mrzOaQ9oR0hzQLxt4c7Gjkxo+WGetV688tOKG1n7puA='", "'sha256-k7B/z5XAYSiNSfnY4+WYjLr7LjzXjvr+6Uj7PYpDgQ4='"],
+            OrderDocumentRenderer.ScriptHashes);
+
+        var model = new OrderPrintModel(Order(), []);
+        foreach (var html in new[]
+                 {
+                     OrderDocumentRenderer.RenderMany([PrintDocs.BillA4], [model], Company, Now),
+                     OrderDocumentRenderer.RenderMany([PrintDocs.BillA4, PrintDocs.LabelA6], [model], Company, Now)
+                 })
+        {
+            Assert.DoesNotMatch(@"\son[a-z]+\s*=", html); // onclick=, onload=…
+            foreach (System.Text.RegularExpressions.Match m in System.Text.RegularExpressions.Regex.Matches(html, "<script>(.*?)</script>", System.Text.RegularExpressions.RegexOptions.Singleline))
+                Assert.Contains(OrderDocumentRenderer.CspHash(m.Groups[1].Value), OrderDocumentRenderer.ScriptHashes);
+        }
     }
 
     private static readonly CompanyInfo Company = new();
@@ -224,6 +264,17 @@ public class OrderDocumentRendererTests
         Assert.Contains("Reason for Export: <b>GIFT</b>", html);
         Assert.Contains("<b>SCS CO., LTD</b>", html); // I (name) … certify
         Assert.Contains("Signature/Title/Stamp", html);
+    }
+
+    [Fact]
+    public void Invoice_in_hinh_thuc_chiu_thue_khi_lenh_in_gui_kem_khong_gui_thi_khong_in()
+    {
+        var items = new[] { new PrintItem("Dress", 1, "PCS", 20, "6204", "Vietnam") };
+        var withDuty = System.Net.WebUtility.HtmlDecode(Render(PrintDocs.Invoice, new OrderPrintModel(Order(), items) { DutyTerms = "DDP" }));
+        Assert.Contains("Terms of delivery: <b>DDP</b> (duties and taxes paid by shipper)", withDuty);
+
+        var without = System.Net.WebUtility.HtmlDecode(Render(PrintDocs.Invoice, new OrderPrintModel(Order(), items)));
+        Assert.DoesNotContain("Terms of delivery", without);
     }
 
     [Fact]

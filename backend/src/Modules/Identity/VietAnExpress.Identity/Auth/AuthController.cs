@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Options;
 using VietAnExpress.Identity.Contracts;
+using VietAnExpress.Identity.CustomerOtp;
 using VietAnExpress.Identity.Staff;
 using VietAnExpress.Identity.Support;
 using VietAnExpress.SharedKernel.Authorization;
@@ -30,6 +31,34 @@ internal sealed class AuthController(IOptions<JwtOptions> jwt) : ApiControllerBa
     public async Task<IActionResult> Login(LoginRequest body, [FromQuery] bool useCookies = true, CancellationToken ct = default)
     {
         var result = await Sender.Send(new LoginCommand(body.UserName, body.Password, body.Remember), ct);
+        if (result.IsFailure) return Problem(result.Error);
+        // OTP khách (công tắc CustomerOtp:Mode): đúng mật khẩu → gửi mã, chưa cấp phiên; nhập mã ở /auth/verify-otp.
+        var otp = await Sender.Send(new StartCustomerOtpCommand(result.Value, body.UserName, body.Remember), ct);
+        if (otp.IsFailure) return Problem(otp.Error);
+        return otp.Value is { } challenge
+            ? OkData(challenge, $"Đã gửi mã OTP tới {challenge.Email}")
+            : SessionResponse(result.Value, useCookies, "Đăng nhập thành công");
+    }
+
+    /// <summary>OTP khách, lần đăng nhập đầu: email nhận mã + đồng ý xử lý dữ liệu cá nhân → gửi mã xác nhận tới email đó.</summary>
+    [HttpPost("otp-email")]
+    [AllowAnonymous]
+    [EnableRateLimiting(RateLimitPolicies.Login)]
+    [ProducesResponseType<ApiResponse<CustomerOtpChallengeDto>>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> OtpEmail(SetOtpEmailRequest body, CancellationToken ct)
+    {
+        var result = await Sender.Send(new SetOtpEmailCommand(body.ChallengeId, body.Email, body.AcceptTerms), ct);
+        return result.IsSuccess ? OkData(result.Value, $"Đã gửi mã xác nhận tới {result.Value.Email}") : Problem(result.Error);
+    }
+
+    /// <summary>Bước 2 khi bật OTP khách: nhập mã OTP đã gửi email → phiên (cookie, hoặc body khi ?useCookies=false).</summary>
+    [HttpPost("verify-otp")]
+    [AllowAnonymous]
+    [EnableRateLimiting(RateLimitPolicies.Login)]
+    [ProducesResponseType<ApiResponse<SessionUserDto>>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> VerifyOtp(VerifyCustomerOtpRequest body, [FromQuery] bool useCookies = true, CancellationToken ct = default)
+    {
+        var result = await Sender.Send(new VerifyCustomerOtpCommand(body.ChallengeId, body.Code), ct);
         return result.IsSuccess ? SessionResponse(result.Value, useCookies, "Đăng nhập thành công") : Problem(result.Error);
     }
 

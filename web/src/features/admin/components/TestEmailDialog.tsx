@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { getErrorMessage } from '@/shared/api/http';
 import { useI18n } from '@/shared/i18n';
-import { Button, Icon, Modal, Notice } from '@/shared/ui';
+import { Button, Modal, Notice } from '@/shared/ui';
 import { useTestNotificationEmail } from '../api';
 import { toRequest, type Draft } from '../lib/editor';
 import styles from './NotificationEditor.module.css';
@@ -50,7 +50,7 @@ export function TestEmailDialog({ draft, onClose }: { draft: Draft; onClose: () 
         <>
           <Button variant="ghost" onClick={onClose}>{t('Đóng')}</Button>
           <Button variant="primary" onClick={submit} disabled={!to.trim() || send.isPending}>
-            <Icon name="send" size={15} /> {t(send.isPending ? 'Đang gửi…' : 'Gửi thử')}
+            {t(send.isPending ? 'Đang gửi…' : 'Gửi thử')}
           </Button>
         </>
       }

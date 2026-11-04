@@ -23,13 +23,20 @@ internal sealed record SessionUserDto(
     string? Phone = null,
     string? Address = null,
     string? TaxCode = null,
-    bool IsAdmin = false);
+    bool IsAdmin = false,
+    string? AgentUserName = null,
+    string? AgentName = null);
 
-/// <summary>Loại tài khoản: "customer" = tài khoản chính của khách (admin), "staff" = tài khoản con của nhân viên.</summary>
+/// <summary>
+/// Loại tài khoản: "customer" = tài khoản chính của khách (admin), "staff" = tài khoản con của nhân viên,
+/// "vietan" = nhân viên Việt An (dbo.USERS) làm thay khách — AgentUserName / AgentName là của nhân viên, phần còn lại của khách đang chọn
+/// (CustomerId 0 = chưa chọn khách).
+/// </summary>
 internal static class AccountTypes
 {
     public const string Customer = "customer";
     public const string Staff = "staff";
+    public const string VietAn = "vietan";
 }
 
 /// <summary>Kết quả đăng nhập / làm mới phiên — controller quyết định trả qua cookie hay body.</summary>

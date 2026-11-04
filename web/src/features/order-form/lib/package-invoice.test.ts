@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { isPerPackageInvoice } from '@/shared/config/domain';
 import { createOrderSchema, defaultValues, emptyInvoiceItem, emptyPackage, type InvoiceItemValues } from '../schema';
 import {
-  copyPreviousPackage, packageCount, packageGroups, packageInvoiceIssues, syncPackageItems, writeInvoiceItems
+  copyPreviousPackage, invoicePackageCount, packageCount, packageGroups, packageInvoiceIssues, syncPackageItems, writeInvoiceItems
 } from './package-invoice';
 
 const item = (descEn: string, pkg = '', extra: Partial<InvoiceItemValues> = {}): InvoiceItemValues =>
@@ -24,6 +24,15 @@ describe('isPerPackageInvoice', () => {
   it('quy tắc "Hãng - *" áp cho mọi hub của hãng', () => {
     expect(isPerPackageInvoice('UPS - Dubai', ['UPS - *'])).toBe(true);
     expect(isPerPackageInvoice('UPSX - Dubai', ['UPS - *'])).toBe(false);
+  });
+});
+
+describe('invoicePackageCount', () => {
+  it('theo tổng số lượng dự kiến khách nhập, chưa nhập thì theo bảng kiện', () => {
+    expect(invoicePackageCount('2', [{ qty: '1' }])).toBe(2);
+    expect(invoicePackageCount('', [{ qty: '2' }, { qty: '1' }])).toBe(3);
+    expect(invoicePackageCount('0', [{ qty: '1' }])).toBe(1);
+    expect(invoicePackageCount('a', [{ qty: '1' }])).toBe(1);
   });
 });
 

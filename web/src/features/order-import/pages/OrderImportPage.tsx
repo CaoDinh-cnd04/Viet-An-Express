@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { getErrorMessage } from '@/shared/api/http';
 import { useI18n } from '@/shared/i18n';
 import { BRANCHES, CARRIERS, defaultHub, hubOptions } from '@/shared/config/domain';
-import { Button, Card, DataTable, FileDrop, FormGrid, Icon, LinkButton, Notice, PageHeader, SelectField, StatusPill, type Column } from '@/shared/ui';
+import { Button, Card, DataTable, FileDrop, FormGrid, LinkButton, Notice, PageHeader, SelectField, StatusPill, type Column } from '@/shared/ui';
 import { useCommitImport, usePreviewImport } from '../api';
 import { IMPORT_GUIDE, IMPORT_LIMITS, IMPORT_STEPS, IMPORT_TEMPLATE_URL } from '../constants';
 import { formatMoney } from '@/shared/lib/format';
@@ -76,7 +76,7 @@ export default function OrderImportPage() {
         description="Tạo nhiều đơn cùng lúc từ file Excel mẫu: chọn dịch vụ (nếu cần) → tải file lên → kiểm tra → tạo đơn."
         actions={
           <LinkButton to={IMPORT_TEMPLATE_URL} reloadDocument download={TEMPLATE_NAME} size="sm">
-            <Icon name="download" size={15} /> {t('Tải file mẫu')}
+            {t('Tải file mẫu')}
           </LinkButton>
         }
       />
@@ -135,7 +135,7 @@ export default function OrderImportPage() {
               <div className={styles.actions}>
                 {!created && file && (
                   <Button size="sm" onClick={() => check(file)} disabled={preview.isPending || commit.isPending}>
-                    <Icon name="refresh" size={15} /> {t('Kiểm tra lại')}
+                    {t('Kiểm tra lại')}
                   </Button>
                 )}
                 <Button variant="primary" size="sm" disabled={!result.valid || !!hubError || commit.isPending || created} onClick={create}>

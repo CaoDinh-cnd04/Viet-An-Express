@@ -8,6 +8,7 @@
 
 .header {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--space-3);
   min-height: 52px;
@@ -27,6 +28,8 @@
 .actions {
   margin-left: auto;
   display: flex;
+  flex-wrap: wrap;
+  align-items: center;
   gap: var(--space-2);
 }
 
@@ -34,15 +37,27 @@
   padding: var(--space-3) var(--space-4) var(--space-4);
 }
 
-/* Tiêu đề nổi bật: tên khung màu xanh lá đậm, in đậm */
-.accent .title {
-  color: var(--color-section-title);
-  font-size: var(--text-lg);
-  font-weight: 700;
+/* Tiêu đề nổi bật: nền xanh lá Việt An nhạt, tên khung xanh lá in đậm, đường kẻ ngăn với thân — dễ nhận ra từng mục của form dài */
+.accent > .header {
+  min-height: 44px;
+  padding: var(--space-2) var(--space-4);
+  /* Khung muốn tiêu đề nền trắng không đường kẻ (vd Chi tiết kiện hàng, Invoice ở trang Tạo đơn) đặt --card-head-border / --color-section-head-bg */
+  border-bottom: var(--card-head-border, 1px solid var(--color-border));
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+  background: var(--color-section-head-bg);
 }
 
-/* Nút trên tiêu đề (Làm mới, Sổ địa chỉ…) cùng màu với tên khung */
+.accent .title {
+  color: var(--color-section-accent);
+  /* Trang cần tiêu đề to hơn đặt --card-title-size (vd trang Tạo đơn 16px) */
+  font-size: var(--card-title-size, var(--text-lg));
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* Nút trên tiêu đề (Làm mới, Sổ địa chỉ…) cùng màu với tên khung, nền trắng để nổi trên dải màu */
 .accent > .header .actions :is(button, a) {
-  border-color: var(--color-section-title);
-  color: var(--color-section-title);
+  border-color: var(--card-action-border, var(--color-section-accent));
+  background: var(--card-action-bg, var(--color-surface));
+  color: var(--card-action-color, var(--color-section-accent));
 }

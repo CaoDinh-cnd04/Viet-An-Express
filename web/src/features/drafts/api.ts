@@ -17,6 +17,8 @@ export interface Draft {
   content: string;
   date: string;
   payload?: Record<string, unknown>;
+  /** Nhân viên Việt An tạo giúp khách (MaVanDon.CreateUser > 0). */
+  createdByVietAn?: boolean;
 }
 
 export type NewDraft = Omit<Draft, 'id' | 'date'>;

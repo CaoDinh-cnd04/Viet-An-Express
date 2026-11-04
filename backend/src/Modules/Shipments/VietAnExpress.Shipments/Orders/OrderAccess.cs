@@ -60,7 +60,20 @@ internal sealed class OrderAccess(ICurrentUser user, ICustomersApi customers)
     /// Ghi người tạo vào MaVanDon.Customer_Staff_ID (cột hệ thống cũ = người liên hệ / nhân viên của khách,
     /// dbo.TCustomer_NguoiLienLac.ID): tài khoản con → ID của mình, tài khoản chính → 0 như hệ thống cũ.
     /// </summary>
-    public void StampCreator(LegacyOrder order) => order.CustomerStaffId = CreatorStaffId ?? 0;
+    /// <remarks>
+    /// Nhân viên Việt An làm thay khách: thêm MaVanDon.CreateUser / ModifyUser = USERS.ID (khách tự làm = 0 như hệ thống cũ) —
+    /// khách thấy nhãn "Việt An tạo giúp".
+    /// </remarks>
+    public void StampCreator(LegacyOrder order)
+    {
+        order.CustomerStaffId = CreatorStaffId ?? 0;
+        order.CreateUser = order.ModifyUser = VietAnUserId;
+    }
+
+    /// <summary>Người sửa / in gần nhất: MaVanDon.ModifyUser = USERS.ID khi nhân viên Việt An làm thay, 0 = khách.</summary>
+    public void StampModifier(LegacyOrder order) => order.ModifyUser = VietAnUserId;
+
+    private int VietAnUserId => user.VietAnUserId ?? 0;
 
     /// <summary>Khách ghi đơn vào dbo.MaVanDon — kèm tên công ty, người liên hệ để điền người gửi.</summary>
     public async Task<Result<LegacyCustomerRef>> WriterAsync(CancellationToken ct)

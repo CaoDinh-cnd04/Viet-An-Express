@@ -9,8 +9,8 @@ const translate = createTranslator(EN);
 /** Có bản dịch: đúng khoá, khớp mẫu có biến, hoặc cố ý không dịch. */
 const has = (text: string) => NO_TRANSLATE.has(text) || text in EN || translate('en', text) !== text;
 
-// Toàn bộ mã giao diện (trừ test và chính từ điển).
-const sources = import.meta.glob<string>(['/src/**/*.{ts,tsx}', '!/src/**/*.test.{ts,tsx}', '!/src/shared/i18n/**'], {
+// Toàn bộ mã giao diện (trừ test, chính từ điển và bảng dữ liệu hub theo nước — khoá "Dịch vụ|Hub", không hiện cho khách).
+const sources = import.meta.glob<string>(['/src/**/*.{ts,tsx}', '!/src/**/*.test.{ts,tsx}', '!/src/shared/i18n/**', '!/src/shared/config/hub-countries.ts'], {
   query: '?raw',
   import: 'default',
   eager: true

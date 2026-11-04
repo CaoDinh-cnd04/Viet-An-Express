@@ -11,7 +11,8 @@ namespace VietAnExpress.Identity.MyTracking;
 /// Phần thương hiệu + cổng liên lạc của trang MyTracking nằm ở hồ sơ khách <c>dbo.TCustomer</c> như trang mytracking.top cũ
 /// (không ở TCustomer_MyTracking): logo = <c>Logo_ShippingMark</c> → <c>dbo.TCommonFile</c> (cũng là shipping mark in trên bill),
 /// website = <c>Bank</c> (nút Home của trang cũ), màu = <c>Column1</c> / <c>Column2</c>, cổng liên lạc = <c>CongLienLac_*</c>.
-/// Địa chỉ (<c>Address1</c>) và điện thoại (<c>Phone</c>) là thông tin người gửi trên bill — chỉ đọc, đổi qua yêu cầu hỗ trợ.
+/// Địa chỉ (<c>Address1</c>) và điện thoại (<c>Phone</c>) là thông tin người gửi trên bill — chỉ đọc; khách sửa ở MyTracking thì
+/// lưu ở TCustomer_MyTracking (<see cref="MyTrackingPage.SetContactInfo"/>).
 /// </summary>
 internal sealed class MyTrackingBrand
 {

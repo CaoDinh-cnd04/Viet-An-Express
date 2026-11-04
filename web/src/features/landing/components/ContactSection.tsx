@@ -100,7 +100,7 @@ function ContactForm() {
         {...register('message')}
       />
       <Button variant="primary" type="submit" className={styles.submit} disabled={send.isPending}>
-        <Icon name="send" size={16} />
+        
         {t(send.isPending ? 'Đang gửi…' : 'Gửi lời nhắn')}
       </Button>
     </form>

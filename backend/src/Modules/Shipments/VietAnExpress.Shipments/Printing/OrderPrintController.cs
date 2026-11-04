@@ -19,15 +19,16 @@ internal sealed class OrderPrintController : ApiControllerBase
     /// <summary>
     /// Trang in chứng từ (HTML, tự mở hộp thoại in): doc = bill-a4 | invoice | cvck | label-a6, hoặc nhiều loại
     /// ngăn bằng dấu phẩy (trang gộp, in lần lượt từng loại);
-    /// bills = danh sách số vận đơn ngăn bằng dấu phẩy (tối đa 100).
+    /// bills = danh sách số vận đơn ngăn bằng dấu phẩy (tối đa 100);
+    /// duty = DDU | DDP (không bắt buộc) — hình thức chịu thuế khách chọn lúc tạo đơn, chỉ in lên invoice (không lưu database).
     /// </summary>
     [HttpGet("print")]
     [HasPermission(ShipmentsPermissions.View)]
     [Produces("text/html")]
-    public async Task<IActionResult> Print([FromQuery] string? bills, [FromQuery] string? doc, CancellationToken ct)
+    public async Task<IActionResult> Print([FromQuery] string? bills, [FromQuery] string? doc, [FromQuery] string? duty, CancellationToken ct)
     {
         var list = (bills ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        var result = await Sender.Send(new PrintOrdersQuery(list, doc ?? ""), ct);
+        var result = await Sender.Send(new PrintOrdersQuery(list, doc ?? "", duty), ct);
         return result.IsSuccess ? Content(result.Value, "text/html; charset=utf-8") : Problem(result.Error);
     }
 

@@ -25,6 +25,9 @@ internal sealed class MyTrackingPageConfiguration : IEntityTypeConfiguration<MyT
             b.Property<string?>($"CongTruyenThong{i:00}").HasColumnName($"CongTruyenThong_{i:00}").HasMaxLength(MyTrackingChannels.ValueMaxLength);
         }
         b.Property(x => x.Background).HasColumnName("Str1").HasMaxLength(MyTrackingChannels.ValueMaxLength);
+        b.Property(x => x.CompanyName).HasColumnName("CompanyName").HasMaxLength(MyTrackingChannels.ValueMaxLength);
+        b.Property(x => x.Address).HasColumnName("Address").HasMaxLength(MyTrackingChannels.ValueMaxLength);
+        b.Property(x => x.Phone).HasColumnName("Tel").HasMaxLength(MyTrackingChannels.ValueMaxLength);
 
         b.HasMany(x => x.Banners).WithOne().HasForeignKey(x => x.MyTrackingId).OnDelete(DeleteBehavior.ClientCascade);
     }

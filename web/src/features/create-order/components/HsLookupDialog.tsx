@@ -77,7 +77,7 @@ export function HsLookupDialog({ open, onClose }: { open: boolean; onClose: () =
             <input autoFocus value={input} onChange={e => setInput(e.target.value)} placeholder={t('VD: dried mango, t-shirt, 0804, 6109.10')} />
           </label>
           <Button type="submit" variant="primary" disabled={input.trim().length < 2}>
-            <Icon name="search" size={15} /> {t('Tra cứu')}
+            {t('Tra cứu')}
           </Button>
         </form>
 
@@ -109,7 +109,7 @@ export function HsLookupDialog({ open, onClose }: { open: boolean; onClose: () =
               <header className={styles.groupHead}>
                 <span className={styles.label}>HS6</span>
                 <code className={styles.code}>{g.hs6}</code>
-                <button type="button" className={styles.copy} onClick={() => void copy(g.hs6, t('Đã sao chép HS {hs}', { hs: g.hs6 }))}><Icon name="copy" size={13} /> {t('Chép')}</button>
+                <button type="button" className={styles.copy} onClick={() => void copy(g.hs6, t('Đã sao chép HS {hs}', { hs: g.hs6 }))}>{t('Chép')}</button>
                 {g.path.length > 0 && <p className={styles.path}>{g.path.join(' › ')}</p>}
               </header>
               <ul className={styles.lines}>
@@ -127,7 +127,7 @@ export function HsLookupDialog({ open, onClose }: { open: boolean; onClose: () =
                       {it.nationalCode ? (
                         <>
                           <code className={styles.code}>{formatHs(it.nationalCode)}</code>
-                          <button type="button" className={styles.copy} onClick={() => void copy(formatHs(it.nationalCode), t('Đã sao chép HS {hs}', { hs: formatHs(it.nationalCode) }))}><Icon name="copy" size={13} /> {t('Chép')}</button>
+                          <button type="button" className={styles.copy} onClick={() => void copy(formatHs(it.nationalCode), t('Đã sao chép HS {hs}', { hs: formatHs(it.nationalCode) }))}>{t('Chép')}</button>
                         </>
                       ) : (
                         <span className={styles.muted}>{t('Chưa có mã {digits} của {country}', { digits: t(meta.digits), country: t(meta.label) })}</span>

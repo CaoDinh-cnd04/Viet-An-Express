@@ -4,8 +4,26 @@
  */
 export const PORTAL_HOME = '/home';
 
+import type { SessionUser } from '../types';
+
+/** Nhân viên Việt An chọn / đổi khách để làm thay. */
+export const CHOOSE_CUSTOMER_PATH = '/chon-khach';
+
+/** Các trang nhân viên Việt An vào được khi chưa chọn khách. */
+const NO_CUSTOMER_PATHS = new Set([CHOOSE_CUSTOMER_PATH, '/troubles']);
+
+/** Nhân viên Việt An (dbo.USERS) đang đăng nhập portal để làm thay khách. */
+export function isVietAnAgent(user: SessionUser | null | undefined): boolean {
+  return user?.accountType === 'vietan';
+}
+
+/** Nhân viên Việt An chưa chọn khách mà mở trang của khách → phải chọn khách trước. Hàm thuần — có test. */
+export function needsCustomer(user: SessionUser | null | undefined, pathname: string): boolean {
+  return isVietAnAgent(user) && !user?.customerCode && !NO_CUSTOMER_PATHS.has(pathname);
+}
+
 /** Các trang ngoài (không cần đăng nhập) — không dùng làm đích quay lại. */
-const PUBLIC_PATHS = new Set(['/', '/login']);
+const PUBLIC_PATHS = new Set(['/', '/login', CHOOSE_CUSTOMER_PATH]);
 
 /**
  * Đích chuyển tới sau đăng nhập, lấy từ `?next=`.

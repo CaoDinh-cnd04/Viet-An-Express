@@ -59,11 +59,40 @@ public class DraftOrdersTests
 
         var dto = DraftOrders.ToDto(o, lines, []);
 
-        // Không lưu chi nhánh (VA_Bill NULL) → danh sách để trống, mở lại form mặc định TP.HCM.
+        // Không lưu chi nhánh (VA_Bill NULL) → danh sách để trống, mở lại form cũng để trống cho khách chọn.
         Assert.Equal(("850993", "ready", "Jason Teo", "DHL - Singapore", "", "1 kiện · 2 kg", "15/10/2026"),
             (dto.Id, dto.Stt, dto.Cnee, dto.Service, dto.Branch, dto.Pcs, dto.Date));
         var form = dto.Payload!.Value;
-        Assert.Equal("TP.HCM", form.GetProperty("shipper").GetProperty("branch").GetString());
+        Assert.Equal("", form.GetProperty("shipper").GetProperty("branch").GetString());
         Assert.Equal("1", form.GetProperty("packages")[0].GetProperty("qty").GetString());
+    }
+
+    private static OrderPayload DocPayload() => new()
+    {
+        Shipper = new() { Company = "SGB EXPRESS HN", Contact = "Đức Anh", Tel = "0977714964", Address = "241 Tân Xuân, HN" },
+        Service = new() { Carrier = "DHL", Hub = "DHL - Singapore" },
+        Shipment = new() { Type = "DOC", Pieces = "1", GrossWeight = "0.5" },
+        Receiver = new() { Company = "Jason Teo", Contact = "Jason", Tel = "+6591234567", Country = "Singapore", City = "SINGAPORE", Addr1 = "8 Bhamo Road", Addr2 = "#01-02" }
+    };
+
+    [Fact]
+    public void Nhap_chung_tu_mo_lai_va_in_van_la_chung_tu_khong_bat_khai_invoice()
+    {
+        var o = DraftOrders.Build(DocPayload(), Customer, Today, null);
+        Assert.Equal(("Document", "ReasonExport"), (o.GoodsName, o.ExportReason)); // như hệ thống cũ — In / mở lại / phần mềm cũ nhận chứng từ qua Ten_hang
+
+        var payload = Orders.OrderCopy.FromLegacy(o, LegacyOrderFactory.PackageLines(DocPayload(), 1), []);
+        Assert.Equal("DOC", payload.Shipment.Type);
+        Assert.Empty(PrintReadiness.Missing(payload));
+    }
+
+    [Fact]
+    public void Nhap_chung_tu_cu_Ten_hang_NULL_khong_kien_khong_invoice_van_la_chung_tu()
+    {
+        var o = DraftOrders.Build(DocPayload(), Customer, Today, null);
+        o.GoodsName = null; // nháp lưu trước 03/11/2026
+
+        Assert.Equal("DOC", Orders.OrderCopy.FromLegacy(o, [], []).Shipment.Type);
+        Assert.Equal("PACK", Orders.OrderCopy.FromLegacy(DraftOrders.Build(new OrderPayload(), Customer, Today, null), [], []).Shipment.Type);
     }
 }

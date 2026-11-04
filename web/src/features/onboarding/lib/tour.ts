@@ -8,8 +8,27 @@ export interface Box {
 
 export type Placement = 'right' | 'bottom' | 'center';
 
-/** Đã xem hướng dẫn — lưu theo từng khách trên trình duyệt (tăng v khi đổi nội dung để khách xem lại). */
-export const tourStorageKey = (customerCode: string) => `va.tour.v1.${customerCode || 'guest'}`;
+/** intro = hướng dẫn tổng quát lần đầu đăng nhập; còn lại = hướng dẫn từng nút của 1 trang. */
+export type TourId = 'intro' | 'create-quick' | 'orders' | 'support' | 'mytracking' | 'staff';
+
+/** Trang có hướng dẫn riêng (đường dẫn → bộ hướng dẫn). */
+const PAGE_TOURS: Readonly<Record<string, TourId>> = {
+  '/orders/new/quick': 'create-quick',
+  '/orders': 'orders',
+  '/troubles': 'support',
+  '/account/mytracking': 'mytracking',
+  '/account/staff': 'staff'
+};
+
+/** Bộ hướng dẫn của trang đang mở (bỏ "/" cuối); trang không có hướng dẫn riêng → undefined. */
+export const pageTourId = (pathname: string): TourId | undefined => PAGE_TOURS[pathname.replace(/(.)\/+$/, '$1')];
+
+/**
+ * Đã xem hướng dẫn — lưu theo từng khách trên trình duyệt (tăng v khi đổi nội dung để khách xem lại).
+ * Hướng dẫn tổng quát giữ khoá cũ để khách đã xem không phải xem lại.
+ */
+export const tourStorageKey = (customerCode: string, id: TourId = 'intro') =>
+  id === 'intro' ? `va.tour.v1.${customerCode || 'guest'}` : `va.tour.${id}.v1.${customerCode || 'guest'}`;
 
 const GAP = 14;
 const MARGIN = 12;
@@ -23,7 +42,7 @@ const clamp = (value: number, min: number, max: number) => Math.min(Math.max(val
 
 /**
  * Vị trí khung chú thích: bên phải vùng chức năng (menu trái) hoặc bên dưới (thanh trên cùng),
- * hết chỗ thì đổi phía; luôn nằm trong màn hình. Không có vùng chức năng → giữa màn hình.
+ * hết chỗ thì đổi phía (phải → dưới → trên); luôn nằm trong màn hình. Không có vùng chức năng → giữa màn hình.
  */
 export function popoverPosition(
   target: Box | null,
@@ -49,6 +68,11 @@ export function popoverPosition(
   if (below + size.height + MARGIN <= viewport.height) {
     // Canh mép phải khung theo mép phải vùng chức năng (nút ở góc phải thanh trên cùng).
     return { top: below, left: clamp(target.left + target.width - size.width, MARGIN, maxLeft), placement: 'bottom' };
+  }
+  // Vùng ở thấp trên màn hình (nút cuối trang): khung nằm phía trên.
+  const above = target.top - GAP - size.height;
+  if (above >= MARGIN) {
+    return { top: above, left: clamp(target.left + target.width - size.width, MARGIN, maxLeft), placement: 'bottom' };
   }
   return center;
 }

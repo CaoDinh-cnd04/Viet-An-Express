@@ -3,6 +3,7 @@ import { FormProvider } from 'react-hook-form';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { getErrorMessage } from '@/shared/api/http';
 import { useI18n } from '@/shared/i18n';
+import { cx } from '@/shared/lib/cx';
 import { Button, Card, LinkButton, Notice, PageHeader, SegmentedControl } from '@/shared/ui';
 import { useSession } from '@/features/auth';
 import { DraftsTable } from '@/features/drafts';
@@ -15,7 +16,9 @@ import { QuickLookup } from '../components/QuickLookup';
 import { ReceiverSection } from '../components/ReceiverSection';
 import { ServiceSection } from '../components/ServiceSection';
 import { ShipmentSection } from '../components/ShipmentSection';
+import { SectionTitle } from '../components/SectionTitle';
 import { ShipperSection } from '../components/ShipperSection';
+import formStyles from '../components/form.module.css';
 import { StepIndicator } from '../components/StepIndicator';
 import { SurchargeConfirmDialog } from '../components/SurchargeConfirmDialog';
 import { useCreateOrderForm } from '../hooks/useCreateOrderForm';
@@ -70,15 +73,16 @@ export default function CreateOrderPage({ mode }: { mode: CreateMode }) {
         description={isWizard ? t('{n} bước · tự lưu trong phiên', { n: steps.length }) : 'Điền tất cả trên 1 trang · tự lưu trong phiên'}
         actions={
           <>
-            <HelpLinksMenu />
-            <SegmentedControl ariaLabel="Chế độ tạo đơn" options={MODE_OPTIONS} value={mode} onChange={m => navigate(MODE_ROUTES[m] + search)} />
+            {/* data-tour: mốc cho hướng dẫn từng nút của trang (features/onboarding) */}
+            <span data-tour="create-help-links"><HelpLinksMenu /></span>
+            <span data-tour="create-mode"><SegmentedControl ariaLabel="Chế độ tạo đơn" options={MODE_OPTIONS} value={mode} onChange={m => navigate(MODE_ROUTES[m] + search)} /></span>
           </>
         }
       />
 
       <div className={styles.layout}>
-        {/* Mục lục dọc, ghim theo khi cuộn: từng bước → chuyển bước; 1 trang → cuộn tới phần đó và đánh dấu phần đang xem */}
-        <aside className={styles.nav}>
+        {/* Thanh các bước ngang trên cùng (trải 2 cột): từng bước → chuyển bước; 1 trang → cuộn tới phần đó */}
+        <div className={styles.steps} data-tour="create-nav">
           <StepIndicator
             steps={steps}
             sections={wizard.sections}
@@ -89,34 +93,51 @@ export default function CreateOrderPage({ mode }: { mode: CreateMode }) {
             onSelectStep={wizard.selectStep}
             onSelectSection={(i, id) => void wizard.selectSection(i, id)}
           />
-          <QuickLookup />
+        </div>
+        {/* Cột trái ghim theo khi cuộn: khung Hỗ trợ khách hàng */}
+        <aside className={styles.nav}>
+          <div data-tour="create-lookup"><QuickLookup /></div>
         </aside>
 
         <form className={styles.form} onSubmit={e => void order.submit(e)} noValidate>
-          {/* Giao diện dọc: mỗi khung 1 hàng theo thứ tự khai bill, có id để mục lục nhảy tới */}
+          {/* Bước đầu chia 2 cột: trái người gửi → hàng & dịch vụ, phải người nhận; mỗi phần có id để thanh các bước nhảy tới */}
           {showStep(0) && (
-            <>
-              <div id={secId('shipper')} className={styles.section}><ShipperSection /></div>
-              <div id={secId('receiver')} className={styles.section}><ReceiverSection /></div>
-              <div id={secId('service')} className={styles.section}><ServiceSection /></div>
-              <div id={secId('shipment')} className={styles.section}>
-                <ShipmentSection onShipmentInput={onShipmentInput} onTypeChange={onTypeChange} docConverted={docConverted} />
+            <div className={styles.parties}>
+              <div className={styles.column}>
+                <div id={secId('shipper')} className={styles.section} data-tour="create-shipper"><ShipperSection /></div>
+                <div className={styles.section}>
+                  <Card accent className={formStyles.cleanCard} title={<SectionTitle plain icon="truck" title="Hàng & dịch vụ" />}>
+                    <div id={secId('service')} className={styles.section} data-tour="create-service"><ServiceSection /></div>
+                    <div id={secId('shipment')} className={styles.section} data-tour="create-shipment">
+                      <ShipmentSection onShipmentInput={onShipmentInput} onTypeChange={onTypeChange} docConverted={docConverted} />
+                    </div>
+                  </Card>
+                </div>
               </div>
-            </>
+              <div id={secId('receiver')} className={cx(styles.section, styles.fillColumn)} data-tour="create-receiver"><ReceiverSection /></div>
+            </div>
           )}
 
           {showStep(1) && (
             <>
-              {isPack && <div id={secId('packages')} className={styles.section}><PackagesTable onPackagesInput={onPackagesInput} /></div>}
-              <div id={secId('addons')} className={styles.section}><AddonsSection /></div>
+              {/* Hàng hóa: dịch vụ thêm là 1 dòng cuối khung kiện hàng; chứng từ (không có bảng kiện): khung riêng */}
+              {isPack ? (
+                <div id={secId('packages')} className={styles.section} data-tour="create-packages">
+                  <PackagesTable onPackagesInput={onPackagesInput}>
+                    <div id={secId('addons')} className={styles.section} data-tour="create-addons"><AddonsSection embedded /></div>
+                  </PackagesTable>
+                </div>
+              ) : (
+                <div id={secId('addons')} className={styles.section} data-tour="create-addons"><AddonsSection /></div>
+              )}
             </>
           )}
 
-          {isPack && showStep(2) && <div id={secId('invoice')} className={styles.section}><InvoiceSection /></div>}
+          {isPack && showStep(2) && <div id={secId('invoice')} className={styles.section} data-tour="create-invoice"><InvoiceSection /></div>}
 
-          <footer className={styles.footer}>
+          <footer className={styles.footer} data-tour="create-actions">
             {isWizard && current > 0 && <Button onClick={() => void wizard.goToStep(current - 1)}>{t('Quay lại')}</Button>}
-            <Button variant="ghost" onClick={order.saveAsDraft} disabled={order.busy}>{t('Lưu nháp')}</Button>
+            <Button className={styles.draftButton} onClick={order.saveAsDraft} disabled={order.busy}>{t('Lưu nháp')}</Button>
             <span className={styles.spacer} />
             {isWizard && current < lastStep ? (
               <Button variant="primary" onClick={() => void wizard.goToStep(current + 1)}>
@@ -132,9 +153,11 @@ export default function CreateOrderPage({ mode }: { mode: CreateMode }) {
       </div>
 
       {!isWizard && (
-        <Card flush title="Đơn nháp & chưa in" subtitle="· bấm In để cấp mã bill" actions={<LinkButton to="/drafts" size="sm" variant="ghost">{t('Mở trang đầy đủ')}</LinkButton>} className={styles.drafts}>
-          <DraftsTable limit={10} />
-        </Card>
+        <div data-tour="create-drafts">
+          <Card flush title="Đơn nháp & chưa in" subtitle="· bấm In để cấp mã bill" actions={<LinkButton to="/drafts" size="sm" variant="ghost">{t('Mở trang đầy đủ')}</LinkButton>} className={styles.drafts}>
+            <DraftsTable limit={10} />
+          </Card>
+        </div>
       )}
 
       <SurchargeConfirmDialog

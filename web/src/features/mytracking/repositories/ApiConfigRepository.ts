@@ -10,8 +10,8 @@ export class ApiConfigRepository implements ConfigRepository {
   async load(): Promise<ConfigLoadResult> {
     const res = await this.api.load();
     const config = res.config ? parseConfig(res.config) : emptyConfig();
-    // Tên công ty lấy theo hồ sơ khách, không cho sửa (backend cũng ghi đè khi lưu).
-    if (res.companyName) config.brand.companyName = res.companyName;
+    // Chưa có cấu hình: tên công ty theo hồ sơ khách (cấu hình đã có thì backend trả tên khách sửa, trống thì theo hồ sơ).
+    if (!config.brand.companyName && res.companyName) config.brand.companyName = res.companyName;
     return { config, publication: toPublication(res) };
   }
   async save(_userId: string, config: MyTrackingConfig): Promise<ConfigSaveResult> {

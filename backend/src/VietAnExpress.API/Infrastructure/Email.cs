@@ -9,20 +9,32 @@ namespace VietAnExpress.API.Infrastructure;
 
 /// <summary>
 /// Cấu hình gửi email (mục <c>Email</c>). Mật khẩu chỉ để trong user-secrets / biến môi trường (<c>Email__Password</c>).
-/// Gmail: bật xác minh 2 bước rồi tạo "mật khẩu ứng dụng" 16 ký tự — không dùng mật khẩu đăng nhập Gmail.
+/// Từ 03/11/2026 gửi bằng hộp thư support@vietanexpress.com (cPanel, máy chủ pro43.emailserver.vn): STARTTLS cổng 587,
+/// mật khẩu của hộp thư. (SmtpClient không hỗ trợ SSL ngầm cổng 465 — dùng 587.)
 /// </summary>
 public sealed class EmailOptions
 {
     public const string Section = "Email";
 
-    public string Host { get; set; } = "smtp.gmail.com";
+    public string Host { get; set; } = "pro43.emailserver.vn";
     public int Port { get; set; } = 587;
     /// <summary>Tài khoản gửi (cũng là địa chỉ người gửi).</summary>
     public string UserName { get; set; } = "";
     public string Password { get; set; } = "";
     public string FromName { get; set; } = "Việt An Express";
-    /// <summary>Hộp thư nhận góp ý / yêu cầu hỗ trợ của khách — trống thì dùng <see cref="UserName"/>.</summary>
+    /// <summary>
+    /// Hộp thư nhận góp ý / yêu cầu hỗ trợ của khách — nhiều địa chỉ ngăn bằng dấu phẩy / chấm phẩy
+    /// (vd "cs@vietanexpress.com, sale@vietanexpress.com"); trống thì dùng <see cref="UserName"/>.
+    /// </summary>
     public string InboxAddress { get; set; } = "";
+
+    /// <summary>Danh sách địa chỉ nhận của <see cref="InboxAddress"/> (bỏ trống / trùng); trống thì <see cref="UserName"/>.</summary>
+    public IReadOnlyList<string> InboxAddresses()
+    {
+        var list = InboxAddress.Split([',', ';'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        return list.Count > 0 ? list : [UserName.Trim()];
+    }
     public int TimeoutSeconds { get; set; } = 60;
 }
 
@@ -50,7 +62,7 @@ internal sealed class SmtpEmailSender(IOptions<EmailOptions> options, ILogger<Sm
             SubjectEncoding = Encoding.UTF8,
             BodyEncoding = Encoding.UTF8
         };
-        var to = message.To is { Count: > 0 } ? message.To : [string.IsNullOrWhiteSpace(O.InboxAddress) ? O.UserName : O.InboxAddress];
+        var to = message.To is { Count: > 0 } ? message.To : O.InboxAddresses();
         foreach (var address in to) mail.To.Add(address.Trim());
         foreach (var address in message.Bcc ?? []) mail.Bcc.Add(address.Trim());
         if (!string.IsNullOrWhiteSpace(message.ReplyTo)) mail.ReplyToList.Add(message.ReplyTo.Trim());

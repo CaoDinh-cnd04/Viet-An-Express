@@ -1,10 +1,10 @@
-/* Đầu khung lọc: 5 ô số liệu (mẫu 2c) — nền nhạt cùng màu trạng thái, ô đang chọn đặc màu chữ trắng; hàng tổng bên dưới */
+/* Đầu trang Đơn hàng (nằm trên nền trang, ngoài khung lọc): 5 ô trắng có chấm màu + thanh tỉ lệ, ô đang chọn đặc màu;
+   dòng tổng bên dưới căn phải, không khung */
 .overview {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
-  padding: var(--space-3);
-  border-bottom: 1px solid var(--color-border);
+  gap: 6px;
+  margin-bottom: var(--space-2);
 }
 
 .tiles {
@@ -17,22 +17,22 @@
   --tone: var(--color-status-all);
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  gap: 1px;
+  align-items: stretch;
+  gap: 4px;
   min-width: 0;
-  padding: 10px 14px;
-  border: 0;
-  border-radius: var(--radius-md);
-  background: color-mix(in srgb, var(--tone) 13%, var(--color-surface));
+  padding: 9px 14px 11px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
   color: var(--color-text);
   font: inherit;
   text-align: left;
   cursor: pointer;
-  transition: background-color 0.12s, color 0.12s, box-shadow 0.12s;
+  transition: background-color 0.12s, border-color 0.12s, box-shadow 0.12s;
 }
 
 .tile:hover {
-  background: color-mix(in srgb, var(--tone) 22%, var(--color-surface));
+  border-color: var(--tone);
 }
 
 .tile:focus-visible {
@@ -40,30 +40,69 @@
   outline-offset: 2px;
 }
 
+/* Chấm màu trạng thái + nhãn */
 .label {
-  color: var(--tone);
-  font-size: 13px;
-  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--color-text);
+  font-size: 12.5px;
+  font-weight: 500;
   white-space: nowrap;
 }
 
+.label::before {
+  content: "";
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--tone);
+}
+
+/* Số đơn bên trái, "% tổng" bên phải */
+.figure {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
 .count {
-  font-size: 26px;
-  font-weight: 800;
-  line-height: 1.15;
+  font-size: 21px;
+  font-weight: 700;
+  line-height: 1.2;
   font-variant-numeric: tabular-nums;
 }
 
 .share {
   color: var(--color-text-muted);
-  font-size: 12px;
+  font-size: 11px;
+  white-space: nowrap;
 }
 
-/* Đang chọn: đặc màu trạng thái, chữ trắng, bóng nhẹ cùng màu */
+/* Thanh tỉ lệ trên tổng đơn, chạy hết chiều ngang ô */
+.bar {
+  display: block;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--color-border);
+  overflow: hidden;
+}
+
+.bar span {
+  display: block;
+  height: 100%;
+  border-radius: 2px;
+  background: var(--tone);
+}
+
+/* Đang chọn: đặc màu trạng thái, chữ trắng */
 .on,
 .on:hover {
+  border-color: var(--tone);
   background: var(--tone);
-  box-shadow: 0 4px 12px color-mix(in srgb, var(--tone) 35%, transparent);
+  box-shadow: 0 2px 6px color-mix(in srgb, var(--tone) 25%, transparent);
 }
 
 .on .label,
@@ -72,13 +111,25 @@
   color: var(--color-on-hero);
 }
 
+.on .label::before {
+  display: none;
+}
+
+.on .bar {
+  background: color-mix(in srgb, var(--color-on-hero) 30%, transparent);
+}
+
+.on .bar span {
+  background: var(--color-on-hero);
+}
+
 .all { --tone: var(--color-status-all); }
 .wait { --tone: var(--color-status-wait); }
 .fly { --tone: var(--color-status-fly); }
 .nd { --tone: var(--color-status-nd); }
 .ok { --tone: var(--color-status-ok); }
 
-/* Tổng kiện · Tổng cân · Kết quả + thao tác — hàng dưới các ô, căn phải */
+/* Tổng kiện · Tổng cân · Kết quả + thao tác — căn phải, chữ nhỏ, không khung */
 .bottom {
   display: flex;
   flex-wrap: wrap;
@@ -90,7 +141,7 @@
 .totals {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-1) 10px;
+  gap: var(--space-1) var(--space-4);
   margin: 0;
 }
 
@@ -100,20 +151,15 @@
   gap: 6px;
 }
 
-.totals div + div {
-  padding-left: 10px;
-  border-left: 1px solid var(--color-border);
-}
-
 .totals dt {
   color: var(--color-text-muted);
-  font-size: 12px;
+  font-size: 11px;
 }
 
 .totals dd {
   margin: 0;
-  color: var(--color-table-head-text);
-  font-size: 12px;
+  color: var(--color-text);
+  font-size: 11px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
@@ -121,13 +167,12 @@
 .actions {
   display: flex;
   align-items: center;
-  padding-left: 10px;
-  border-left: 1px solid var(--color-border);
 }
 
 @media (max-width: 900px) {
   .tiles {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--space-2);
   }
 }
 
@@ -136,6 +181,6 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .count {
-    font-size: 22px;
+    font-size: 17px;
   }
 }

@@ -90,7 +90,7 @@ export function AdminNotifications() {
           <p className={styles.sub}>{t('Soạn và theo dõi tin gửi khách trên portal')}</p>
         </div>
         <Button variant="primary" onClick={() => setEditing('new')}>
-          <Icon name="plus" size={15} /> {t('Soạn thông báo')}
+          {t('Soạn thông báo')}
         </Button>
       </div>
 
@@ -151,7 +151,7 @@ export function AdminNotifications() {
             <>
               {(current.status === 'draft' || current.status === 'removed') && (
                 <Button variant="ghost" className={styles.dangerBtn} onClick={() => doDelete(current)} disabled={del.isPending}>
-                  <Icon name="trash" size={14} /> {t('Xóa hẳn')}
+                  {t('Xóa hẳn')}
                 </Button>
               )}
               {['live', 'scheduled', 'expired'].includes(current.status) && (
@@ -160,10 +160,10 @@ export function AdminNotifications() {
                 </Button>
               )}
               <Button onClick={() => setEditing({ copy: current })}>
-                <Icon name="copy" size={14} /> {t('Nhân bản')}
+                {t('Nhân bản')}
               </Button>
               <Button variant="primary" onClick={() => setEditing(current)}>
-                <Icon name="edit" size={14} /> {t(current.status === 'removed' ? 'Sửa và đăng lại' : 'Sửa')}
+                {t(current.status === 'removed' ? 'Sửa và đăng lại' : 'Sửa')}
               </Button>
             </>
           )

@@ -14,13 +14,13 @@ const PRINT_BUTTONS: ReadonlyArray<{ doc: PrintDoc; label: string; hint?: string
   { doc: 'cvck', label: 'CVCK' }
 ];
 
-/** Cột in: Bill A4 · Invoice · CVCK xếp dọc. */
+/** Cột in: Bill A4 · Invoice · CVCK xếp dọc. Đơn chứng từ (DOC) không có invoice → ẩn nút Invoice. */
 export function PrintButtons({ order }: { order: Order }) {
   const { t } = useI18n();
   const print = usePrintDocuments();
   return (
     <div className={styles.stack}>
-      {PRINT_BUTTONS.map(b => (
+      {PRINT_BUTTONS.filter(b => !(b.doc === 'invoice' && order.type === 'DOC')).map(b => (
         <button key={b.doc} type="button" className={styles.pill} title={b.hint && t(b.hint)} onClick={() => void print([order.bill], b.doc)}>
           {b.label}
         </button>

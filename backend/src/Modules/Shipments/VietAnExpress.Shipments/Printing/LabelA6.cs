@@ -40,7 +40,7 @@ internal static class LabelA6
     {
         var o = m.Order;
         var pieceNo = $"{m.Bill}/{index}";
-        var gw = (piece?.WeightKg ?? 0).ToString("0.00", CultureInfo.InvariantCulture);
+        var gw = BillA4.PieceWeight(m, piece, total).ToString("0.00", CultureInfo.InvariantCulture);
         var dim = piece is null ? "<b>0</b>*<b>0</b>*<b>0</b>" : $"<b>{Qty(piece.Length)}</b>*<b>{Qty(piece.Width)}</b>*<b>{Qty(piece.Height)}</b>";
         // Kích thước có số lẻ dài (vd 108.25*132.5*123.75) → chữ nhỏ lại để vẫn nằm cùng hàng với mã vạch.
         var dimClass = piece is not null && $"{Qty(piece.Length)}*{Qty(piece.Width)}*{Qty(piece.Height)}".Length > 11 ? "m-wd sm" : "m-wd";

@@ -1,22 +1,11 @@
 /** Tiếng Anh — nhóm hàng hóa (dbo.NhomHangHoa) và shipper gốc của forwarder. */
 export const categories: Record<string, string> = {
   // Quản lý nhóm hàng
-  'Thêm / sửa nhóm hàng': 'Add / edit categories',
-  'Quản lý nhóm hàng hóa': 'Manage goods categories',
-  'Tên nhóm mới': 'New category name',
-  'Tên nhóm mới, vd: Áo dài, nón lá…': 'New category name, e.g. Ao dai, conical hats…',
-  'Thêm nhóm': 'Add category',
-  'Không tải được danh sách nhóm hàng': 'Could not load categories',
-  'Nhóm của bạn ({n})': 'Your categories ({n})',
-  'Chưa có nhóm riêng — thêm nhóm ở ô phía trên.': 'No categories of your own yet — add one above.',
-  'Nhóm chung của Việt An ({n})': 'Viet An standard categories ({n})',
   'Đánh dấu yêu thích': 'Mark as favourite',
   'Đánh dấu yêu thích — nhóm hiện lên đầu danh sách': 'Mark as favourite — shown at the top of the list',
   'Bỏ yêu thích': 'Remove favourite',
   'Tên nhóm {name}': 'Name of category {name}',
-  'Sửa nhóm {name}': 'Edit category {name}',
   'Xóa nhóm {name}': 'Delete category {name}',
-  'Xóa nhóm "{name}"? Đơn đã khai nhóm này không bị ảnh hưởng.': 'Delete category "{name}"? Orders already using it are not affected.',
 
   // Thông báo từ máy chủ
   'Đã thêm nhóm hàng': 'Category added',
@@ -48,7 +37,7 @@ export const categories: Record<string, string> = {
 
   // Shipper gốc (forwarder)
   'Tên shipper gốc': 'Original shipper name',
-  'Dành cho đơn vị forwarder gửi hộ khách — không bắt buộc': 'For forwarders shipping on behalf of a customer — optional',
+  'Khi forwarder gửi hộ': 'When a forwarder ships on behalf',
   'Shipper gốc': 'Original shipper',
   'Mở rộng': 'Expand',
   'Invoice (khai báo hải quan)': 'Invoice (customs declaration)',
@@ -64,9 +53,7 @@ export const categories: Record<string, string> = {
   'Chọn hình thức chịu thuế': 'Select duty terms',
   'DDU — người nhận chịu thuế': 'DDU — receiver pays duties',
   'DDP — người gửi chịu thuế': 'DDP — shipper pays duties',
-  'Tên tiếng Việt (bắt buộc)': 'Vietnamese name (required)',
   'Nhập tên hàng (VN)': 'Enter the item name (VN)',
-  'Nhà sản xuất ↵ địa chỉ (Enter để xuống dòng)': 'Manufacturer ↵ address (Enter for a new line)',
 
   // Tùy chọn dịch vụ (ô chọn xổ xuống)
   'Không sử dụng dịch vụ': 'No additional services',
@@ -76,11 +63,10 @@ export const categories: Record<string, string> = {
   'Số lượng kiện chưa khớp': 'Piece count does not match',
   'VD: Quần áo, mỹ phẩm, đồ gia dụng': 'e.g. Clothing, cosmetics, household items',
   'Bấm để sửa thông tin người gửi': 'Click to edit shipper details',
-  // Thông tin đơn hàng: mô tả tổng quan (PACK), chứng từ mặc định Documents
-  'Mô tả tổng quan hàng hóa (content)': 'Goods content (general description)',
-  'Chứng từ không cần khai thêm — nội dung mặc định là Documents. Trên {kg}kg sẽ tự chuyển sang hàng hóa (PACK).':
-    'Documents need nothing more — the content defaults to "Documents". Over {kg}kg they are switched to parcel (PACK) automatically.',
-  'Nhập mô tả tổng quan hàng hóa': 'Enter the goods content',
+  // Thông tin đơn hàng: mô tả tổng quan (PACK), chứng từ mặc định Document
+  'Chứng từ không cần khai thêm — nội dung mặc định là Document. Trên {kg}kg sẽ tự chuyển sang hàng hóa (PACK).':
+    'Documents need nothing more — the content defaults to "Document". Over {kg}kg they are switched to parcel (PACK) automatically.',
+  'Nhập mô tả chi tiết hàng hóa': 'Describe the goods in detail',
   'Nhập cân/kiện': 'Enter weight per piece',
   'Dịch vụ cộng thêm (nếu cần)': 'Add-on services (if needed)',
   'Tăng {label}': 'Increase {label}',
@@ -115,7 +101,6 @@ export const categories: Record<string, string> = {
   'Cập nhật': 'Update',
   'Nơi': 'Location',
   'Copy đơn': 'Copy order',
-  'Bấm ngôi sao để đưa nhóm vào mục "Nhóm yêu thích" ở đầu ô chọn nhóm hàng.': 'Click the star to pin a category under "Favorite categories" at the top of the category list.',
   'Nhóm yêu thích': 'Favorite categories',
   'Nhóm khác': 'Other categories',
   'Xóa "{name}" khỏi thư viện? Các đơn đã khai mặt hàng này không bị ảnh hưởng.': 'Remove "{name}" from the library? Orders that already declared this item are not affected.',
@@ -128,5 +113,6 @@ export const categories: Record<string, string> = {
   'Xóa khỏi thư viện': 'Remove from library',
   'Tìm nhóm hàng…': 'Search categories…',
   'Không có nhóm phù hợp.': 'No matching categories.',
-  'Ghi bằng tiếng Anh (vd: Clothes, Dried food, Cosmetics)': 'Write in English (e.g. Clothes, Dried food, Cosmetics)',
+  'Tiếng Anh, ghi rõ từng loại hàng (vd: Soft dried mango, Cotton T-shirt, Dress)': 'In English, list each kind of goods (e.g. Soft dried mango, Cotton T-shirt, Dress)',
+  'Ghi mô tả bằng tiếng Anh, không dấu (vd: Soft dried mango)': 'Write the description in English without accents (e.g. Soft dried mango)',
 };

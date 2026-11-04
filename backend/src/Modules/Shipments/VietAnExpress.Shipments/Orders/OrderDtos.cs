@@ -33,7 +33,9 @@ internal sealed record OrderDto(
     OrderInvoiceDto? Invoice = null,
     /// <summary>VSVX mọi hãng ghi lúc cấp bill (Remote_Area_FedEx, Remote_Area_UPS, Remote_Area), vd "Fedex (Tier B), UPS"; null khi không thuộc vùng.</summary>
     string? RemoteArea = null,
-    decimal? ChargeableWeight = null);
+    decimal? ChargeableWeight = null,
+    /// <summary>Nhân viên Việt An tạo giúp khách (MaVanDon.CreateUser &gt; 0).</summary>
+    bool CreatedByVietAn = false);
 
 /// <summary>1 dòng kiện (dbo.MaVanDon_PCS_DIM) — chỉ trả ở GET /orders/{bill}. <c>WeightKg</c> là cân 1 kiện.</summary>
 internal sealed record OrderPackageDto(int Qty, string PackType, int Length, int Width, int Height, decimal WeightKg,

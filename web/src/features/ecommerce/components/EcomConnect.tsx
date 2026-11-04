@@ -83,7 +83,7 @@ function TiktokConnect({ disabled }: { disabled: boolean }) {
         disabled={disabled}
       />
       <Button variant="primary" disabled={disabled || start.isPending} onClick={() => start.mutate({ platform: 'tiktok', region })}>
-        <Icon name="link" size={15} /> {t('Kết nối')}
+        {t('Kết nối')}
       </Button>
     </div>
   );
@@ -114,7 +114,7 @@ function StoreRow({ store, onDisconnect }: { store: StoreConnection; onDisconnec
             </Button>
           ) : (
             <Button size="sm" disabled={sync.isPending} onClick={() => sync.mutate(store.id)}>
-              <Icon name="refresh" size={15} /> {t('Đồng bộ')}
+              {t('Đồng bộ')}
             </Button>
           )}
           <Button size="sm" iconOnly aria-label={t('Ngắt kết nối {shop}', { shop: store.shopName })} onClick={onDisconnect}><Icon name="close" size={15} /></Button>
@@ -186,7 +186,7 @@ function DeveloperApi() {
                 <span className={styles.keyEnv}>{k.env === 'production' ? 'Production' : 'Sandbox'}</span>
                 <code className={styles.key}>{k.key}</code>
                 <Button size="sm" iconOnly aria-label={t('Sao chép key {env}', { env: k.env })} onClick={() => void copy(k.key, t('Đã sao chép API key'))}><Icon name="copy" size={15} /></Button>
-                <Button size="sm" onClick={() => regenerate.mutate(k.env)} disabled={regenerate.isPending}><Icon name="refresh" size={15} /> {t('Tạo lại')}</Button>
+                <Button size="sm" onClick={() => regenerate.mutate(k.env)} disabled={regenerate.isPending}>{t('Tạo lại')}</Button>
               </div>
             ))}
             {!data && <p className={styles.muted}>{t(settings.isLoading ? 'Đang tải…' : 'Chưa có API key.')}</p>}
@@ -215,7 +215,7 @@ function DeveloperApi() {
             ))}
           </fieldset>
           <div className={styles.formActions}>
-            <Button onClick={() => testWebhook.mutate()} disabled={unavailable || !webhookUrl || testWebhook.isPending}><Icon name="send" size={15} /> {t('Gửi thử')}</Button>
+            <Button onClick={() => testWebhook.mutate()} disabled={unavailable || !webhookUrl || testWebhook.isPending}>{t('Gửi thử')}</Button>
             <Button variant="primary" onClick={() => save.mutate({ webhookUrl, webhookEvents: events })} disabled={unavailable || save.isPending}>{t('Lưu webhook')}</Button>
           </div>
         </div>

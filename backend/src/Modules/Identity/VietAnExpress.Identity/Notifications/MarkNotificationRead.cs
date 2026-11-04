@@ -15,6 +15,8 @@ internal sealed class MarkNotificationReadHandler(IdentityDbContext db, ICurrent
     {
         if (user.CustomerId is not { } customerId || customerId <= 0) return IdentityErrors.NotLoggedIn;
         if (!await (await db.VisibleNotificationsAsync(customerId, VietnamTime.Now(clock), ct)).AnyAsync(n => n.Id == c.Id, ct)) return NotificationErrors.NotFound;
+        // Nhân viên Việt An làm thay khách: xem được nhưng không đánh dấu đã đọc thay khách.
+        if (user.VietAnUserId is not null) return true;
         var staff = CustomerInbox.StaffKey(user);
         if (await db.NotificationReads.AnyAsync(r => r.NotificationId == c.Id && r.CustomerId == customerId && r.StaffId == staff, ct)) return true;
         db.NotificationReads.Add(new NotificationRead(c.Id, customerId, staff, VietnamTime.Now(clock)));

@@ -1,5 +1,5 @@
 import { useI18n } from '@/shared/i18n';
-import { Button, Icon, LinkButton, Modal, Sheet, SheetBox, SheetFields, SheetLines, SheetName, SheetRow, SheetTable, SheetTotals } from '@/shared/ui';
+import { Button, LinkButton, Modal, Sheet, SheetBox, SheetFields, SheetLines, SheetName, SheetRow, SheetTable, SheetTotals } from '@/shared/ui';
 import type { Draft } from '../api';
 import { draftDetail } from '../lib/draft-detail';
 import styles from './DraftDetailModal.module.css';
@@ -31,7 +31,7 @@ export function DraftDetailModal({ draft, onClose, onPrint, printing }: DraftDet
       footer={
         <>
           <LinkButton size="sm" to={`/orders/new/quick?draft=${encodeURIComponent(draft.id)}`}>
-            <Icon name="edit" size={15} /> {t(ready ? 'Sửa' : 'Tiếp tục')}
+            {t(ready ? 'Sửa' : 'Tiếp tục')}
           </LinkButton>
           <Button size="sm" variant="primary" disabled={!ready || printing} onClick={() => onPrint(draft)}>
             {t(printing ? 'Đang in…' : 'In & cấp bill')}

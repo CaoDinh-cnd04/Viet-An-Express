@@ -19,5 +19,8 @@ internal sealed class HttpCurrentUser(IHttpContextAccessor accessor) : ICurrentU
     public long? StaffId =>
         long.TryParse(Principal?.FindFirstValue(VaClaimTypes.StaffId), NumberStyles.None, CultureInfo.InvariantCulture, out var id) ? id : null;
 
+    public int? VietAnUserId =>
+        int.TryParse(Principal?.FindFirstValue(VaClaimTypes.VietAnUserId), NumberStyles.None, CultureInfo.InvariantCulture, out var id) ? id : null;
+
     public bool HasPermission(string permission) => Principal?.HasClaim(VaClaimTypes.Permission, permission) == true;
 }

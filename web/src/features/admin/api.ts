@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { apiUrl, toError } from '@/shared/api/http';
+import { apiUrl, http, toError } from '@/shared/api/http';
 import type { NotificationItem } from '@/features/notifications';
 import type { SupportStatus, SupportTicket } from '@/features/support';
 
@@ -223,12 +223,21 @@ export interface AdminSupportTicket {
   email?: string | null;
 }
 
-const supportKey = ['admin', 'troubles'] as const;
+/**
+ * Nguồn yêu cầu hỗ trợ: `admin` = trang /admin (token quản trị, mọi khách); `managed` = nhân viên Việt An đăng nhập portal
+ * (cookie phiên, chỉ khách mình phụ trách — GET /troubles/manage).
+ */
+export type SupportSource = 'admin' | 'managed';
 
-export function useAdminSupportTickets(enabled: boolean) {
+const supportKey = (source: SupportSource) => ['admin', 'troubles', source] as const;
+
+export function useAdminSupportTickets(enabled: boolean, source: SupportSource = 'admin') {
   return useQuery({
-    queryKey: supportKey,
-    queryFn: async () => ((await (await adminFetch('/admin/troubles')).json()) as { data: AdminSupportTicket[] }).data,
+    queryKey: supportKey(source),
+    queryFn: async () =>
+      source === 'managed'
+        ? (await http.get<{ data: AdminSupportTicket[] }>('/troubles/manage')).data
+        : ((await (await adminFetch('/admin/troubles')).json()) as { data: AdminSupportTicket[] }).data,
     enabled,
     refetchInterval: 60_000
   });
@@ -238,15 +247,18 @@ export function useAdminSupportTickets(enabled: boolean) {
  * Trả lời (nối vào TContact.Content) và / hoặc đổi trạng thái — không gửi thông báo, khách xem ở trang Hỗ trợ & góp ý;
  * "Chờ khách phản hồi" thì khách trả lời lại được.
  */
-export function useReplyAdminSupportTicket() {
+export function useReplyAdminSupportTicket(source: SupportSource = 'admin') {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, reply, status }: { id: string; reply: string; status?: SupportStatus }) =>
-      ((await (await adminFetch(`/admin/troubles/${encodeURIComponent(id)}/reply`, {
+    mutationFn: async ({ id, reply, status }: { id: string; reply: string; status?: SupportStatus }) => {
+      const body = { reply: reply.trim() || null, status: status ?? null };
+      if (source === 'managed') return http.post<{ message: string; data: AdminSupportTicket }>(`/troubles/manage/${encodeURIComponent(id)}/reply`, body);
+      return ((await (await adminFetch(`/admin/troubles/${encodeURIComponent(id)}/reply`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ reply: reply.trim() || null, status: status ?? null })
-      })).json()) as { message: string; data: AdminSupportTicket }),
-    onSuccess: () => void qc.invalidateQueries({ queryKey: supportKey })
+        body: JSON.stringify(body)
+      })).json()) as { message: string; data: AdminSupportTicket });
+    },
+    onSuccess: () => void qc.invalidateQueries({ queryKey: supportKey(source) })
   });
 }

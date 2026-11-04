@@ -31,6 +31,9 @@
   --color-on-secondary: #ffffff;
   /* Tiêu đề khung trong form dài */
   --color-section-title: #1a202c;
+  /* Tiêu đề khung form (Card accent): nền xanh lá Việt An nhạt, chữ xanh lá Việt An */
+  --color-section-accent: var(--color-success-strong);
+  --color-section-head-bg: var(--color-success-soft);
   /* Bảng Đơn hàng: hàng tiêu đề xanh lục bảo nhạt; nút in chứng từ xanh ngọc đậm, nút nhãn A6 cam mơ nhạt (chữ nâu đậm) */
   --color-table-head-bg: #dcefe8;
   --color-table-head-text: #05261c;
@@ -47,6 +50,10 @@
   --color-print-label: #fdba74;
   --color-print-label-hover: #fb923c;
   --color-print-label-text: #2b1200;
+  /* Nút "Lưu nháp" ở trang tạo đơn: cùng màu cam mơ mục đang chọn trên thanh menu, chữ nâu đậm */
+  --color-draft: var(--color-sidebar-active-bg);
+  --color-draft-hover: #f97316;
+  --color-on-draft: var(--color-sidebar-active-text);
   /* Ô trạng thái đơn (Đơn hàng của tôi): nền nhạt cùng màu, ô đang chọn đặc màu */
   --color-status-all: #047857;
   --color-status-wait: #475569;
@@ -118,8 +125,8 @@
 
   /* Kích thước */
   --radius-sm: 8px;
-  /* Nút, ô nhập, ô chọn: bo tròn hẳn (viên thuốc) */
-  --radius-control: 999px;
+  /* Nút, ô nhập, ô chọn: khung chữ nhật bo góc như thẻ / bảng (trước đây bo tròn hẳn kiểu viên thuốc) */
+  --radius-control: var(--radius-sm);
   --radius-md: 12px;
   --radius-lg: 16px;
   --control-h: 34px;
@@ -132,7 +139,7 @@
   --space-6: 22px;
 
   /* Chữ */
-  --font-sans: 'Be Vietnam Pro', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   /* Thanh menu: Plus Jakarta Sans — hiện đại, nét mềm, đủ dấu tiếng Việt */
   --font-nav: 'Plus Jakarta Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
@@ -170,6 +177,8 @@
     --color-secondary: #232a36;
     --color-secondary-strong: #2d3748;
     --color-section-title: #e2e8f0;
+    --color-section-accent: var(--color-success-deep);
+    --color-section-head-bg: var(--color-success-soft);
     --color-sidebar-bg: #05261c;
     --color-sidebar-text: #ffffff;
     --color-sidebar-muted: #bfdcd1;
@@ -191,6 +200,10 @@
     --color-print-label: #fdba74;
     --color-print-label-hover: #fb923c;
     --color-print-label-text: #2b1200;
+  /* Nút "Lưu nháp" ở trang tạo đơn: cùng màu cam mơ mục đang chọn trên thanh menu, chữ nâu đậm */
+  --color-draft: var(--color-sidebar-active-bg);
+  --color-draft-hover: #f97316;
+  --color-on-draft: var(--color-sidebar-active-text);
   --color-hero-from: #0a1626;
   --color-hero-to: #142a47;
     --color-bg: #0f1218;
@@ -230,6 +243,8 @@
   --color-secondary: #232a36;
   --color-secondary-strong: #2d3748;
   --color-section-title: #e2e8f0;
+  --color-section-accent: var(--color-success-deep);
+  --color-section-head-bg: var(--color-success-soft);
   --color-sidebar-bg: #05261c;
   --color-sidebar-text: #ffffff;
   --color-sidebar-muted: #bfdcd1;
@@ -251,6 +266,10 @@
   --color-print-label: #fdba74;
   --color-print-label-hover: #fb923c;
   --color-print-label-text: #2b1200;
+  /* Nút "Lưu nháp" ở trang tạo đơn: cùng màu cam mơ mục đang chọn trên thanh menu, chữ nâu đậm */
+  --color-draft: var(--color-sidebar-active-bg);
+  --color-draft-hover: #f97316;
+  --color-on-draft: var(--color-sidebar-active-text);
   --color-hero-from: #0a1626;
   --color-hero-to: #142a47;
   --color-bg: #0f1218;

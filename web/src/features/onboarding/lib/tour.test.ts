@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isOnScreen, popoverPosition, tourStorageKey } from './tour';
+import { isOnScreen, pageTourId, popoverPosition, tourStorageKey } from './tour';
 
 const viewport = { width: 1440, height: 900 };
 const size = { width: 340, height: 200 };
@@ -26,6 +26,11 @@ describe('popoverPosition', () => {
     expect(p.left).toBeLessThanOrEqual(1440 - 340 - 12);
   });
 
+  it('vùng ở sát đáy màn hình: khung nằm phía trên vùng đó', () => {
+    const p = popoverPosition({ top: 820, left: 400, width: 300, height: 40 }, size, viewport, 'bottom');
+    expect(p.top).toBe(820 - 14 - 200);
+  });
+
   it('không có vùng chức năng / vùng bị ẩn → giữa màn hình', () => {
     expect(popoverPosition(null, size, viewport, 'right')).toEqual({ top: 350, left: 550, placement: 'center' });
     expect(popoverPosition({ top: 100, left: -260, width: 240, height: 40 }, size, viewport, 'right').placement).toBe('center');
@@ -40,7 +45,15 @@ describe('isOnScreen', () => {
   });
 });
 
-it('mỗi khách một khoá lưu riêng', () => {
+it('mỗi khách một khoá lưu riêng; hướng dẫn tổng quát giữ khoá cũ, mỗi trang 1 khoá', () => {
   expect(tourStorageKey('SCS')).toBe('va.tour.v1.SCS');
   expect(tourStorageKey('')).toBe('va.tour.v1.guest');
+  expect(tourStorageKey('SCS', 'orders')).toBe('va.tour.orders.v1.SCS');
+});
+
+it('chọn hướng dẫn theo trang đang mở', () => {
+  expect(pageTourId('/orders/new/quick')).toBe('create-quick');
+  expect(pageTourId('/orders/')).toBe('orders');
+  expect(pageTourId('/orders/new')).toBeUndefined();
+  expect(pageTourId('/')).toBeUndefined();
 });

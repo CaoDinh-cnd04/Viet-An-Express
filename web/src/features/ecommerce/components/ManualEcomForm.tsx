@@ -186,14 +186,14 @@ export function ManualEcomForm() {
             })}
           </div>
           <Button size="sm" disabled={fields.length >= MAX_PRODUCTS} onClick={() => append(emptyProduct())}>
-            <Icon name="plus" size={15} /> {t('Thêm sản phẩm')}
+            {t('Thêm sản phẩm')}
           </Button>
         </section>
 
         <div className={styles.formActions}>
           <Button onClick={() => reset(defaults())}>{t('Làm mới')}</Button>
           <Button variant="primary" type="submit" disabled={create.isPending}>
-            <Icon name="check" size={15} /> {t(create.isPending ? 'Đang lưu…' : 'Lưu đơn')}
+            {t(create.isPending ? 'Đang lưu…' : 'Lưu đơn')}
           </Button>
         </div>
       </form>

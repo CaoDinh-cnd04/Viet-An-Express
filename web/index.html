@@ -6,18 +6,15 @@
     <link rel="icon" href="/logo.webp" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" />
     <meta name="description" content="Việt An Express — chuyển phát nhanh quốc tế door-to-door từ 2010: gửi hàng đi Mỹ, Úc, Canada, Singapore, Malaysia, Đài Loan, Dubai. Tra cứu vận đơn và portal khách hàng." />
     <meta name="theme-color" content="#0f3d1a" />
     <title>Việt An Express — Chuyển phát nhanh quốc tế</title>
   </head>
   <body>
     <div id="root"></div>
-    <script>
-      // Khách mới: giao diện sáng (không theo chế độ tối của máy); đã chọn thì dùng lựa chọn đã lưu. Chạy trước React để không nháy tối.
-      try { document.documentElement.dataset.theme = JSON.parse(localStorage.getItem('va.theme')) === 'dark' ? 'dark' : 'light'; }
-      catch (e) { document.documentElement.dataset.theme = 'light'; }
-    </script>
+    <!-- Chọn giao diện sáng / tối trước khi React chạy (không nháy tối). File riêng thay vì script inline — CSP script-src 'self' chặn script inline. -->
+    <script src="/theme-init.js"></script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

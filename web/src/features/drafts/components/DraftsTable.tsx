@@ -23,7 +23,12 @@ export function DraftsTable({ limit }: { limit?: number }) {
     {
       key: 'cnee',
       header: 'Người nhận',
-      render: d => <span className={styles.strong}>{t(d.cnee || '—')}</span>
+      render: d => (
+        <>
+          <span className={styles.strong}>{t(d.cnee || '—')}</span>
+          {d.createdByVietAn && <> <StatusPill tone="brand">{t('Việt An tạo giúp')}</StatusPill></>}
+        </>
+      )
     },
     { key: 'ct', header: 'Nước đến', render: d => d.ct },
     { key: 'svc', header: 'Dịch vụ', render: d => <span className={styles.muted}>{t(d.service)}</span> },
@@ -39,8 +44,8 @@ export function DraftsTable({ limit }: { limit?: number }) {
         const printing = print.pendingId === d.id;
         return (
           <div className={styles.actions}>
-            <Button size="sm" onClick={() => setViewing(d)}><Icon name="eye" size={15} /> {t('Xem')}</Button>
-            <LinkButton size="sm" to={`/orders/new/quick?draft=${encodeURIComponent(d.id)}`}><Icon name="edit" size={15} /> {t(ready ? 'Sửa' : 'Tiếp tục')}</LinkButton>
+            <Button size="sm" onClick={() => setViewing(d)}>{t('Xem')}</Button>
+            <LinkButton size="sm" to={`/orders/new/quick?draft=${encodeURIComponent(d.id)}`}>{t(ready ? 'Sửa' : 'Tiếp tục')}</LinkButton>
             <Button size="sm" variant="primary" onClick={() => setTerms({ id: d.id })} disabled={!ready || printing} title={t(ready ? 'Cấp mã bill và in vận đơn A4, invoice, nhãn A6' : 'Hoàn thiện đơn trước khi in')}>
               {t(printing ? 'Đang in…' : 'In & cấp bill')}
             </Button>

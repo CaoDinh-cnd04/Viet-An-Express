@@ -34,6 +34,13 @@ internal static class BillA4
             ? packages.SelectMany(p => Enumerable.Repeat<PrintPackage?>(p with { Qty = 1, StoredVolumeKg = p.Qty > 0 ? p.StoredVolumeKg / p.Qty : null }, p.Qty)).ToList()
             : Enumerable.Repeat<PrintPackage?>(null, Math.Max(1, pieces)).ToList();
 
+    /// <summary>
+    /// Cân in trên shipping mark: cân của kiện; đơn không có dòng kiện (chứng từ, đơn hệ thống cũ) → cân đơn chia đều số kiện
+    /// (trước đây in 0.00kg).
+    /// </summary>
+    public static decimal PieceWeight(OrderPrintModel m, PrintPackage? piece, int total) =>
+        piece?.WeightKg ?? Math.Round((m.Order.WeightKg ?? 0) / Math.Max(1, total), 2);
+
     /// <summary>Tên nước tiếng Anh → mã ISO 2 ký tự (vd "Singapore" → "SG"); không nhận ra thì trả tên viết hoa.</summary>
     public static string CountryCode(string? country)
     {
@@ -81,7 +88,7 @@ internal static class BillA4
     {
         var o = m.Order;
         var pieceNo = $"{m.Bill}/{index}";
-        var gw = (piece?.WeightKg ?? 0).ToString("0.00", CultureInfo.InvariantCulture);
+        var gw = PieceWeight(m, piece, total).ToString("0.00", CultureInfo.InvariantCulture);
         var dim = piece is null ? "<b>0</b>*<b>0</b>*<b>0</b>" : $"<b>{Kg(piece.Length)}</b>*<b>{Kg(piece.Width)}</b>*<b>{Kg(piece.Height)}</b>";
         var cityLine = string.Join(", ", new[] { o.ConsigneeCity, o.ConsigneeState, o.ConsigneePostalCode, o.ConsigneeCountry }
             .Select(s => s?.Trim()).Where(s => !string.IsNullOrEmpty(s)));
@@ -399,7 +406,9 @@ internal static class BillA4
     // ---------------- CSS riêng cho bill (A4 ngang) ----------------
 
     public const string Css = """
-        @page { size: A4 landscape; margin: 7mm; }
+        /* Lề in 2,54 cm 4 cạnh như Word (tính từ viền khung tới mép giấy; lề 7 mm / 1,27 cm cũ sát mép).
+           Bố cục giữ khổ 271,6 × 184 mm, khi in thu nhỏ đều 86% cho vừa vùng 246,2 × 159,2 mm. */
+        @page { size: A4 landscape; margin: 25.4mm; }
         * { box-sizing: border-box; }
         /* Aptos (font Body của Office) cho mọi chứng từ + cỡ chữ thống nhất (chữ thường 12px, chữ nhỏ 11px); máy chưa có Aptos thì dùng Arial. */
         body { margin: 0; font-family: Aptos, "Aptos Body", Arial, Helvetica, sans-serif; font-size: 12px; color: #000; background: #e9ece9;
@@ -407,14 +416,14 @@ internal static class BillA4
         .toolbar { position: sticky; top: 0; display: flex; gap: 12px; align-items: center; padding: 10px 16px; background: #1e6b2c; color: #fff; z-index: 1; font-family: Aptos, "Aptos Body", Arial, Helvetica, sans-serif; font-size: 12px; }
         .toolbar button { padding: 6px 18px; border: 0; border-radius: 6px; background: #fff; color: #1e6b2c; font-weight: 700; cursor: pointer; }
         .toolbar .hint { opacity: .85; }
-        .sheet { width: 297mm; height: 210mm; padding: 7mm; margin: 16px auto; background: #fff; box-shadow: 0 2px 10px rgba(0,0,0,.15);
+        .sheet { width: 297mm; height: 210mm; padding: 12.7mm; margin: 16px auto; background: #fff; box-shadow: 0 2px 10px rgba(0,0,0,.15);
                  display: grid; grid-template-columns: 1fr 1fr; gap: 9mm; overflow: hidden; break-after: page; page-break-after: always; }
         .sheet:last-of-type { break-after: auto; page-break-after: auto; }
         .slip { display: flex; flex-direction: column; min-width: 0; height: 100%; }
-        .box { border: 1.5px solid #000; flex: 1; display: flex; flex-direction: column; min-height: 0; }
-        .s-head { display: grid; grid-template-columns: 28mm 1fr 42mm; gap: 2mm; align-items: center; padding: 1.5mm 3mm; height: 27mm; }
+        .box { border: 2px solid #000; flex: 1; display: flex; flex-direction: column; min-height: 0; }
+        .s-head { display: grid; grid-template-columns: 28mm 1fr 42mm; gap: 2mm; align-items: center; padding: 1mm 3mm; height: 22mm; }
         /* Hình đầu chiếm 2 cột trái (logo + tên + liên hệ), canh trái, giữ tỉ lệ. */
-        .head-img { grid-column: 1 / 3; width: 100%; height: 24mm; object-fit: contain; object-position: left center; }
+        .head-img { grid-column: 1 / 3; width: 100%; height: 20mm; object-fit: contain; object-position: left center; }
         .awb { text-align: center; font-family: Aptos, "Aptos Body", Arial, Helvetica, sans-serif; }
         .awb .barcode { display: block; width: 100%; height: 9mm; }
         /* Số bill (OrderNumber) dưới mã vạch: Aptos, to, chữ thường (không đậm), căn giữa */
@@ -422,12 +431,12 @@ internal static class BillA4
         .awb-no { margin-top: .6mm; font-size: 20px; font-weight: 400; line-height: 1.05; white-space: nowrap; }
         .awb-no small { font-size: 14px; }
         .route { font-size: 14px; font-weight: 700; line-height: 1.1; }
-        .bar { background: #92d050; font-weight: 700; padding: .4mm 1.5mm; border-top: 1px solid #000; border-bottom: 1px solid #000; }
+        .bar { background: #92d050; font-weight: 700; padding: .4mm 1.5mm; border-top: 1.5px solid #000; border-bottom: 1.5px solid #000; }
         .sender { display: grid; grid-template-columns: 50mm 1fr; padding: 1mm 3mm 0 0; }
         .qr { display: flex; flex-direction: column; align-items: center; justify-content: center; }
         /* Vùng trắng 4 module nằm sẵn trong SVG nên khung không cần lề trong: mã ~22 mm (trước ~16 mm). */
         .qr-frame { position: relative; width: 30mm; height: 30mm; padding: 0; background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-        .qr-frame::before, .qr-frame::after { content: ""; position: absolute; top: 0; bottom: 0; width: 4mm; border: 1.5px solid #000; }
+        .qr-frame::before, .qr-frame::after { content: ""; position: absolute; top: 0; bottom: 0; width: 4mm; border: 2px solid #000; }
         .qr-frame::before { left: 0; border-right: 0; }
         .qr-frame::after { right: 0; border-left: 0; }
         .qr-frame svg { display: block; width: 100%; height: 100%; shape-rendering: crispEdges; }
@@ -451,11 +460,11 @@ internal static class BillA4
         .row .val:not(.ln) { border: 0; }
         .row .split { font-weight: 700; }
         .ln-main { flex: 1; }
-        .ship .row { min-height: 7.5mm; border-bottom: 1px solid #000; margin-right: -3mm; padding-right: 3mm; }
-        .ship .row .lbl, .ship .row .val { line-height: 7.5mm; }
-        .gap { height: 3mm; border-bottom: 1.5px solid #000; }
+        .ship .row { min-height: 6mm; border-bottom: 1.5px solid #000; margin-right: -3mm; padding-right: 3mm; }
+        .ship .row .lbl, .ship .row .val { line-height: 6mm; }
+        .gap { height: 2mm; border-bottom: 2px solid #000; }
         table.pkg { width: 100%; border-collapse: collapse; table-layout: fixed; }
-        .pkg th, .pkg td { border: 1px solid #000; padding: .5mm 1mm; text-align: center; vertical-align: top; }
+        .pkg th, .pkg td { border: 1.5px solid #000; padding: .5mm 1mm; text-align: center; vertical-align: top; }
         .pkg tr:first-child > * { border-top: 0; }
         .pkg tr > *:first-child { border-left: 0; }
         .pkg tr > *:last-child { border-right: 0; }
@@ -465,50 +474,51 @@ internal static class BillA4
         .dims-title { text-align: center; font-weight: 700; }
         .dim-grid { display: grid; grid-template-columns: 1fr 1fr; }
         .dim { border-bottom: 1px dotted #000; min-height: 4.6mm; line-height: 4.6mm; padding-right: 2mm; font-size: 11px; white-space: nowrap; overflow: hidden; }
-        .pkg td { height: 14mm; border-top: 0; vertical-align: middle; }
+        .pkg td { height: 10mm; border-top: 0; vertical-align: middle; }
         .pkg .pcs { font-size: 20px; font-weight: 700; }
         /* Số kiện, TL thực, TL quy đổi cùng 1 cỡ. */
         .pkg .w { font-size: 20px; font-weight: 700; }
         .pkg tr:first-child th:not(.dims) { border-bottom: 0; }
-        .signs { display: grid; grid-template-columns: 1fr 1fr; flex: 1; min-height: 16mm; border-top: 1px solid #000; }
+        .signs { display: grid; grid-template-columns: 1fr 1fr; flex: 1; min-height: 12mm; border-top: 1.5px solid #000; }
         .sign { display: flex; flex-direction: column; justify-content: space-between; padding: 1mm 2mm; }
-        .sign + .sign { border-left: 1px solid #000; }
+        .sign + .sign { border-left: 1.5px solid #000; }
         .sign-date { font-size: 11px; line-height: 1.2; }
-        .s-foot { display: flex; flex: 0 0 16mm; justify-content: space-between; align-items: center; padding: 1.5mm 3mm 0; }
+        .s-foot { display: flex; flex: 0 0 12mm; justify-content: space-between; align-items: center; padding: .5mm 3mm 0; }
         .s-foot > div:first-child { flex: 1; min-width: 0; padding-right: 2mm; }
         .total { font-size: 16px; font-weight: 700; margin-bottom: 1.5mm; }
         .slip-name { font-size: 11px; }
         .foot-awb { flex: none; width: 42mm; text-align: center; font-family: Aptos, "Aptos Body", Arial, Helvetica, sans-serif; font-size: 18px; font-weight: 400; line-height: 1.1; }
-        .foot-awb .barcode { display: block; width: 100%; height: 9mm; }
+        .foot-awb .barcode { display: block; width: 100%; height: 8mm; }
         .terms-col { font-size: 10.5px; line-height: 1.28; text-align: justify; overflow: hidden; }
         .terms-col p { margin: 0 0 .55mm; }
         .terms-col .sub { padding-left: 3.5mm; }
         .t-title, .t-h { font-weight: 700; margin: .6mm 0 .3mm; }
-        .mark { display: flex; flex-direction: column; min-width: 0; }
-        .m-box { border: 1.5px solid #000; }
-        .m-head { border-bottom: 1.5px solid #000; }
-        .m-title { text-align: center; font-size: 30px; font-weight: 700; padding: 1.5mm 0; border-bottom: 1.5px solid #000; }
+        /* Nhãn cao đúng trang: khung co lại khi địa chỉ dài (cắt phần thừa trong khung), chân nhãn + ngày luôn in đủ */
+        .mark { display: flex; flex-direction: column; min-width: 0; height: 100%; min-height: 0; }
+        .m-box { border: 2px solid #000; flex: 0 1 auto; min-height: 0; overflow: hidden; }
+        .m-head { border-bottom: 2px solid #000; }
+        .m-title { text-align: center; font-size: 26px; font-weight: 700; padding: 1mm 0; border-bottom: 2px solid #000; }
         .m-hawb { text-align: center; padding: 1mm 0; font-size: 22px; }
-        .m-hawb b { font-size: 44px; margin-left: 3mm; }
+        .m-hawb b { font-size: 38px; margin-left: 3mm; }
         .m-bar { font-size: 16px; font-weight: 700; padding: .5mm 3mm; }
         .m-bar.center { text-align: center; }
         /* 3 cột 1fr | auto | 1fr: mã nước và số kiện nằm đúng giữa shipping mark, thẳng với SHIPPING MARK / HAWB. */
-        .m-dest { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; padding: 2mm 3mm; border-bottom: 1.5px solid #000; min-height: 38mm; }
-        .m-dest .qr-frame { justify-self: start; margin-left: 3mm; width: 32mm; height: 32mm; }
+        .m-dest { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; padding: 2mm 3mm; border-bottom: 2px solid #000; min-height: 28mm; }
+        .m-dest .qr-frame { justify-self: start; margin-left: 3mm; width: 27mm; height: 27mm; }
         .m-dest-txt { text-align: center; }
         .m-dest-lbl { font-weight: 700; font-size: 12px; }
-        .m-dest-code { font-size: 56px; font-weight: 700; line-height: 1.05; }
+        .m-dest-code { font-size: 48px; font-weight: 700; line-height: 1.05; }
         .m-pcs { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; padding: 1mm 6mm; font-size: 22px; font-weight: 700; }
-        .m-pcs b { font-size: 56px; line-height: 1; text-align: center; word-spacing: 2mm; }
+        .m-pcs b { font-size: 46px; line-height: 1; text-align: center; word-spacing: 2mm; }
         .m-party { padding: .8mm 3mm; font-weight: 700; font-size: 13px; line-height: 1.45; }
         .m-party.small { font-size: 11px; line-height: 1.3; }
-        .m-foot { display: flex; justify-content: space-between; align-items: center; padding: 2mm 6mm 0; font-size: 13px; }
+        .m-foot { flex: none; display: flex; justify-content: space-between; align-items: center; padding: 2mm 6mm 0; font-size: 13px; }
         .m-big { font-size: 18px; }
-        .m-date { text-align: center; font-size: 30px; font-weight: 700; margin-top: 8mm; }
+        .m-date { flex: none; text-align: center; font-size: 24px; font-weight: 700; margin-top: 1.5mm; }
         @media print {
           body { background: #fff; }
           .toolbar { display: none; }
-          .sheet { width: auto; height: 195mm; margin: 0; padding: 0; box-shadow: none; }
+          .sheet { width: 271.6mm; height: 184mm; zoom: .86; margin: 0 auto; padding: 0; box-shadow: none; }
         }
         """;
 }

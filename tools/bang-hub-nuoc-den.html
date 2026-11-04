@@ -1,0 +1,325 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bảng hub theo nước đến</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  /* Luôn giao diện sáng (người dùng chọn 04/11/2026). Bố cục: thanh thao tác trên cùng · trái danh sách dịch vụ – hub (menu nhỏ) · phải bảng tick nước theo khu vực */
+  :root {
+    --brand: #0b4d39; --brand-soft: #dcefe8; --brand-softer: #eef7f3;
+    --bg: #f3f4f6; --surface: #ffffff; --muted: #f7f8fa; --line: #d9dee5; --line-soft: #e8ebef;
+    --text: #1a202c; --text-2: #3f4a5a; --text-3: #6b7280; --warn: #a4133c; --warn-soft: #fbe8ed; --ok: #2e8b3e;
+    color-scheme: light;
+    --font: 'Plus Jakarta Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 13px/1.45 var(--font); }
+  .wrap { max-width: 1400px; margin: 0 auto; padding-block: 16px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: flex; flex-direction: column; gap: 12px; }
+  header { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; }
+  h1 { margin: 0; font-size: 17px; text-wrap: balance; }
+  .sub { color: var(--text-3); font-size: 12px; }
+  .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-left: auto; align-items: center; }
+  button, .btn { font: inherit; font-size: 12.5px; height: 30px; padding: 0 12px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--text); cursor: pointer; display: inline-flex; align-items: center; white-space: nowrap; }
+  button:hover, .btn:hover { border-color: var(--brand); }
+  button:focus-visible, .btn:focus-within, input:focus-visible, select:focus-visible { outline: 2px solid var(--brand); outline-offset: 1px; }
+  .primary { background: var(--brand); border-color: var(--brand); color: var(--surface); font-weight: 600; }
+  .danger { color: var(--warn); }
+  .btn input[type=file] { display: none; }
+  .status { color: var(--text-3); font-size: 12px; }
+  .guide { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px; color: var(--text-2); font-size: 12.5px; }
+  .guide ol { margin: 4px 0 0; padding-left: 18px; }
+  .layout { display: grid; grid-template-columns: 260px minmax(0, 1fr); gap: 12px; align-items: start; }
+  .menu { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 6px 0; position: sticky; top: env(safe-area-inset-top, 0px); max-height: calc(100vh - 32px); overflow: auto; }
+  .menu h3 { margin: 10px 14px 4px; font-size: 11.5px; color: var(--text-3); font-weight: 600; letter-spacing: .02em; }
+  .menu a { display: flex; justify-content: space-between; gap: 8px; padding: 5px 14px; color: var(--text); text-decoration: none; border-left: 3px solid transparent; cursor: pointer; }
+  .menu a:hover { background: var(--muted); }
+  .menu a.on { background: var(--brand-softer); border-left-color: var(--brand); color: var(--brand); font-weight: 600; }
+  .cnt { font-size: 11px; color: var(--text-3); font-variant-numeric: tabular-nums; font-weight: 500; }
+  .cnt.empty { color: var(--warn); }
+  .cnt.all { color: var(--ok); }
+  .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; min-width: 0; }
+  .ph { padding: 12px 14px; border-bottom: 1px solid var(--line-soft); display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; }
+  .ph h2 { margin: 0; font-size: 15px; }
+  .ph .meta { color: var(--text-3); font-size: 12px; }
+  .row { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; padding: 10px 14px; border-bottom: 1px solid var(--line-soft); }
+  label.chk { display: inline-flex; gap: 6px; align-items: center; cursor: pointer; }
+  input[type=text], input[type=search], select { font: inherit; height: 30px; border: 1px solid var(--line); border-radius: 6px; padding: 0 8px; background: var(--surface); color: var(--text); min-width: 0; }
+  .note { flex: 1; min-width: 200px; }
+  #search { flex: 1; min-width: 240px; max-width: 420px; }
+  .regions { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { height: 26px; padding: 0 10px; border-radius: 13px; font-size: 12px; }
+  .chip.full { background: var(--brand); border-color: var(--brand); color: var(--surface); }
+  .chip.part { background: var(--brand-soft); border-color: var(--brand); color: var(--brand); }
+  .groups { padding: 6px 14px 14px; display: flex; flex-direction: column; gap: 10px; }
+  .grp h4 { margin: 8px 0 6px; font-size: 12.5px; display: flex; gap: 10px; align-items: center; }
+  .grp h4 .cnt { font-weight: 500; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 2px 10px; }
+  .grid label { display: flex; gap: 6px; align-items: center; padding: 3px 4px; border-radius: 4px; cursor: pointer; min-width: 0; }
+  .grid label:hover { background: var(--muted); }
+  .grid label.on { background: var(--brand-softer); }
+  .code { font-variant-numeric: tabular-nums; color: var(--text-3); font-size: 11px; width: 22px; flex: none; }
+  .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .allbox { padding: 14px; color: var(--text-2); }
+  .confirm { display: inline-flex; gap: 6px; align-items: center; color: var(--warn); font-size: 12px; }
+  @media (max-width: 760px) { .layout { grid-template-columns: 1fr; } .menu { position: static; max-height: none; } }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Bảng hub theo nước đến</h1>
+      <div class="sub">Việt An Express · nhân viên tick các nước mỗi dịch vụ – hub đi được, rồi tải Excel gửi lại để nạp vào portal</div>
+    </div>
+    <div class="actions">
+      <span class="status" id="status"></span>
+      <button type="button" class="primary" id="btnExport">Tải Excel</button>
+      <label class="btn" for="fileImport">Nạp Excel<input type="file" id="fileImport" accept=".xlsx,.xls,.csv"></label>
+      <span id="resetBox"><button type="button" class="danger" id="btnReset">Xóa hết</button></span>
+    </div>
+  </header>
+
+  <div class="guide">
+    <strong>Cách dùng</strong>
+    <ol>
+      <li>Chọn 1 hub ở cột trái (đỏ = chưa điền nước nào).</li>
+      <li>Tick các nước hub đó đi được — bấm tên khu vực để chọn / bỏ cả khu vực; hub đi mọi nước thì tick "Đi mọi nước".</li>
+      <li>Dữ liệu tự lưu trên trình duyệt này. Xong bấm <strong>Tải Excel</strong> và gửi file cho bộ phận IT. Muốn sửa tiếp trên máy khác: <strong>Nạp Excel</strong> file đã tải.</li>
+    </ol>
+  </div>
+
+  <div class="layout">
+    <nav class="menu" id="menu" aria-label="Dịch vụ và hub"></nav>
+    <section class="panel" id="panel" aria-live="polite"></section>
+  </div>
+</div>
+
+<script>
+const COUNTRIES = [{"c":"AF","n":"Afghanistan"},{"c":"AX","n":"Aland Island"},{"c":"AL","n":"Albania"},{"c":"DZ","n":"Algeria"},{"c":"AS","n":"American Samoa"},{"c":"AD","n":"Andorra"},{"c":"AO","n":"Angola"},{"c":"AI","n":"Anguilla"},{"c":"AQ","n":"Antarctica"},{"c":"AG","n":"Antigua and Barbuda"},{"c":"AR","n":"Argentina"},{"c":"AM","n":"Armenia"},{"c":"AW","n":"Aruba"},{"c":"AU","n":"Australia"},{"c":"AT","n":"Austria"},{"c":"AZ","n":"Azerbaijan"},{"c":"BS","n":"Bahamas"},{"c":"BH","n":"Bahrain"},{"c":"BD","n":"Bangladesh"},{"c":"BB","n":"Barbados"},{"c":"BY","n":"Belarus"},{"c":"BE","n":"Belgium"},{"c":"BZ","n":"Belize"},{"c":"BJ","n":"Benin"},{"c":"BM","n":"Bermuda"},{"c":"BT","n":"Bhutan"},{"c":"BO","n":"Bolivia"},{"c":"BA","n":"Bosnia and Herzegovina"},{"c":"BW","n":"Botswana"},{"c":"BR","n":"Brazil"},{"c":"IO","n":"British Indian Ocean Territory"},{"c":"BN","n":"Brunei"},{"c":"BG","n":"Bulgaria"},{"c":"BF","n":"Burkina Faso"},{"c":"BI","n":"Burundi"},{"c":"KH","n":"Cambodia"},{"c":"CM","n":"Cameroon"},{"c":"CA","n":"Canada"},{"c":"CV","n":"Cape Verde"},{"c":"KY","n":"Cayman Islands"},{"c":"CF","n":"Central African Republic"},{"c":"TD","n":"Chad"},{"c":"CL","n":"Chile"},{"c":"CN","n":"China"},{"c":"CX","n":"Christmas Island"},{"c":"CC","n":"Cocos (Keeling) Islands"},{"c":"CO","n":"Colombia"},{"c":"KM","n":"Comoros"},{"c":"CG","n":"Congo"},{"c":"CD","n":"Congo (Dem. Republic Of)"},{"c":"CK","n":"Cook Islands"},{"c":"CR","n":"Costa Rica"},{"c":"CI","n":"Cote D'Ivoire"},{"c":"HR","n":"Croatia"},{"c":"CU","n":"Cuba"},{"c":"CW","n":"Curacao"},{"c":"CY","n":"Cyprus"},{"c":"CZ","n":"Czech Republic"},{"c":"DK","n":"Denmark"},{"c":"DJ","n":"Djibouti"},{"c":"DM","n":"Dominica"},{"c":"DO","n":"Dominican Republic"},{"c":"TL","n":"East Timor"},{"c":"EC","n":"Ecuador"},{"c":"EG","n":"Egypt"},{"c":"SV","n":"El Salvador"},{"c":"EN","n":"England"},{"c":"GQ","n":"Equatorial Guinea"},{"c":"ER","n":"Eritrea"},{"c":"EE","n":"Estonia"},{"c":"ET","n":"Ethiopia"},{"c":"FK","n":"Falkland Islands"},{"c":"FO","n":"Faroe Islands"},{"c":"FJ","n":"Fiji"},{"c":"FI","n":"Finland"},{"c":"FR","n":"France"},{"c":"GF","n":"French Guyana"},{"c":"PF","n":"French Polynesia"},{"c":"GA","n":"Gabon"},{"c":"GM","n":"Gambia"},{"c":"GE","n":"Georgia"},{"c":"DE","n":"Germany"},{"c":"GH","n":"Ghana"},{"c":"GI","n":"Gibraltar"},{"c":"GR","n":"Greece"},{"c":"GL","n":"Greenland"},{"c":"GD","n":"Grenada"},{"c":"GP","n":"Guadeloupe"},{"c":"GU","n":"Guam"},{"c":"GT","n":"Guatemala"},{"c":"GG","n":"Guernsey"},{"c":"GW","n":"Guinea Bissau"},{"c":"GN","n":"Guinea Republic"},{"c":"GY","n":"Guyana"},{"c":"HT","n":"Haiti"},{"c":"VA","n":"Holy See (Vatican City)"},{"c":"HN","n":"Honduras"},{"c":"HK","n":"Hong Kong"},{"c":"HU","n":"Hungary"},{"c":"IS","n":"Iceland"},{"c":"IN","n":"India"},{"c":"ID","n":"Indonesia"},{"c":"IR","n":"Iran"},{"c":"IQ","n":"Iraq"},{"c":"IE","n":"Ireland"},{"c":"IM","n":"Isle of Man"},{"c":"IL","n":"Israel"},{"c":"IT","n":"Italy"},{"c":"JM","n":"Jamaica"},{"c":"JP","n":"Japan"},{"c":"JE","n":"Jersey"},{"c":"JO","n":"Jordan"},{"c":"KZ","n":"Kazakhstan"},{"c":"KE","n":"Kenya"},{"c":"KI","n":"Kiribati"},{"c":"KP","n":"Korea, North"},{"c":"KR","n":"Korea, South"},{"c":"XK","n":"Kosovo"},{"c":"KW","n":"Kuwait"},{"c":"KG","n":"Kyrgyzstan"},{"c":"LA","n":"Laos"},{"c":"LV","n":"Latvia"},{"c":"LB","n":"Lebanon"},{"c":"LS","n":"Lesotho"},{"c":"LR","n":"Liberia"},{"c":"LY","n":"Libya"},{"c":"LI","n":"Liechtenstein"},{"c":"LT","n":"Lithuania"},{"c":"LU","n":"Luxembourg"},{"c":"MO","n":"Macau"},{"c":"MK","n":"Macedonia"},{"c":"MG","n":"Madagascar"},{"c":"MW","n":"Malawi"},{"c":"MY","n":"Malaysia"},{"c":"MV","n":"Maldives"},{"c":"ML","n":"Mali"},{"c":"MT","n":"Malta"},{"c":"MH","n":"Marshall Islands"},{"c":"MQ","n":"Martinique"},{"c":"MR","n":"Mauritania"},{"c":"MU","n":"Mauritius"},{"c":"YT","n":"Mayotte"},{"c":"MX","n":"Mexico"},{"c":"FM","n":"Micronesia"},{"c":"MD","n":"Moldova"},{"c":"MC","n":"Monaco"},{"c":"MN","n":"Mongolia"},{"c":"ME","n":"Montenegro"},{"c":"MS","n":"Montserrat"},{"c":"MA","n":"Morocco"},{"c":"MZ","n":"Mozambique"},{"c":"MM","n":"Myanmar"},{"c":"NA","n":"Namibia"},{"c":"NR","n":"Nauru"},{"c":"NP","n":"Nepal"},{"c":"NL","n":"Netherlands"},{"c":"AN","n":"Netherlands Antilles"},{"c":"NC","n":"New Caledonia"},{"c":"NZ","n":"New Zealand"},{"c":"NI","n":"Nicaragua"},{"c":"NE","n":"Niger"},{"c":"NG","n":"Nigeria"},{"c":"NU","n":"Niue"},{"c":"MP","n":"Northern Mariana Islands"},{"c":"NO","n":"Norway"},{"c":"OM","n":"Oman"},{"c":"PK","n":"Pakistan"},{"c":"PW","n":"Palau"},{"c":"PS","n":"Palestine"},{"c":"PA","n":"Panama"},{"c":"PG","n":"Papua New Guinea"},{"c":"PY","n":"Paraguay"},{"c":"PE","n":"Peru"},{"c":"PH","n":"Philippines"},{"c":"PN","n":"Pitcairn Islands"},{"c":"PL","n":"Poland"},{"c":"PT","n":"Portugal"},{"c":"PR","n":"Puerto Rico"},{"c":"QA","n":"Qatar"},{"c":"RE","n":"Reunion"},{"c":"RO","n":"Romania"},{"c":"RU","n":"Russia"},{"c":"RW","n":"Rwanda"},{"c":"WS","n":"Samoa"},{"c":"SM","n":"San Marino"},{"c":"ST","n":"Sao Tome and Principe"},{"c":"SA","n":"Saudi Arabia"},{"c":"SN","n":"Senegal"},{"c":"RS","n":"Serbia"},{"c":"SC","n":"Seychelles"},{"c":"SL","n":"Sierra Leone"},{"c":"SG","n":"Singapore"},{"c":"SK","n":"Slovakia"},{"c":"SI","n":"Slovenia"},{"c":"SB","n":"Solomon Islands"},{"c":"XS","n":"SOMALIA HARGEISA"},{"c":"SO","n":"SOMALIA MOGADISHU"},{"c":"ZA","n":"South Africa"},{"c":"ES","n":"Spain"},{"c":"LK","n":"Sri Lanka"},{"c":"BL","n":"St. Barthelemy"},{"c":"SH","n":"St. Helena"},{"c":"KN","n":"St. Kitts and Nevis"},{"c":"LC","n":"St. Lucia"},{"c":"SX","n":"St. Maarten"},{"c":"MF","n":"St. Martin"},{"c":"PM","n":"St. Pierre and Miquelon"},{"c":"VC","n":"St. Vincent and the Grenadines"},{"c":"SD","n":"Sudan"},{"c":"SR","n":"Suriname"},{"c":"SJ","n":"Svalbard"},{"c":"SZ","n":"Swaziland"},{"c":"SE","n":"Sweden"},{"c":"CH","n":"Switzerland"},{"c":"SY","n":"Syria"},{"c":"TW","n":"Taiwan"},{"c":"TJ","n":"Tajikistan"},{"c":"TZ","n":"Tanzania"},{"c":"TH","n":"Thailand"},{"c":"TG","n":"Togo"},{"c":"TK","n":"Tokelau"},{"c":"TO","n":"Tonga"},{"c":"TT","n":"Trinidad and Tobago"},{"c":"TN","n":"Tunisia"},{"c":"TR","n":"Turkey"},{"c":"TM","n":"Turkmenistan"},{"c":"TC","n":"Turks and Caicos Islands"},{"c":"TV","n":"Tuvalu"},{"c":"UG","n":"Uganda"},{"c":"UA","n":"Ukraine"},{"c":"AE","n":"United Arab Emirates"},{"c":"GB","n":"United Kingdom"},{"c":"US","n":"United States"},{"c":"UY","n":"Uruguay"},{"c":"UZ","n":"Uzbekistan"},{"c":"VU","n":"Vanuatu"},{"c":"VA","n":"Vatican City"},{"c":"VE","n":"Venezuela"},{"c":"VN","n":"Vietnam"},{"c":"VG","n":"Virgin Islands (British)"},{"c":"VI","n":"Virgin Islands (U.S.)"},{"c":"WF","n":"Wallis and Futuna"},{"c":"EH","n":"Western Sahara"},{"c":"YE","n":"Yemen"},{"c":"YG","n":"Yugoslavia"},{"c":"ZM","n":"Zambia"},{"c":"ZW","n":"Zimbabwe"}];
+const HUBS = {
+  'Chuyên tuyến': ['Sin (Đông Lạnh)', 'Singapore', 'UK', 'AU_AuPost', 'AU_Toll (T.Phẩm/M.Phẩm)', 'AU_Toll Vip (Hàng thường)', 'Canada', 'Dubai',
+    'Indonesia', 'Korea', 'Laos', 'Saudi', 'USA', 'USA - Sea', 'EU', 'Japan', 'Malaysia', 'China', 'India', 'Russia', 'Taiwan', 'Hong Kong',
+    'Thailand - AIR', 'Thailand - Truck', 'Cambodia', 'Philippines', 'VA'],
+  SEA: ['Australia', 'Dubai', 'Indonesia', 'Malaysia', 'Philippine', 'Singapore', 'USA'],
+  DHL: ['VN', 'SIN VIP', 'Singapore', 'UK', 'Dubai'],
+  Fedex: ['SIN 1', 'SIN 2', 'SIN 3 (FICP)', 'Singapore', 'UK', 'VN'],
+  UPS: ['Dubai', 'Singapore', 'UK', 'VN Saver', 'TaiWan', 'VN Expedited'],
+  Aramex: ['Dubai'],
+  Ecommerce: ['SING POST', 'Việt An'],
+  'Ủy quyền Việt An': ['Tự chọn']
+};
+const EU = ['AT','BE','BG','HR','CY','CZ','DK','EE','FI','FR','DE','GR','HU','IE','IT','LV','LT','LU','MT','NL','PL','PT','RO','SK','SI','ES','SE'];
+const REGIONS = [
+  ['Đông Nam Á', ['SG','MY','TH','ID','PH','VN','KH','LA','MM','BN','TL']],
+  ['Đông Á', ['CN','HK','MO','TW','JP','KR','KP','MN']],
+  ['Nam Á', ['IN','PK','BD','LK','NP','BT','MV','AF']],
+  ['Trung Đông / Tây Á', ['AE','SA','QA','KW','OM','BH','YE','IQ','IR','JO','LB','SY','IL','PS','TR','GE','AM','AZ']],
+  ['Trung Á', ['KZ','UZ','TM','KG','TJ']],
+  ['EU (27 nước)', EU],
+  ['Châu Âu khác', ['GB','NO','CH','IS','LI','AL','AD','BA','BY','FO','GI','GG','IM','JE','XK','MC','ME','MK','MD','RU','RS','SM','UA','VA','AX','SJ']],
+  ['Bắc Mỹ', ['US','CA','MX','GL','BM','PM']],
+  ['Trung Mỹ & Caribe', ['GT','BZ','SV','HN','NI','CR','PA','CU','JM','HT','DO','PR','BS','BB','TT','AG','DM','GD','KN','LC','VC','AI','AW','BQ','CW','SX','KY','TC','VG','VI','MS','GP','MQ','BL','MF']],
+  ['Nam Mỹ', ['BR','AR','CL','CO','PE','VE','EC','BO','PY','UY','GY','SR','GF','FK']],
+  ['Châu Phi', ['DZ','AO','BJ','BW','BF','BI','CV','CM','CF','TD','KM','CG','CD','CI','DJ','EG','GQ','ER','SZ','ET','GA','GM','GH','GN','GW','KE','LS','LR','LY','MG','MW','ML','MR','MU','YT','MA','MZ','NA','NE','NG','RE','RW','SH','ST','SN','SC','SL','SO','ZA','SS','SD','TZ','TG','TN','UG','EH','ZM','ZW']],
+  ['Châu Đại Dương', ['AU','NZ','PG','FJ','SB','VU','NC','PF','WS','TO','KI','TV','NR','PW','FM','MH','GU','MP','AS','CK','NU','TK','WF','NF','PN','CX','CC']]
+];
+/** Bản đầu soạn theo tên hub (Chuyên tuyến, SEA) — nhân viên kiểm tra lại. Hãng chuyển phát nhanh để trống cho nhân viên điền. */
+const DRAFT = {
+  'Chuyên tuyến|Sin (Đông Lạnh)': ['SG'], 'Chuyên tuyến|Singapore': ['SG'], 'Chuyên tuyến|UK': ['GB'],
+  'Chuyên tuyến|AU_AuPost': ['AU'], 'Chuyên tuyến|AU_Toll (T.Phẩm/M.Phẩm)': ['AU'], 'Chuyên tuyến|AU_Toll Vip (Hàng thường)': ['AU'],
+  'Chuyên tuyến|Canada': ['CA'], 'Chuyên tuyến|Dubai': ['AE'], 'Chuyên tuyến|Indonesia': ['ID'], 'Chuyên tuyến|Korea': ['KR'],
+  'Chuyên tuyến|Laos': ['LA'], 'Chuyên tuyến|Saudi': ['SA'], 'Chuyên tuyến|USA': ['US'], 'Chuyên tuyến|USA - Sea': ['US'],
+  'Chuyên tuyến|EU': EU, 'Chuyên tuyến|Japan': ['JP'], 'Chuyên tuyến|Malaysia': ['MY'], 'Chuyên tuyến|China': ['CN'],
+  'Chuyên tuyến|India': ['IN'], 'Chuyên tuyến|Russia': ['RU'], 'Chuyên tuyến|Taiwan': ['TW'], 'Chuyên tuyến|Hong Kong': ['HK'],
+  'Chuyên tuyến|Thailand - AIR': ['TH'], 'Chuyên tuyến|Thailand - Truck': ['TH'], 'Chuyên tuyến|Cambodia': ['KH'], 'Chuyên tuyến|Philippines': ['PH'],
+  'SEA|Australia': ['AU'], 'SEA|Dubai': ['AE'], 'SEA|Indonesia': ['ID'], 'SEA|Malaysia': ['MY'], 'SEA|Philippine': ['PH'], 'SEA|Singapore': ['SG'], 'SEA|USA': ['US']
+};
+const DRAFT_NOTES = { 'Chuyên tuyến|VA': 'Chưa rõ hub VA đi nước nào — cần điền' };
+
+const STORE_KEY = 'va.hubTool.v1';
+const NAME = Object.fromEntries(COUNTRIES.map(c => [c.c, c.n]));
+const known = new Set(REGIONS.flatMap(r => r[1]));
+const others = COUNTRIES.map(c => c.c).filter(c => !known.has(c));
+const GROUPS = [...REGIONS.map(([n, codes]) => [n, codes.filter(c => NAME[c])]), ...(others.length ? [['Khác', others]] : [])];
+const KEYS = Object.entries(HUBS).flatMap(([s, hubs]) => hubs.map(h => `${s}|${h}`));
+
+let state = load();
+let current = KEYS[0];
+let query = '';
+
+function emptyState() {
+  const s = {};
+  for (const k of KEYS) s[k] = { all: false, countries: [...(DRAFT[k] ?? [])], note: DRAFT_NOTES[k] ?? (DRAFT[k] ? 'Bản soạn sẵn — kiểm tra lại' : '') };
+  return s;
+}
+function load() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(STORE_KEY));
+    if (saved && typeof saved === 'object') return { ...emptyState(), ...saved };
+  } catch (e) { /* trình duyệt chặn lưu */ }
+  return emptyState();
+}
+function save() {
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); setStatus('Đã tự lưu ' + new Date().toLocaleTimeString('vi-VN')); }
+  catch (e) { setStatus('Trình duyệt không cho lưu — nhớ bấm Tải Excel'); }
+}
+function setStatus(t) { document.getElementById('status').textContent = t; }
+const esc = s => String(s).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
+
+function countLabel(k) {
+  const e = state[k];
+  if (e.all) return ['Mọi nước', 'all'];
+  return e.countries.length ? [String(e.countries.length), ''] : ['chưa điền', 'empty'];
+}
+
+function renderMenu() {
+  document.getElementById('menu').innerHTML = Object.entries(HUBS).map(([s, hubs]) =>
+    `<h3>${esc(s)}</h3>` + hubs.map(h => {
+      const k = `${s}|${h}`, [label, cls] = countLabel(k);
+      return `<a data-k="${esc(k)}" class="${k === current ? 'on' : ''}">${esc(h)} <span class="cnt ${cls}">${label}</span></a>`;
+    }).join('')).join('');
+  document.querySelectorAll('#menu a').forEach(a => a.onclick = () => { current = a.dataset.k; render(); });
+}
+
+function renderPanel() {
+  const [service, hub] = current.split('|');
+  const e = state[current];
+  const picked = new Set(e.countries);
+  const q = query.trim().toLowerCase();
+  const copyOptions = KEYS.filter(k => k !== current).map(k => `<option value="${esc(k)}">${esc(k.replace('|', ' – '))}</option>`).join('');
+  let html = `
+    <div class="ph"><h2>${esc(service)} – ${esc(hub)}</h2>
+      <span class="meta">${e.all ? 'Đi mọi nước' : `${e.countries.length} nước đã chọn`}</span></div>
+    <div class="row">
+      <label class="chk"><input type="checkbox" id="chkAll" ${e.all ? 'checked' : ''}> Đi mọi nước</label>
+      <input type="text" id="note" class="note" placeholder="Ghi chú (vd: chỉ nhận hàng thường, không nhận pin)" value="${esc(e.note)}">
+      <select id="copyFrom" aria-label="Chép danh sách nước từ hub khác"><option value="">Chép nước từ hub…</option>${copyOptions}</select>
+    </div>`;
+  if (e.all) {
+    html += `<div class="allbox">Hub này đi được mọi nước — portal sẽ hiện hub cho mọi nước đến. Bỏ tick "Đi mọi nước" để chọn từng nước.</div>`;
+  } else {
+    html += `<div class="row"><input type="search" id="search" placeholder="Tìm nước (tên tiếng Anh hoặc mã, vd: Brazil, BR)" value="${esc(query)}">
+      <button type="button" id="clearHub">Bỏ chọn hết</button></div>
+      <div class="row regions">${GROUPS.map(([name, codes], i) => {
+        const n = codes.filter(c => picked.has(c)).length;
+        return `<button type="button" class="chip ${n === codes.length ? 'full' : n ? 'part' : ''}" data-region="${i}">${esc(name)} ${n}/${codes.length}</button>`;
+      }).join('')}</div>
+      <div class="groups">${GROUPS.map(([name, codes]) => {
+        const list = codes.filter(c => !q || c.toLowerCase() === q || NAME[c].toLowerCase().includes(q));
+        if (!list.length) return '';
+        const n = codes.filter(c => picked.has(c)).length;
+        return `<div class="grp"><h4>${esc(name)} <span class="cnt">${n}/${codes.length}</span></h4><div class="grid">${list.map(c =>
+          `<label class="${picked.has(c) ? 'on' : ''}"><input type="checkbox" data-c="${c}" ${picked.has(c) ? 'checked' : ''}><span class="code">${c}</span><span class="name" title="${esc(NAME[c])}">${esc(NAME[c])}</span></label>`
+        ).join('')}</div></div>`;
+      }).join('')}</div>`;
+  }
+  const panel = document.getElementById('panel');
+  panel.innerHTML = html;
+
+  panel.querySelector('#chkAll').onchange = ev => { e.all = ev.target.checked; save(); render(); };
+  panel.querySelector('#note').oninput = ev => { e.note = ev.target.value; save(); };
+  panel.querySelector('#copyFrom').onchange = ev => {
+    const src = state[ev.target.value]; if (!src) return;
+    e.all = src.all; e.countries = [...src.countries]; save(); render();
+  };
+  if (e.all) return;
+  const search = panel.querySelector('#search');
+  search.oninput = ev => { query = ev.target.value; renderPanel(); const s = document.getElementById('search'); s.focus(); s.setSelectionRange(s.value.length, s.value.length); };
+  panel.querySelector('#clearHub').onclick = () => { e.countries = []; save(); render(); };
+  panel.querySelectorAll('[data-region]').forEach(b => b.onclick = () => {
+    const codes = GROUPS[+b.dataset.region][1];
+    const set = new Set(e.countries);
+    const full = codes.every(c => set.has(c));
+    codes.forEach(c => full ? set.delete(c) : set.add(c));
+    e.countries = [...set]; save(); render();
+  });
+  panel.querySelectorAll('[data-c]').forEach(cb => cb.onchange = () => {
+    const set = new Set(e.countries);
+    cb.checked ? set.add(cb.dataset.c) : set.delete(cb.dataset.c);
+    e.countries = [...set]; save(); renderMenu();
+    cb.closest('label').classList.toggle('on', cb.checked);
+    panel.querySelector('.meta').textContent = `${e.countries.length} nước đã chọn`;
+  });
+}
+
+function render() { renderMenu(); renderPanel(); }
+
+// ---------- Excel ----------
+const HEAD = ['Dịch vụ', 'Hub', 'Đi mọi nước (x)', 'Mã nước', 'Tên nước', 'Số nước', 'Ghi chú'];
+function exportExcel() {
+  const rows = KEYS.map(k => {
+    const [s, h] = k.split('|'), e = state[k];
+    const codes = [...e.countries].sort();
+    return [s, h, e.all ? 'x' : '', e.all ? '' : codes.join(', '), e.all ? 'Mọi nước' : codes.map(c => NAME[c] ?? c).join(', '), e.all ? '' : codes.length, e.note ?? ''];
+  });
+  const byCountry = COUNTRIES.map(c => {
+    const hubs = KEYS.filter(k => state[k].all || state[k].countries.includes(c.c)).map(k => k.replace('|', ' – '));
+    return [c.c, c.n, hubs.length, hubs.join('; ')];
+  });
+  if (typeof XLSX === 'undefined') {
+    // Không tải được thư viện Excel (mất mạng): xuất CSV — Excel mở được.
+    const csv = [HEAD, ...rows].map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\r\n');
+    return download(new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' }), 'Bang_hub_nuoc_den.csv');
+  }
+  const wb = XLSX.utils.book_new();
+  const ws1 = XLSX.utils.aoa_to_sheet([HEAD, ...rows]);
+  ws1['!cols'] = [{ wch: 16 }, { wch: 26 }, { wch: 14 }, { wch: 60 }, { wch: 60 }, { wch: 9 }, { wch: 40 }];
+  XLSX.utils.book_append_sheet(wb, ws1, 'Hub - Nuoc den');
+  const ws2 = XLSX.utils.aoa_to_sheet([['Mã nước', 'Tên nước', 'Số hub', 'Dịch vụ – hub đi được'], ...byCountry]);
+  ws2['!cols'] = [{ wch: 8 }, { wch: 32 }, { wch: 8 }, { wch: 120 }];
+  XLSX.utils.book_append_sheet(wb, ws2, 'Theo nuoc');
+  const out = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+  download(new Blob([out], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), `Bang_hub_nuoc_den_${new Date().toISOString().slice(0, 10)}.xlsx`);
+}
+function download(blob, name) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+  setStatus('Đã tải ' + name);
+}
+function importExcel(file) {
+  if (typeof XLSX === 'undefined') { setStatus('Không tải được thư viện Excel — kiểm tra mạng rồi mở lại trang'); return; }
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const wb = XLSX.read(new Uint8Array(reader.result), { type: 'array' });
+      const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, defval: '' });
+      const head = rows[0].map(v => String(v).trim());
+      const col = name => head.indexOf(name);
+      let n = 0, skipped = 0;
+      for (const r of rows.slice(1)) {
+        const k = `${String(r[col('Dịch vụ')]).trim()}|${String(r[col('Hub')]).trim()}`;
+        if (!state[k]) { if (String(r[0]).trim()) skipped++; continue; }
+        const codes = String(r[col('Mã nước')]).split(/[,;\s]+/).map(c => c.trim().toUpperCase()).filter(c => NAME[c]);
+        state[k] = { all: /x/i.test(String(r[col('Đi mọi nước (x)')])), countries: [...new Set(codes)], note: String(r[col('Ghi chú')] ?? '') };
+        n++;
+      }
+      save(); render();
+      setStatus(`Đã nạp ${n} hub${skipped ? `, bỏ qua ${skipped} dòng không khớp dịch vụ – hub` : ''}`);
+    } catch (err) { setStatus('File không đúng mẫu — dùng file tải từ chính trang này'); }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+document.getElementById('btnExport').onclick = exportExcel;
+document.getElementById('fileImport').onchange = ev => { if (ev.target.files[0]) importExcel(ev.target.files[0]); ev.target.value = ''; };
+// Xóa hết: xác nhận ngay trên trang (không dùng hộp thoại của trình duyệt).
+document.getElementById('btnReset').onclick = function askReset() {
+  const box = document.getElementById('resetBox');
+  box.innerHTML = '<span class="confirm">Xóa hết dữ liệu đã điền? <button type="button" class="danger" id="yes">Xóa</button><button type="button" id="no">Thôi</button></span>';
+  box.querySelector('#yes').onclick = () => { state = emptyState(); save(); render(); restore(); };
+  box.querySelector('#no').onclick = restore;
+  function restore() { box.innerHTML = '<button type="button" class="danger" id="btnReset">Xóa hết</button>'; document.getElementById('btnReset').onclick = askReset; }
+};
+
+render();
+setStatus('Dữ liệu tự lưu trên trình duyệt này');
+</script>
+</body>
+</html>

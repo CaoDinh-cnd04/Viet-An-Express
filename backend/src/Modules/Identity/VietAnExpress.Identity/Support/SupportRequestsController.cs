@@ -54,6 +54,19 @@ internal sealed class SupportRequestsController : ApiControllerBase
     [ProducesResponseType<ApiResponse<SupportRequestDto>>(StatusCodes.Status200OK)]
     public async Task<IActionResult> Answer(string id, SupportAnswerRequest body, CancellationToken ct) =>
         FromResult(await Sender.Send(new AnswerSupportRequestCommand(id, body.Text), ct), "Đã gửi phản hồi cho CS Việt An");
+
+    /// <summary>Nhân viên Việt An: yêu cầu của khách mình phụ trách (IS_ADMIN / VIEW_CUSTOMER_ALL: mọi khách) — như GET /admin/troubles.</summary>
+    [HttpGet("manage")]
+    [HasPermission(IdentityPermissions.ManageSupportRequests)]
+    [ProducesResponseType<ApiResponse<IReadOnlyList<AdminSupportRequestDto>>>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> Managed(CancellationToken ct) => FromResult(await Sender.Send(new GetManagedSupportRequestsQuery(), ct));
+
+    /// <summary>Nhân viên Việt An trả lời / đổi trạng thái (<c>{ reply?, status? }</c>) — như POST /admin/troubles/{id}/reply, trong phạm vi khách.</summary>
+    [HttpPost("manage/{id}/reply")]
+    [HasPermission(IdentityPermissions.ManageSupportRequests)]
+    [ProducesResponseType<ApiResponse<AdminSupportRequestDto>>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> ManagedReply(string id, SupportReplyRequest body, CancellationToken ct) =>
+        FromResult(await Sender.Send(new ReplyManagedSupportRequestCommand(id, body.Reply, body.Status), ct), "Đã cập nhật yêu cầu");
 }
 
 /// <summary>Trang quản trị trả lời và / hoặc đổi trạng thái yêu cầu.</summary>

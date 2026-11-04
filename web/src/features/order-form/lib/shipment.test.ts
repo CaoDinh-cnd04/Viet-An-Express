@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createOrderSchema, defaultValues, emptyInvoiceItem, emptyPackage } from '../schema';
-import { MULTI_CATEGORY } from '../constants';
+import { MULTI_CATEGORY, PACKAGE_ITEM_DESCRIPTION } from '../constants';
 import { applyDocWeightRule, buildDraftPayload, goodsName, invoiceTotal, isDocOverweight, summarizePackages, volumetricWeight } from './shipment';
 
 const pkg = (over: Partial<ReturnType<typeof emptyPackage>>) => ({ ...emptyPackage(), ...over });
@@ -62,7 +62,9 @@ describe('invoiceTotal', () => {
 describe('createOrderSchema', () => {
   const valid = () => {
     const v = defaultValues();
-    v.shipper = { ...v.shipper, company: 'ABC', contact: 'A', tel: '0909 805 845', address: 'HCM' };
+    // Chi nhánh / dịch vụ không còn mặc định (04/11/2026) — khách tự chọn.
+    v.shipper = { ...v.shipper, company: 'ABC', contact: 'A', tel: '0909 805 845', address: 'HCM', branch: 'TP.HCM' };
+    v.service = { carrier: 'Chuyên tuyến', hub: 'Chuyên tuyến - Singapore', reference: '' };
     v.receiver = { ...v.receiver, country: 'Singapore', city: 'Singapore', company: 'LINEX', contact: 'Lim', tel: '+65 6545 3778/79', addr1: '1 Raffles', addr2: 'Tower One' };
     v.goods.description = 'Clothes';
     v.packages = [pkg({ category: 'Quần áo, giày dép', weight: '8' })];
@@ -98,7 +100,8 @@ describe('createOrderSchema', () => {
     const multi = valid();
     multi.shipment.pieces = '2';
     multi.packages = [pkg({ category: 'Quần áo, giày dép', weight: '1' }), pkg({ category: MULTI_CATEGORY, weight: '1' })];
-    expect(createOrderSchema.safeParse(multi).error?.issues.map(i => i.path.join('.'))).toEqual(['packages.1.description']);
+    // Cột "Mô tả mặt hàng" đang tạm ẩn (PACKAGE_ITEM_DESCRIPTION) → "Nhiều loại hàng" không bắt buộc mô tả
+    expect(createOrderSchema.safeParse(multi).success).toBe(!PACKAGE_ITEM_DESCRIPTION);
     multi.packages[1]!.description = 'Quần áo + mỹ phẩm';
     expect(createOrderSchema.safeParse(multi).success).toBe(true);
   });
@@ -123,7 +126,7 @@ describe('createOrderSchema', () => {
     expect(createOrderSchema.safeParse(v).success).toBe(true);
   });
 
-  it('chứng từ: chỉ cần số kiện và cân nặng, nội dung mặc định Documents', () => {
+  it('chứng từ: chỉ cần số kiện và cân nặng, nội dung mặc định Document', () => {
     const doc = valid();
     doc.shipment.type = 'DOC';
     doc.shipment.pieces = '1';
@@ -132,7 +135,7 @@ describe('createOrderSchema', () => {
     expect(createOrderSchema.safeParse(doc).error?.issues.map(i => i.path.join('.'))).toEqual(['shipment.grossWeight']);
     doc.shipment.grossWeight = '0.5';
     expect(createOrderSchema.safeParse(doc).success).toBe(true);
-    expect(buildDraftPayload(doc, 'ready').content).toBe('Documents');
+    expect(buildDraftPayload(doc, 'ready').content).toBe('Document');
   });
 
   it('invoice: bắt buộc tên tiếng Việt và hình thức chịu thuế', () => {
@@ -178,6 +181,7 @@ describe('goodsName', () => {
 describe('buildDraftPayload', () => {
   it('dùng hub làm dịch vụ và cân tính cước từ bảng kiện', () => {
     const v = defaultValues();
+    v.service = { carrier: 'Chuyên tuyến', hub: 'Chuyên tuyến - Singapore', reference: '' };
     v.receiver.company = 'LINEX';
     v.receiver.country = 'Singapore';
     v.packages = [pkg({ qty: '1', weight: '8', length: '30', width: '20', height: '15', category: MULTI_CATEGORY, description: 'Váy nữ' })];

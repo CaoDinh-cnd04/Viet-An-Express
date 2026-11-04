@@ -41,10 +41,10 @@ export function useMyTrackingConfig(userId: string, server: ConfigRepository = s
   };
   const save = form.handleSubmit(values => persist(values));
   // Khôi phục chỉ sửa form; giữ mốc đã lưu để báo đúng thay đổi chưa lưu.
-  // Tên công ty theo hồ sơ khách — khôi phục mặc định vẫn giữ.
+  // Tên công ty / địa chỉ / điện thoại (theo hồ sơ khách hoặc khách đã sửa) — khôi phục mặc định vẫn giữ.
   const restoreDefaults = () => {
     const defaults = emptyConfig();
-    defaults.brand.companyName = form.getValues('brand.companyName');
+    for (const key of ['companyName', 'address', 'phone'] as const) defaults.brand[key] = form.getValues(`brand.${key}`);
     reset(defaults, { keepDefaultValues: true });
     setFeedback(undefined);
   };

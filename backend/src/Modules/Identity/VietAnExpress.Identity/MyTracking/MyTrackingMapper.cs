@@ -6,7 +6,8 @@ namespace VietAnExpress.Identity.MyTracking;
 
 /// <summary>
 /// Dựng cấu hình MyTracking như frontend dùng (features/mytracking/schema.ts): phần mở rộng từ TCustomer_MyTracking (có thể chưa có dòng),
-/// thương hiệu + cổng liên lạc từ TCustomer (<see cref="MyTrackingBrand"/>); ảnh đổi sang link hiển thị, tên công ty theo hồ sơ khách.
+/// thương hiệu + cổng liên lạc từ TCustomer (<see cref="MyTrackingBrand"/>); ảnh đổi sang link hiển thị.
+/// Tên công ty / địa chỉ / điện thoại: khách đã sửa (TCustomer_MyTracking) thì dùng, không thì theo hồ sơ khách.
 /// </summary>
 internal static class MyTrackingMapper
 {
@@ -17,25 +18,29 @@ internal static class MyTrackingMapper
         return string.IsNullOrEmpty(code) ? customerId.ToString(CultureInfo.InvariantCulture) : code;
     }
 
-    public static string ConfigJson(MyTrackingPage? page, MyTrackingBrandView brand, string? companyName) => MyTrackingJson.WithCompanyName(new JsonObject
+    public static string ConfigJson(MyTrackingPage? page, MyTrackingBrandView brand, string? companyName)
     {
-        ["title"] = page?.Title ?? "",
-        ["description"] = page?.Description ?? "",
-        ["background"] = page?.Background ?? "",
-        ["brand"] = new JsonObject
+        var profile = MyTrackingProfile.From(brand, companyName);
+        return new JsonObject
         {
-            ["companyName"] = "",
-            ["address"] = brand.Brand?.Address?.Trim() ?? "",
-            ["phone"] = brand.Brand?.Phone?.Trim() ?? "",
-            ["logo"] = brand.Logo ?? "",
-            ["website"] = brand.Brand?.Website?.Trim() ?? "",
-            ["primaryColor"] = brand.Brand?.Color01?.Trim() ?? "",
-            ["secondaryColor"] = brand.Brand?.Color02?.Trim() ?? "",
-            ["contacts"] = brand.Brand?.Contacts() ?? [],
-            ["socials"] = page?.Socials() ?? []
-        },
-        ["images"] = page?.Images() ?? []
-    }.ToJsonString(), companyName);
+            ["title"] = page?.Title ?? "",
+            ["description"] = page?.Description ?? "",
+            ["background"] = page?.Background ?? "",
+            ["brand"] = new JsonObject
+            {
+                ["companyName"] = page?.CompanyName ?? profile.CompanyName,
+                ["address"] = page?.Address ?? profile.Address,
+                ["phone"] = page?.Phone ?? profile.Phone,
+                ["logo"] = brand.Logo ?? "",
+                ["website"] = brand.Brand?.Website?.Trim() ?? "",
+                ["primaryColor"] = brand.Brand?.Color01?.Trim() ?? "",
+                ["secondaryColor"] = brand.Brand?.Color02?.Trim() ?? "",
+                ["contacts"] = brand.Brand?.Contacts() ?? [],
+                ["socials"] = page?.Socials() ?? []
+            },
+            ["images"] = page?.Images() ?? []
+        }.ToJsonString();
+    }
 
     public static MyTrackingDto ToDto(MyTrackingPage? page, MyTrackingBrandView brand, long customerId, CustomerSummary? customer, MyTrackingImageStore images) =>
         new(new RawJson(images.ForDisplay(ConfigJson(page, brand, customer?.TrackingName))),

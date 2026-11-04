@@ -141,6 +141,21 @@ public class SupportRequestTests
     }
 
     [Fact]
+    public async Task Email_ho_tro_gui_nhan_vien_phu_trach_khach_chua_co_thi_hop_thu_Viet_An()
+    {
+        await using var c = new Ctx();
+        c.F.Customers.Setup(x => x.GetAccountManagerAsync(IdentityFixture.CustomerId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new AccountManager(9, "vo.hanh", "Võ Hạnh", "vo.hanh@vietanexpress.com", null, null, true));
+        await c.CreateAsync(Support());
+        await c.F.Jobs.RunAllAsync(new ServiceCollection().AddSingleton<IEmailSender>(c.F.Email).BuildServiceProvider());
+        Assert.Equal(["vo.hanh@vietanexpress.com"], Assert.Single(c.F.Email.Sent).To);
+
+        Assert.Null(SupportRequestRules.CsRecipients(null)); // chưa có người phụ trách → Email:InboxAddress
+        Assert.Null(SupportRequestRules.CsRecipients(new AccountManager(9, "a", "A", "vo.hanh@vietanexpress.com", null, null, false)));
+        Assert.Null(SupportRequestRules.CsRecipients(new AccountManager(9, "a", "A", "chua-co", null, null, true)));
+    }
+
+    [Fact]
     public async Task Gop_y_chi_can_noi_dung()
     {
         await using var c = new Ctx();

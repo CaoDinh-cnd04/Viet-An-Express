@@ -21,49 +21,39 @@ interface StepIndicatorProps {
   onSelectSection?: (step: number, sectionId: string) => void;
   /** Hiện dấu tích ở bước đã xong. */
   showDone?: boolean;
-  /** Bước nào đã điền đủ các trường bắt buộc (theo kiểm tra form) — quyết định "Đã xong" / "Còn thiếu" và thanh tiến độ. */
+  /** Bước nào đã điền đủ các trường bắt buộc (theo kiểm tra form) — quyết định "Đã xong" / "Còn thiếu". */
   completed?: ReadonlyArray<boolean>;
 }
 
-/** Nhãn trạng thái dưới mỗi bước: xong = đủ trường bắt buộc; còn thiếu = đã qua nhưng chưa đủ. */
+/** Trạng thái từng bước — hiện ở chú thích khi rê chuột; chỉ "Còn thiếu" hiện thành chữ. */
 const STATE_LABEL = { passed: 'Đã xong', active: 'Đang điền', missing: 'Còn thiếu', todo: 'Chưa làm' } as const;
 
 /**
- * Dòng thời gian dọc các bước tạo đơn (cao vừa nội dung): mỗi bước có tên, mô tả
- * và trạng thái (Đã xong / Đang điền / Chưa làm); đáy khung là thanh tiến độ.
+ * Thanh các bước tạo đơn nằm ngang trên đầu trang (cột trái chỉ còn khung Hỗ trợ khách hàng): số + tên bước,
+ * trạng thái bằng màu (đang làm · đã xong có dấu tích · đã qua mà còn thiếu thì nhắc "Còn thiếu").
  * Bấm bước để chuyển bước (từng bước) hoặc cuộn tới phần đó (1 trang).
  */
 export function StepIndicator({ steps, current, onSelectStep, showDone = true, completed = [] }: StepIndicatorProps) {
   const { t } = useI18n();
-  const doneCount = steps.filter((_, i) => completed[i] === true).length;
   return (
-    <nav className={styles.panel} aria-label={t('Các bước tạo đơn')}>
-      <ol className={styles.timeline}>
+    <nav className={styles.bar} aria-label={t('Các bước tạo đơn')}>
+      <ol className={styles.steps}>
         {steps.map((s, i) => {
-          // Trạng thái theo dữ liệu thật: bước đang xem = Đang điền; bước khác đủ trường = Đã xong, đã qua mà thiếu = Còn thiếu
           const complete = completed[i] === true;
           const state = i === current ? 'active' : complete ? 'passed' : i < current ? 'missing' : 'todo';
           const done = showDone && complete && i !== current;
           return (
             <li key={s.title} className={cx(styles.step, styles[state])}>
-              <button type="button" className={styles.head} onClick={() => onSelectStep(i)} aria-current={state === 'active' ? 'step' : undefined}>
-                <span className={cx(styles.num, done && styles.numDone)}>{done ? <Icon name="check" size={14} /> : i + 1}</span>
-                <span className={styles.text}>
-                  <strong>{t(s.title)}</strong>
-                  <small>{t(s.description)}</small>
-                  <span className={styles.state}>{t(STATE_LABEL[state])}</span>
-                </span>
+              <button type="button" className={styles.head} onClick={() => onSelectStep(i)} aria-current={state === 'active' ? 'step' : undefined}
+                title={`${t(s.description)} · ${t(STATE_LABEL[state])}`}>
+                <span className={styles.num}>{done ? <Icon name="check" size={13} /> : i + 1}</span>
+                <span className={styles.title}>{t(s.title)}</span>
+                {state === 'missing' && <span className={styles.missingText}>{t(STATE_LABEL.missing)}</span>}
               </button>
             </li>
           );
         })}
       </ol>
-      <div className={styles.progress}>
-        <span>{t('Hoàn thành {done}/{total} bước', { done: doneCount, total: steps.length })}</span>
-        <span className={styles.track} aria-hidden="true">
-          <i style={{ width: `${Math.max(4, (doneCount / steps.length) * 100)}%` }} />
-        </span>
-      </div>
     </nav>
   );
 }

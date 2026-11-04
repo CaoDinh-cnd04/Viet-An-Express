@@ -1,5 +1,7 @@
 /** Hằng số nghiệp vụ dùng chung giữa nhiều feature. */
 
+import { CARRIER_EXCLUDED, HUB_COUNTRIES } from './hub-countries';
+
 export const BRANCHES = ['TP.HCM', 'Hà Nội', 'Huế', 'Bảo Lộc', 'Cần Thơ'] as const;
 export type Branch = (typeof BRANCHES)[number];
 
@@ -50,17 +52,45 @@ export function hubLabel(hub: string): string {
   return carrier ? hub.slice(carrier.length + 3) : hub;
 }
 
-/** Lựa chọn cho ô Hub: giá trị đầy đủ, nhãn chỉ tên hub. */
-export const hubOptions = (carrier: string) => (CARRIER_HUBS[carrier] ?? []).map(value => ({ value, label: hubLabel(value) }));
-
-/** Hub mặc định khi đổi hãng: hãng chỉ có 1 hub thì chọn luôn, nhiều hub thì để khách chọn. */
-export function defaultHub(carrier: string): string {
+/**
+ * Hub của hãng đi được tới nước đến (mã ISO-2) theo bảng CS điền (HUB_COUNTRIES) và danh sách nước hãng không / ngưng phục vụ
+ * (CARRIER_EXCLUDED). Chưa biết mã nước → mọi hub của hãng; hub chưa có trong bảng → coi như đi mọi nước. Hàm thuần — có test.
+ */
+export function hubsFor(carrier: string, countryCode?: string): readonly string[] {
   const hubs = CARRIER_HUBS[carrier] ?? [];
+  const code = countryCode?.trim().toUpperCase();
+  if (!code || code.length !== 2) return hubs;
+  if (CARRIER_EXCLUDED[carrier]?.includes(code)) return [];
+  return hubs.filter(hub => {
+    const countries = HUB_COUNTRIES[`${carrier}|${hubLabel(hub)}`] ?? '*';
+    return countries === '*' || countries.includes(code);
+  });
+}
+
+/** Hãng có ít nhất 1 hub đi được tới nước đến (ẩn hãng không phục vụ nước đó). Hàm thuần — có test. */
+export const carriersFor = (countryCode?: string): string[] => CARRIERS.filter(c => hubsFor(c, countryCode).length > 0);
+
+/** Lựa chọn cho ô Hub (lọc theo nước đến nếu có): giá trị đầy đủ, nhãn chỉ tên hub. */
+export const hubOptions = (carrier: string, countryCode?: string) =>
+  hubsFor(carrier, countryCode).map(value => ({ value, label: hubLabel(value) }));
+
+/** Hub mặc định khi đổi hãng / nước: chỉ còn 1 hub thì chọn luôn, nhiều hub thì để khách chọn. */
+export function defaultHub(carrier: string, countryCode?: string): string {
+  const hubs = hubsFor(carrier, countryCode);
   return hubs.length === 1 ? hubs[0]! : '';
 }
 
-/** Dịch vụ mặc định của đơn mới. */
-export const DEFAULT_SERVICE = { carrier: 'Chuyên tuyến', hub: 'Chuyên tuyến - Singapore' } as const;
+/** Nước đến bắt buộc khai Tỉnh / Bang: Mỹ, Canada, Úc (cùng danh sách backend ReceiverStateRule). */
+export const STATE_REQUIRED_COUNTRIES: readonly string[] = ['US', 'CA', 'AU'];
+
+const STATE_REQUIRED_NAMES = new Set(['united states', 'united states of america', 'usa', 'us', 'canada', 'australia']);
+
+/** Có bắt buộc Tỉnh / Bang không — theo mã nước ISO-2 (form tự điền), thiếu mã thì theo tên nước tiếng Anh. Hàm thuần — có test. */
+export function stateRequired(country: string | undefined, countryCode?: string): boolean {
+  const code = countryCode?.trim().toUpperCase();
+  if (code && code.length === 2) return STATE_REQUIRED_COUNTRIES.includes(code);
+  return STATE_REQUIRED_NAMES.has((country ?? '').trim().toLowerCase());
+}
 
 /**
  * Tuyến khai invoice riêng từng kiện (mỗi kiện 1 invoice, số invoice = tổng số kiện).

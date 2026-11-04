@@ -29,10 +29,47 @@
   font-size: 12px;
 }
 
-.actions button {
+/* In bill · Xuất bảng kê: nền đặc màu, chữ + icon trắng, không viền (03/11/2026) */
+.action {
+  --tone: var(--color-print-doc);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   height: 26px;
-  padding: 0 9px;
-  font-size: 12px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: var(--tone);
+  color: var(--color-on-hero);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 0.12s;
+}
+
+.action:hover:not(:disabled),
+.action[aria-expanded='true'] {
+  background: color-mix(in srgb, var(--tone) 82%, black);
+}
+
+.action:focus-visible {
+  outline: 2px solid var(--tone);
+  outline-offset: 1px;
+}
+
+.action:disabled {
+  background: var(--color-border);
+  color: var(--color-text-faint);
+  cursor: default;
+}
+
+.print { --tone: var(--color-print-doc); }
+.export { --tone: var(--color-status-fly); }
+
+.caret {
+  opacity: 0.7;
 }
 
 /* Hộp chọn loại chứng từ khi in nhiều đơn */

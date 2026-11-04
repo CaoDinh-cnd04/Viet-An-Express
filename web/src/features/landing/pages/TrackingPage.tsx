@@ -72,10 +72,10 @@ export default function TrackingPage() {
               </p>
               <div className={styles.tools}>
                 <Button size="sm" onClick={() => void copy(window.location.href, t('Đã sao chép link tra cứu'))}>
-                  <Icon name="share" size={14} /> {t('Chia sẻ link')}
+                  {t('Chia sẻ link')}
                 </Button>
                 <Button size="sm" onClick={() => window.print()} disabled={!current?.found}>
-                  <Icon name="printer" size={14} /> {t('In')}
+                  {t('In')}
                 </Button>
               </div>
             </div>

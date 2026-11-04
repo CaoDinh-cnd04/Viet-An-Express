@@ -1,7 +1,9 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using VietAnExpress.Customers.Contracts;
 using VietAnExpress.Identity.Shared;
+using VietAnExpress.Identity.VietAnStaff;
 using VietAnExpress.SharedKernel.Application;
 using VietAnExpress.SharedKernel.Results;
 
@@ -11,12 +13,14 @@ namespace VietAnExpress.Identity.Auth;
 
 /// <summary>
 /// Đổi refresh token lấy cặp token mới. Refresh token không lưu DB: hợp lệ khi đúng chữ ký, còn hạn
-/// và mật khẩu (dbo.TCustomer, hoặc dbo.TCustomer_NguoiLienLac với tài khoản con) chưa đổi kể từ lúc cấp; tài khoản con còn hoạt động.
+/// và mật khẩu (dbo.TCustomer, dbo.TCustomer_NguoiLienLac với tài khoản con, dbo.USERS với nhân viên Việt An) chưa đổi kể từ lúc cấp;
+/// tài khoản con / nhân viên Việt An còn hoạt động.
 /// </summary>
 internal sealed record RefreshSessionCommand(string RefreshToken) : IRequest<Result<AuthSession>>;
 
 internal sealed class RefreshSessionHandler(
-    IdentityDbContext db, ITokenService tokens, SessionService sessions, RevokedTokenStore revoked, TimeProvider clock, ILogger<RefreshSessionHandler> logger)
+    IdentityDbContext db, ICustomersApi customers, ITokenService tokens, SessionService sessions, RevokedTokenStore revoked, TimeProvider clock,
+    ILogger<RefreshSessionHandler> logger)
     : IRequestHandler<RefreshSessionCommand, Result<AuthSession>>
 {
     public async Task<Result<AuthSession>> Handle(RefreshSessionCommand cmd, CancellationToken ct)
@@ -26,6 +30,15 @@ internal sealed class RefreshSessionHandler(
         if (revoked.IsRevoked(claims.Id)) return Rejected("refresh token đã thu hồi khi đăng xuất", claims.CustomerId, claims.StaffId);
         // Token cấp trước khi có giới hạn phiên: tính mốc từ lần gia hạn này (không đăng xuất đột ngột).
         var authTime = claims.AuthTime ?? clock.GetUtcNow();
+
+        if (claims.VietAnUserId is { } agentId)
+        {
+            var context = await VietAnScope.LoadAsync(customers, agentId, claims.CustomerId, ct);
+            if (context is null) return Rejected("nhân viên Việt An đã khóa / xóa", claims.CustomerId, null);
+            if (!JwtTokenService.FixedTimeEquals(sessions.VietAnStamp(context.Agent), claims.PasswordStamp))
+                return Rejected("mật khẩu nhân viên Việt An đã đổi (dbo.USERS.USER_PASSWORD) hoặc đã đăng nhập ở thiết bị khác", claims.CustomerId, null);
+            return sessions.Start(context.Agent, context.Customer, claims.IsPersistent, authTime);
+        }
 
         if (claims.StaffId is { } staffId)
         {

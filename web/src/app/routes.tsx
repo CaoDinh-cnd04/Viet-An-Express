@@ -1,6 +1,6 @@
 import { lazy, Suspense, type ComponentType, type LazyExoticComponent } from 'react';
 import { createBrowserRouter, Navigate, useLocation, useParams, type RouteObject } from 'react-router-dom';
-import { PERMISSIONS, RequireAuth, RequirePermission, useCan } from '@/features/auth';
+import { CHOOSE_CUSTOMER_PATH, isVietAnAgent, PERMISSIONS, RequireAuth, RequirePermission, useCan, useSession } from '@/features/auth';
 import LandingPage from '@/features/landing/pages/LandingPage';
 import TrackingPage from '@/features/landing/pages/TrackingPage';
 import { isMyTrackingHost } from '@/features/mytracking';
@@ -41,6 +41,8 @@ const pages = {
   ecommerce: lazy(() => import('@/features/ecommerce/pages/EcommercePage')),
   ecomOrders: lazy(() => import('@/features/ecommerce/pages/EcomOrdersPage')),
   support: lazy(() => import('@/features/support/pages/SupportPage')),
+  managedSupport: lazy(() => import('@/features/admin/pages/ManagedSupportPage')),
+  chooseCustomer: lazy(() => import('@/features/auth/pages/ChooseCustomerPage')),
   notifications: lazy(() => import('@/features/notifications/pages/NotificationsPage')),
   apiTracking: lazy(() => import('@/features/account/pages/ApiTrackingPage')),
   password: lazy(() => import('@/features/account/pages/ChangePasswordPage'))
@@ -55,6 +57,12 @@ const page = (path: string, title: string, Page: ComponentType, permission?: str
   element: permission ? <RequirePermission permission={permission}><Page /></RequirePermission> : <Page />,
   handle: { title } satisfies RouteHandle
 });
+
+/** Hỗ trợ & góp ý: nhân viên Việt An thấy trang quản lý yêu cầu của khách mình phụ trách, khách thấy trang gửi yêu cầu. */
+function SupportEntry() {
+  const session = useSession();
+  return isVietAnAgent(session.data?.status === 'authenticated' ? session.data.user : undefined) ? <pages.managedSupport /> : <pages.support />;
+}
 
 function HomeRedirect() {
   const allowed = useCan();
@@ -98,7 +106,8 @@ const routes: RouteObject[] = [
       page('pricing', 'Giá & gợi ý dịch vụ', pages.pricing),
       page('ecommerce', 'E-commerce', pages.ecommerce, PERMISSIONS.ecommerceView),
       page('ecommerce/orders', 'Đơn hàng E-com', pages.ecomOrders, PERMISSIONS.ecommerceView),
-      page('troubles', 'Hỗ trợ & góp ý', pages.support),
+      page('troubles', 'Hỗ trợ & góp ý', SupportEntry),
+      page(CHOOSE_CUSTOMER_PATH.slice(1), 'Chọn khách', pages.chooseCustomer, PERMISSIONS.actForCustomer),
       page('notifications', 'Thông báo', pages.notifications),
       // Trang Trợ giúp & Góp ý cũ đã gộp vào Hỗ trợ & sự cố.
       { path: 'help', element: <RedirectKeepQuery to="/troubles" /> },

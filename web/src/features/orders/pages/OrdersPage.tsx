@@ -52,17 +52,17 @@ export default function OrdersPage() {
   return (
     <>
 
-      {/* 1 cụm gọn: hàng 1 trạng thái + tổng, hàng 2 bộ lọc + Xóa lọc + In nhiều bill + Xuất bảng kê */}
-      <div className={styles.panel}>
-        <OrderOverview
-          status={filters.status}
-          onStatusChange={status => update({ status })}
-          counts={summary?.statusCounts}
-          totalPieces={summary?.totalPieces ?? 0}
-          totalWeight={summary?.totalWeight ?? 0}
-          totalRows={data?.total ?? 0}
-        />
+      {/* Ô trạng thái + dòng tổng trên nền trang; khung riêng bên dưới: bộ lọc + Xóa lọc + In nhiều bill + Xuất bảng kê */}
+      <OrderOverview
+        status={filters.status}
+        onStatusChange={status => update({ status })}
+        counts={summary?.statusCounts}
+        totalPieces={summary?.totalPieces ?? 0}
+        totalWeight={summary?.totalWeight ?? 0}
+        totalRows={data?.total ?? 0}
+      />
 
+      <div className={styles.panel}>
         <OrderFilterBar
           filters={filters}
           onChange={update}

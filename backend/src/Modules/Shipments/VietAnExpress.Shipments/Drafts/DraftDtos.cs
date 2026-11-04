@@ -60,7 +60,9 @@ internal sealed record DraftDto(
     string Pcs,
     string Content,
     string Date,
-    JsonElement? Payload);
+    JsonElement? Payload,
+    /// <summary>Nhân viên Việt An tạo giúp khách (MaVanDon.CreateUser &gt; 0).</summary>
+    bool CreatedByVietAn = false);
 
 /// <summary>POST /drafts/:id/print — frontend đọc message + billCode.</summary>
 internal sealed record PrintDraftResponse(string Message, string BillCode)

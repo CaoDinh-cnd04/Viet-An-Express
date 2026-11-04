@@ -35,7 +35,7 @@ export function PrintMenu({ orders, size = 'sm', variant }: { orders: ReadonlyAr
       items={PRINT_KINDS.map(k => ({ label: k.label, onSelect: () => print(k.kind) }))}
       trigger={({ open, toggle }) => (
         <Button size={size} variant={variant} onClick={toggle} disabled={!orders.length} aria-expanded={open} aria-haspopup="menu">
-          <Icon name="printer" size={15} /> {t('In')} <Icon name="chevronDown" size={14} />
+          {t('In')} <Icon name="chevronDown" size={14} />
         </Button>
       )}
     />

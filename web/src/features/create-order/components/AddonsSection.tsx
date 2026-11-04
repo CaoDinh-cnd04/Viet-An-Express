@@ -17,31 +17,44 @@ const NO_ADDON = 'Không sử dụng dịch vụ';
  * Tùy chọn dịch vụ — ô chọn xổ xuống, mặc định "Không sử dụng dịch vụ".
  * Danh sách: "Không sử dụng dịch vụ" (bỏ hết) + các dịch vụ chọn nhiều.
  * Giá trị lưu là tên tiếng Việt; hiển thị theo ngôn ngữ đang chọn.
+ * `embedded`: 1 dòng gọn ở cuối khung kiện hàng (hàng hóa); không có thì là khung riêng (chứng từ — không có bảng kiện).
  */
-export function AddonsSection() {
+export function AddonsSection({ embedded }: { embedded?: boolean }) {
   const { t } = useI18n();
   const { control } = useFormContext<CreateOrderValues>();
   const [showFees, setShowFees] = useState(false);
+  const picker = (
+    <Controller
+      control={control}
+      name="addons"
+      render={({ field }) => (
+        <>
+          <AddonPicker value={field.value} onChange={field.onChange} onShowFees={() => setShowFees(true)} />
+          <AddonFeesDialog open={showFees} onClose={() => setShowFees(false)} selected={field.value} />
+        </>
+      )}
+    />
+  );
+  if (embedded) {
+    return (
+      <div className={styles.addonRow}>
+        <span className={styles.addonLabel}>{t('Dịch vụ thêm (có tính phí)')}</span>
+        <div className={styles.addonField}>{picker}</div>
+        <button type="button" className={styles.linkButton} onClick={() => setShowFees(true)}>{t('Xem biểu phí dịch vụ')}</button>
+      </div>
+    );
+  }
   return (
     <Card accent
       title="Tùy chọn dịch vụ"
       subtitle="(có tính phí)"
       actions={
         <button type="button" className={styles.linkButton} onClick={() => setShowFees(true)}>
-          <Icon name="tag" size={13} /> {t('Xem biểu phí dịch vụ')}
+          {t('Xem biểu phí dịch vụ')}
         </button>
       }
     >
-      <Controller
-        control={control}
-        name="addons"
-        render={({ field }) => (
-          <>
-            <AddonPicker value={field.value} onChange={field.onChange} onShowFees={() => setShowFees(true)} />
-            <AddonFeesDialog open={showFees} onClose={() => setShowFees(false)} selected={field.value} />
-          </>
-        )}
-      />
+      {picker}
     </Card>
   );
 }
@@ -139,7 +152,7 @@ function AddonPicker({ value, onChange, onShowFees }: { value: string[]; onChang
           })}
           <div className={styles.addonFooter}>
             <button type="button" className={styles.linkButton} onClick={() => { setOpen(false); onShowFees(); }}>
-              <Icon name="tag" size={13} /> {t('Xem biểu phí dịch vụ')}
+              {t('Xem biểu phí dịch vụ')}
             </button>
             <button type="button" className={styles.linkButton} onClick={() => setOpen(false)}>{t('Xong')}</button>
           </div>

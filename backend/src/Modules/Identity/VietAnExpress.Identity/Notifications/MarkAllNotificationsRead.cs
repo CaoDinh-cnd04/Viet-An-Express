@@ -14,6 +14,8 @@ internal sealed class MarkAllNotificationsReadHandler(IdentityDbContext db, ICur
     public async Task<Result<int>> Handle(MarkAllNotificationsReadCommand c, CancellationToken ct)
     {
         if (user.CustomerId is not { } customerId || customerId <= 0) return IdentityErrors.NotLoggedIn;
+        // Nhân viên Việt An làm thay khách: không đánh dấu đã đọc thay khách.
+        if (user.VietAnUserId is not null) return 0;
         var staff = CustomerInbox.StaffKey(user);
         var unread = await (await db.VisibleNotificationsAsync(customerId, VietnamTime.Now(clock), ct))
             .OrderByDescending(n => n.Pinned && n.CustomerId == null)

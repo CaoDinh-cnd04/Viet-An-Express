@@ -1,5 +1,7 @@
+import { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useCan } from '@/features/auth';
+import { TermsDialog } from '@/features/terms';
 import { useI18n } from '@/shared/i18n';
 import { cx } from '@/shared/lib/cx';
 import { useLocalStorage } from '@/shared/lib/useLocalStorage';
@@ -23,74 +25,85 @@ export function Sidebar({ collapsed, peek, mobileOpen, onNavigate, onExpand, onH
   const { t } = useI18n();
   const badges = useNavBadges();
   const allowed = useCan();
+  const [termsOpen, setTermsOpen] = useState(false);
   const [openGroups, setOpenGroups] = useLocalStorage<Record<string, boolean>>('va.nav.groups', { create: true, orders: true });
 
   const isActive = (to: string) => pathname === to;
   const count = (key?: BadgeKey) => (key ? badges[key] : 0);
 
   return (
-    <aside
-      className={cx(styles.sidebar, collapsed && styles.collapsed, peek && styles.peek, mobileOpen && styles.mobileOpen)}
-      aria-label={t('Menu chính')}
-      onMouseEnter={() => onHover?.(true)}
-      onMouseLeave={() => onHover?.(false)}
-    >
-      <div className={styles.brand}>
-        <img src="/logo.webp" alt="" className={styles.logo} />
-        <div className={styles.brandText}>
-          <div className={styles.brandName}>Việt An Express</div>
+    <>
+      <aside
+        className={cx(styles.sidebar, collapsed && styles.collapsed, peek && styles.peek, mobileOpen && styles.mobileOpen)}
+        aria-label={t('Menu chính')}
+        onMouseEnter={() => onHover?.(true)}
+        onMouseLeave={() => onHover?.(false)}
+      >
+        <div className={styles.brand}>
+          <img src="/logo.webp" alt="" className={styles.logo} />
+          <div className={styles.brandText}>
+            <div className={styles.brandName}>Việt An Express</div>
+          </div>
         </div>
-      </div>
 
-      <nav className={styles.nav}>
-        {NAV.map(entry => {
-          if (entry.kind === 'link') {
-            if (!allowed(entry.permission)) return null;
+        <nav className={styles.nav}>
+          {NAV.map(entry => {
+            if (entry.kind === 'link') {
+              if (!allowed(entry.permission)) return null;
+              return (
+                <NavLink key={entry.to} to={entry.to} end onClick={onNavigate} className={({ isActive: a }) => cx(styles.item, styles.top, a && styles.active)} title={t(entry.label)} data-tour={`nav-${entry.to.slice(1)}`}>
+                  <Icon name={entry.icon} size={16} className={styles.icon} />
+                  <span className={styles.label}>{t(entry.label)}</span>
+                </NavLink>
+              );
+            }
+
+            const children = entry.children.filter(c => allowed(c.permission));
+            if (children.length === 0) return null;
+            const hasActive = children.some(c => isActive(c.to));
+            const open = openGroups[entry.id] || hasActive;
+            const groupCount = children.reduce((sum, c) => sum + count(c.badge), 0);
             return (
-              <NavLink key={entry.to} to={entry.to} end onClick={onNavigate} className={({ isActive: a }) => cx(styles.item, styles.top, a && styles.active)} title={t(entry.label)} data-tour={`nav-${entry.to.slice(1)}`}>
-                <Icon name={entry.icon} size={16} className={styles.icon} />
-                <span className={styles.label}>{t(entry.label)}</span>
-              </NavLink>
+              <div key={entry.id} className={styles.group} data-tour={`nav-${entry.id}`}>
+                <button
+                  type="button"
+                  className={cx(styles.item, styles.top, hasActive && styles.groupActive)}
+                  aria-expanded={open}
+                  title={t(entry.label)}
+                  onClick={() => {
+                    if (collapsed) {
+                      onExpand();
+                      setOpenGroups(g => ({ ...g, [entry.id]: true }));
+                    } else setOpenGroups(g => ({ ...g, [entry.id]: !open }));
+                  }}
+                >
+                  <Icon name={entry.icon} size={16} className={styles.icon} />
+                  <span className={styles.label}>{t(entry.label)}</span>
+                  <span className={styles.short} aria-hidden="true">{t(entry.short)}</span>
+                  {!open && groupCount > 0 && <span className={styles.badge}>{groupCount}</span>}
+                  <Icon name={open ? 'chevronDown' : 'chevronRight'} size={14} className={styles.chevron} />
+                </button>
+                {open && !collapsed && (
+                  <div className={styles.children}>
+                    {children.map(child => (
+                      <ChildLink key={child.to} item={child} count={count(child.badge)} onNavigate={onNavigate} />
+                    ))}
+                  </div>
+                )}
+              </div>
             );
-          }
+          })}
 
-          const children = entry.children.filter(c => allowed(c.permission));
-          if (children.length === 0) return null;
-          const hasActive = children.some(c => isActive(c.to));
-          const open = openGroups[entry.id] || hasActive;
-          const groupCount = children.reduce((sum, c) => sum + count(c.badge), 0);
-          return (
-            <div key={entry.id} className={styles.group} data-tour={`nav-${entry.id}`}>
-              <button
-                type="button"
-                className={cx(styles.item, styles.top, hasActive && styles.groupActive)}
-                aria-expanded={open}
-                title={t(entry.label)}
-                onClick={() => {
-                  if (collapsed) {
-                    onExpand();
-                    setOpenGroups(g => ({ ...g, [entry.id]: true }));
-                  } else setOpenGroups(g => ({ ...g, [entry.id]: !open }));
-                }}
-              >
-                <Icon name={entry.icon} size={16} className={styles.icon} />
-                <span className={styles.label}>{t(entry.label)}</span>
-                <span className={styles.short} aria-hidden="true">{t(entry.short)}</span>
-                {!open && groupCount > 0 && <span className={styles.badge}>{groupCount}</span>}
-                <Icon name={open ? 'chevronDown' : 'chevronRight'} size={14} className={styles.chevron} />
-              </button>
-              {open && !collapsed && (
-                <div className={styles.children}>
-                  {children.map(child => (
-                    <ChildLink key={child.to} item={child} count={count(child.badge)} onNavigate={onNavigate} />
-                  ))}
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </nav>
-    </aside>
+          {/* Điều khoản dịch vụ (chỉ xem) nằm cuối menu, mở được ở mọi trang */}
+          <button type="button" className={cx(styles.item, styles.top, styles.foot)} title={t('Điều khoản dịch vụ')} data-tour="terms" onClick={() => setTermsOpen(true)}>
+            <Icon name="file" size={16} className={styles.icon} />
+            <span className={styles.label}>{t('Điều khoản dịch vụ')}</span>
+          </button>
+        </nav>
+      </aside>
+      {/* Đặt ngoài <aside>: trong menu các biến màu bị đổi sang nền xanh đậm chữ sáng, hộp điều khoản phải dùng màu thường */}
+      <TermsDialog open={termsOpen} onClose={() => setTermsOpen(false)} />
+    </>
   );
 }
 

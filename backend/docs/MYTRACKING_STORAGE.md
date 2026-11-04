@@ -10,8 +10,8 @@ Trang cũ chỉ hiện phần mở rộng khi `TCustomer.ViewLinkTracking = 1`; 
 
 | Dữ liệu API | Cột trong TCustomer |
 |---|---|
-| `brand.companyName` | `InvoiceCustomerName`, trống thì `CustomerName` — chỉ đọc |
-| `brand.address` / `phone` | `Address1` / `Phone` — **chỉ đọc** (thông tin người gửi trên bill; đổi qua yêu cầu hỗ trợ) |
+| `brand.companyName` | mặc định `InvoiceCustomerName`, trống thì `CustomerName` — portal không ghi |
+| `brand.address` / `phone` | mặc định `Address1` / `Phone` — **portal không ghi** (thông tin người gửi trên bill). Khách sửa 3 ô này ở MyTracking → lưu ở `TCustomer_MyTracking` (dưới) |
 | `brand.logo` | `Logo_ShippingMark` (bigint) → `TCommonFile.CommonFileID`; ảnh `/Upload/Logo_ShippingMark/{ServerFileName}`. Cũng là shipping mark in trên bill (`p_MVD_Print_Bill_Multi`). Logo mới → thêm 1 dòng `TCommonFile` (`RealFileName` = `ServerFileName` = tên tệp theo mã băm, `ServerFilePath` `/Upload/Logo_ShippingMark/`, `FileSize`, `MimeType`); xóa logo → `Logo_ShippingMark` NULL (giữ dòng `TCommonFile`) |
 | `brand.website` | `Bank` nvarchar(150) — nút Home của trang cũ |
 | `brand.primaryColor` / `secondaryColor` | `Column1` / `Column2` (`--mcolor` / `--scolor` của trang cũ) |
@@ -27,10 +27,12 @@ EF map cùng dòng TCustomer với `CustomerLogin` (table splitting); cột `Sta
 | `config.title` / `description` | `UuDai_TieuDe` / `UuDai_NoiDung` |
 | `brand.socials` (mạng xã hội, ≤ 5) | `CongTruyenThong_01` Facebook, `_02` Instagram, `_03` Youtube, `_04` Tiktok, `_05` Twitter, `_06` Google Maps, `_07` Pinterest |
 | `background` | `Str1`, `nvarchar(250)`, đường dẫn ảnh nền/banner, vd `/Upload/Banner/{tên-file}.jpg` |
+| `brand.companyName` / `address` / `phone` khách tự sửa | `CompanyName` / `Address` / `Tel` (250). Ô trống hoặc giống hồ sơ khách → NULL; NULL thì trang lấy theo `TCustomer` (02/11/2026, người dùng chốt) |
 
 Thứ tự ô khớp trang mytracking.top cũ (`social_line01…07`) — `MyTrackingChannels.cs`; mỗi ô tối đa 250 ký tự. Thuộc tính JSON lạ không được giữ.
-Cột thương hiệu của bảng này (`CompanyName`, `Address`, `Tel`, `Logo`, `Website`, `Color_*`, `Email`, `CongTinNhan_*`) trang cũ không dùng —
+Cột thương hiệu còn lại của bảng này (`Logo`, `Website`, `Color_*`, `Email`, `CongTinNhan_*`) trang cũ không dùng —
 portal không đọc / ghi nữa (từ 30/10/2026; dữ liệu portal ghi trước đó còn nguyên, không chuyển sang TCustomer).
+`CompanyName` / `Address` / `Tel` portal đọc / ghi lại từ 02/11/2026 (tên / địa chỉ / điện thoại khách tự sửa).
 Chưa dùng: `Banner_QC`, `Str2`, `CongTruyenThong_08–15` (bảng chính); `ID_Hinh`, `Str4–6`,
 `PhienBan_Tracking`, `TypeFile`, `FileName` (bảng ảnh) — chưa rõ cách hệ thống cũ dùng (code `Get_TrackingData` của trang cũ không có trong dump).
 

@@ -59,12 +59,10 @@ public class MyTrackingStorageTests
         return config;
     }
 
-    /// <summary>Cấu hình đọc lại: địa chỉ / điện thoại theo hồ sơ khách (không sửa ở MyTracking), logo ngoài thư mục Logo_ShippingMark không lưu.</summary>
+    /// <summary>Cấu hình đọc lại: logo ngoài thư mục Logo_ShippingMark không lưu.</summary>
     private static JsonObject Expected(JsonObject config, string logo = "")
     {
         var expected = config.DeepClone().AsObject();
-        expected["brand"]!["address"] = IdentityFixture.BrandAddress;
-        expected["brand"]!["phone"] = IdentityFixture.BrandPhone;
         expected["brand"]!["logo"] = logo;
         return expected;
     }
@@ -90,12 +88,13 @@ public class MyTrackingStorageTests
         Assert.Equal(("0901234567", "+84901234567", "cs@sgb.vn"), (brand["CongLienLac_Hotline"], brand["CongLienLac_WhatsApp"], brand["CongLienLac_Email"]));
         Assert.Null(brand["CongLienLac_Zalo"]);
         Assert.Equal(("#1e6b2c", "#e0412f", "https://sgb.vn"), (brand.Color01, brand.Color02, brand.Website));
-        // Địa chỉ / điện thoại là thông tin người gửi trên bill — MyTracking không sửa.
+        // Địa chỉ / điện thoại là thông tin người gửi trên bill — khách sửa ở MyTracking thì lưu ở TCustomer_MyTracking, TCustomer không đổi.
         Assert.Equal((IdentityFixture.BrandAddress, IdentityFixture.BrandPhone), (brand.Address, brand.Phone));
         // Mạng xã hội vẫn ở TCustomer_MyTracking (MangXaHoi của trang cũ); CongTinNhan_* không ghi nữa.
         var page = await f.Db.MyTrackingPages.SingleAsync(Ct);
         Assert.Equal(("https://facebook.com/example", "https://x.com/example"), (page.CongTruyenThong01, page.CongTruyenThong05));
         Assert.Null(page.CongTinNhan01);
+        Assert.Equal((new string('a', 250), "0901234567"), (page.Address, page.Phone));
         Assert.True(JsonNode.DeepEquals(Expected(config), await ReadAsync(f)));
     }
 
@@ -221,20 +220,40 @@ public class MyTrackingStorageTests
     }
 
     [Fact]
-    public async Task Company_name_comes_from_invoice_customer_name_and_cannot_be_changed_by_customer()
+    public async Task Company_address_phone_edited_in_MyTracking_are_saved_in_MyTracking_row_and_TCustomer_stays_unchanged()
     {
         await using var f = new IdentityFixture();
         var customer = new CustomerSummary(IdentityFixture.CustomerId, "SaigonbayHN", "SGB EXPRESS HN", null, null, null, null, null,
             "CÔNG TY TNHH SGB EXPRESS");
         f.Customers.Setup(c => c.GetByIdAsync(IdentityFixture.CustomerId, It.IsAny<CancellationToken>())).ReturnsAsync(customer);
         f.Customers.Setup(c => c.GetByCodeAsync("SaigonbayHN", It.IsAny<CancellationToken>())).ReturnsAsync(customer);
+        // Chưa sửa: theo hồ sơ khách.
+        var read = await ReadAsync(f);
+        Assert.Equal(("CÔNG TY TNHH SGB EXPRESS", IdentityFixture.BrandAddress, IdentityFixture.BrandPhone),
+            (read["brand"]!["companyName"]!.GetValue<string>(), read["brand"]!["address"]!.GetValue<string>(), read["brand"]!["phone"]!.GetValue<string>()));
+
         var config = FullConfigV2();
         config["brand"]!["companyName"] = "Tên khách tự sửa";
-        var saved = await f.SaveMyTracking.Handle(new SaveMyTrackingCommand(JsonSerializer.SerializeToElement(config)), Ct);
-        Assert.Equal("CÔNG TY TNHH SGB EXPRESS", saved.Value.CompanyName);
-        Assert.Equal("CÔNG TY TNHH SGB EXPRESS", (await ReadAsync(f))["brand"]!["companyName"]!.GetValue<string>());
+        config["brand"]!["address"] = "12 Lê Lợi, Q1";
+        config["brand"]!["phone"] = IdentityFixture.BrandPhone; // giống hồ sơ → không lưu riêng
+        Assert.True(await SaveAsync(f, config));
+        f.Db.ChangeTracker.Clear();
+        var page = await f.Db.MyTrackingPages.SingleAsync(Ct);
+        Assert.Equal(("Tên khách tự sửa", "12 Lê Lợi, Q1", null), (page.CompanyName, page.Address, page.Phone));
+        var brand = await f.Db.MyTrackingBrands.SingleAsync(Ct);
+        Assert.Equal((IdentityFixture.BrandAddress, IdentityFixture.BrandPhone), (brand.Address, brand.Phone));
         var published = await f.GetCustomerMyTracking.Handle(new GetCustomerMyTrackingQuery("SaigonbayHN"), Ct);
-        Assert.Equal("CÔNG TY TNHH SGB EXPRESS", JsonNode.Parse(published.Value.Config.Json)!["brand"]!["companyName"]!.GetValue<string>());
+        var shown = JsonNode.Parse(published.Value.Config.Json)!["brand"]!;
+        Assert.Equal(("Tên khách tự sửa", "12 Lê Lợi, Q1", IdentityFixture.BrandPhone),
+            (shown["companyName"]!.GetValue<string>(), shown["address"]!.GetValue<string>(), shown["phone"]!.GetValue<string>()));
+
+        // Xóa trắng ô → quay về theo hồ sơ khách.
+        config["brand"]!["companyName"] = "";
+        config["brand"]!["address"] = " ";
+        Assert.True(await SaveAsync(f, config));
+        read = await ReadAsync(f);
+        Assert.Equal(("CÔNG TY TNHH SGB EXPRESS", IdentityFixture.BrandAddress),
+            (read["brand"]!["companyName"]!.GetValue<string>(), read["brand"]!["address"]!.GetValue<string>()));
     }
 
     [Fact]

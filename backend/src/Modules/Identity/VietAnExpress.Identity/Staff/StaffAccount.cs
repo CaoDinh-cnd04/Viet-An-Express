@@ -71,6 +71,9 @@ internal sealed class StaffAccount
 
     public void SetPassword(string password) => Password = password;
 
+    /// <summary>Email nhận OTP tài khoản con vừa xác nhận — ghi đè cột Email.</summary>
+    public void SetEmail(string email) => Email = email.Trim();
+
     /// <summary>Xóa tài khoản: gỡ tên đăng nhập, mật khẩu — giữ dòng người liên hệ vì hệ thống cũ còn dùng.</summary>
     public void RemoveLogin()
     {

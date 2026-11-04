@@ -64,9 +64,12 @@ export function useOrderEvents(bill: string | null) {
   });
 }
 
-/** Trang HTML in chứng từ (bill A4, invoice, CVCK, nhãn A6) cho 1 hoặc nhiều đơn — GET /orders/print. */
-export function fetchPrintHtml(bills: readonly string[], doc: string): Promise<string> {
-  return http.getText('/orders/print', { bills: bills.join(','), doc });
+/**
+ * Trang HTML in chứng từ (bill A4, invoice, CVCK, nhãn A6) cho 1 hoặc nhiều đơn — GET /orders/print.
+ * `duty` (DDU / DDP): chỉ có khi in ngay lúc tạo đơn — in lên invoice, không lưu.
+ */
+export function fetchPrintHtml(bills: readonly string[], doc: string, duty?: string): Promise<string> {
+  return http.getText('/orders/print', { bills: bills.join(','), doc, ...(duty ? { duty } : {}) });
 }
 
 /** File Excel bảng kê gửi hàng theo bộ lọc hiện tại — GET /orders/export. `page`: chỉ trang đang xem; `all`: toàn bộ. */

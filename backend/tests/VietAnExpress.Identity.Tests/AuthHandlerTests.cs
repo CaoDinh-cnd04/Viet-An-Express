@@ -68,10 +68,16 @@ internal sealed class IdentityFixture : IAsyncDisposable
         Db.SaveChanges();
     }
 
-    public SessionService Sessions => new(Tokens, Customers.Object, [new FakePermissions()]);
+    public SessionService Sessions => new(Tokens, Customers.Object, [new FakePermissions()], VietAnSessions);
+    /// <summary>Sổ phiên nhân viên Việt An (1 phiên / nhân viên) — dùng chung cho mọi lần cấp / làm mới phiên của 1 test.</summary>
+    public VietAnExpress.Identity.VietAnStaff.VietAnSessionRegistry VietAnSessions =>
+        _vietAnSessions ??= new(Environment.Object, Microsoft.Extensions.Logging.Abstractions.NullLogger<VietAnExpress.Identity.VietAnStaff.VietAnSessionRegistry>.Instance);
+    private VietAnExpress.Identity.VietAnStaff.VietAnSessionRegistry? _vietAnSessions;
     public LoginAttemptGuard LoginGuard { get; }
+    public VietAnExpress.Identity.VietAnStaff.VietAnOtpStore VietAnOtps => _otps ??= new(Clock);
+    private VietAnExpress.Identity.VietAnStaff.VietAnOtpStore? _otps;
     public LoginHandler Login => new(Db, Sessions, LoginGuard);
-    public RefreshSessionHandler Refresh => new(Db, Tokens, Sessions, RevokedTokens, Clock, Microsoft.Extensions.Logging.Abstractions.NullLogger<RefreshSessionHandler>.Instance);
+    public RefreshSessionHandler Refresh => new(Db, Customers.Object, Tokens, Sessions, RevokedTokens, Clock, Microsoft.Extensions.Logging.Abstractions.NullLogger<RefreshSessionHandler>.Instance);
     public LogoutHandler Logout => new(Tokens, RevokedTokens);
 
     /// <summary>Kho thu hồi mới đọc lại file App_Data — giả lập ứng dụng khởi động lại.</summary>
@@ -108,7 +114,7 @@ internal sealed class IdentityFixture : IAsyncDisposable
         // Tài khoản con không bao giờ có quyền chỉ-admin (account.*).
         CurrentUser.Setup(u => u.HasPermission(It.IsAny<string>())).Returns<string>(p => staffId is null || !IdentityPermissions.AdminOnly.Contains(p));
     }
-    public GetSessionHandler Me => new(Db, Sessions, CurrentUser.Object);
+    public GetSessionHandler Me => new(Db, Customers.Object, Sessions, CurrentUser.Object);
 
     public string StoredPassword() => Db.Logins.AsNoTracking().Single(l => l.CustomerId == CustomerId).Password!;
 

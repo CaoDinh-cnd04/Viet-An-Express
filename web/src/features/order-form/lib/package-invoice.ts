@@ -18,6 +18,14 @@ export const packageOf = (item: Pick<Item, 'package'>): number => (isCount(item.
 export const packageCount = (packages: ReadonlyArray<Pick<PackageValues, 'qty'>>): number =>
   packages.reduce((sum, p) => sum + (isCount(p.qty) ? Number(p.qty) : 0), 0);
 
+/**
+ * Số invoice khi khai riêng từng kiện: theo "Tổng số lượng dự kiến" (shipment.pieces) khách nhập — nhập 2 kiện là có ngay
+ * Kiện 1/2, 2/2 dù bảng kiện chưa tách dòng; chưa nhập / không hợp lệ thì theo tổng SL các dòng kiện.
+ * (Tổng SL dòng kiện ≠ số kiện dự kiến vẫn báo lỗi riêng ở "Chi tiết kiện hàng".)
+ */
+export const invoicePackageCount = (pieces: string | undefined, packages: ReadonlyArray<Pick<PackageValues, 'qty'>>): number =>
+  isCount(pieces) && Number(pieces) > 0 ? Number(pieces) : packageCount(packages);
+
 /** Dòng hàng chưa nhập gì (bỏ được khi bớt kiện mà không mất dữ liệu). */
 export const isBlankItem = (item: Item): boolean =>
   !item.descEn.trim() && !item.descVi.trim() && !item.manufacturer.trim() && !item.hs.trim() && !item.qty.trim() && !item.price.trim();

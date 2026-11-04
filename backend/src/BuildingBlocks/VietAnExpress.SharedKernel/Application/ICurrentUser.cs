@@ -15,6 +15,9 @@ public interface ICurrentUser
     /// <summary>Có khi đăng nhập bằng tài khoản con (nhân viên); null = tài khoản chính (admin) của khách.</summary>
     long? StaffId { get; }
 
+    /// <summary>Có khi nhân viên Việt An (dbo.USERS.ID) đang làm thay khách <see cref="CustomerId"/>; null = chính khách đăng nhập.</summary>
+    int? VietAnUserId => null;
+
     bool HasPermission(string permission);
 }
 

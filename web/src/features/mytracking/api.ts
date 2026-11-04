@@ -12,7 +12,7 @@ export interface Publication {
 /** GET / PUT /account/mytracking — `config` null khi khách chưa cấu hình. */
 export interface MyTrackingResponse extends Publication {
   config: unknown;
-  /** Tên công ty theo hồ sơ khách (TCustomer.InvoiceCustomerName, trống thì CustomerName) — trang MyTracking luôn dùng tên này, khách không sửa. */
+  /** Tên công ty theo hồ sơ khách (TCustomer.InvoiceCustomerName, trống thì CustomerName) — mặc định khi khách chưa sửa tên ở MyTracking. */
   companyName?: string;
 }
 

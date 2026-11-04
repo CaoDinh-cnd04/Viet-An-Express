@@ -21,15 +21,17 @@ const errorMessage = (e: unknown) => (e instanceof ApiError ? e.message : 'Có l
  */
 export function usePrintDocuments() {
   return useCallback(
-    async (bills: readonly string[] | (() => Promise<readonly string[]>), doc: PrintDoc | readonly PrintDoc[]) => {
+    async (bills: readonly string[] | (() => Promise<readonly string[]>), doc: PrintDoc | readonly PrintDoc[], options?: { duty?: string }) => {
       if (Array.isArray(bills) && bills.length === 0) return;
       const id = uuid();
       const docs = typeof doc === 'string' ? doc : doc.join(',');
-      if (Array.isArray(bills)) writePrintJob(id, { bills: [...bills], doc: docs });
+      // Hình thức chịu thuế (lúc tạo đơn) đi kèm lệnh in — backend in lên invoice, không lưu.
+      const duty = options?.duty ? { duty: options.duty } : {};
+      if (Array.isArray(bills)) writePrintJob(id, { bills: [...bills], doc: docs, ...duty });
       window.open(`${import.meta.env.BASE_URL}print/${id}`, '_blank', 'noopener');
       if (Array.isArray(bills)) return;
       const list = await (bills as () => Promise<readonly string[]>)().catch(() => [] as readonly string[]);
-      writePrintJob(id, list.length === 0 ? { cancel: true } : { bills: [...list], doc: docs });
+      writePrintJob(id, list.length === 0 ? { cancel: true } : { bills: [...list], doc: docs, ...duty });
     },
     []
   );

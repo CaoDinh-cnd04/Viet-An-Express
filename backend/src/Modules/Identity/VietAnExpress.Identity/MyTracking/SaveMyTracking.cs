@@ -16,7 +16,8 @@ internal sealed record SaveMyTrackingCommand(JsonElement Config) : IRequest<Resu
 
 /// <summary>
 /// Lưu như trang mytracking.top cũ: ưu đãi / ảnh nền / mạng xã hội / ảnh quảng cáo vào TCustomer_MyTracking (+ _Banner);
-/// website, màu, cổng liên lạc, logo vào hồ sơ khách TCustomer (<see cref="MyTrackingBrand"/>). Tên công ty, địa chỉ, điện thoại không sửa ở đây.
+/// website, màu, cổng liên lạc, logo vào hồ sơ khách TCustomer (<see cref="MyTrackingBrand"/>). Tên công ty, địa chỉ, điện thoại khách sửa
+/// thì lưu ở TCustomer_MyTracking (<see cref="MyTrackingPage.SetContactInfo"/>) — hồ sơ khách TCustomer không đổi.
 /// </summary>
 internal sealed class SaveMyTrackingHandler(IdentityDbContext db, ICustomersApi customers, ICurrentUser user, MyTrackingImageStore images, TimeProvider clock)
     : IRequestHandler<SaveMyTrackingCommand, Result<MyTrackingDto>>
@@ -50,10 +51,11 @@ internal sealed class SaveMyTrackingHandler(IdentityDbContext db, ICustomersApi 
             ? db.MyTrackingPages.FromSqlInterpolated($"SELECT * FROM dbo.TCustomer_MyTracking WITH (UPDLOCK, HOLDLOCK) WHERE CustomerID = {customerId}")
             : db.MyTrackingPages.Where(p => p.CustomerId == customerId);
         var page = await pages.Include(p => p.Banners).FirstOrDefaultAsync(ct);
-        var (brand, currentLogo) = await db.MyTrackingBrandAsync(customerId, ct, tracked: true);
+        var brandView = await db.MyTrackingBrandAsync(customerId, ct, tracked: true);
+        var (brand, currentLogo) = brandView;
+        var brandJson = MyTrackingJson.Object(json)["brand"] as JsonObject;
         if (brand is not null)
         {
-            var brandJson = MyTrackingJson.Object(json)["brand"] as JsonObject;
             brand.Update(brandJson);
             await SaveLogoAsync(brand, currentLogo, MyTrackingJson.Text(brandJson, "logo"), ct);
         }
@@ -65,6 +67,7 @@ internal sealed class SaveMyTrackingHandler(IdentityDbContext db, ICustomersApi 
             db.MyTrackingBanners.RemoveRange(page.Banners);
             page.Update(json);
         }
+        page.SetContactInfo(brandJson, MyTrackingProfile.From(brandView, customer?.TrackingName));
         try
         {
             await db.SaveChangesAsync(ct);
@@ -87,9 +90,7 @@ internal sealed class SaveMyTrackingHandler(IdentityDbContext db, ICustomersApi 
         if (cmd.Config.ValueKind != JsonValueKind.Object) return MyTrackingErrors.InvalidTrackingConfig;
         var json = cmd.Config.GetRawText();
         if (Encoding.UTF8.GetByteCount(json) > MyTrackingPage.ConfigMaxBytes) return MyTrackingErrors.InvalidTrackingConfig;
-        // Tên công ty không do khách sửa: luôn lưu theo hồ sơ khách.
         var customer = await customers.GetByIdAsync(customerId, ct);
-        json = MyTrackingJson.WithCompanyName(json, customer?.TrackingName);
         try { json = await images.PrepareAsync(json, ct); }
         catch (FormatException) { return MyTrackingErrors.InvalidTrackingConfig; }
         if (MyTrackingChannels.HasTooLongValue(json) || !MyTrackingBrand.FitsColumns(MyTrackingJson.Object(json)["brand"] as JsonObject))

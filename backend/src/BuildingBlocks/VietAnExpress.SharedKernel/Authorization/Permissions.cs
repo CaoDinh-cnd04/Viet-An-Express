@@ -10,6 +10,8 @@ public static class VaClaimTypes
     public const string CustomerId = "customer_id";
     /// <summary>Có khi người đăng nhập là tài khoản con (nhân viên) của khách — dbo.TaiKhoanNhanVien.ID.</summary>
     public const string StaffId = "staff_id";
+    /// <summary>Có khi nhân viên Việt An (dbo.USERS.ID) đăng nhập portal và làm thay khách.</summary>
+    public const string VietAnUserId = "va_user";
     /// <summary>Mã riêng của token (jti) — thu hồi khi đăng xuất.</summary>
     public const string TokenId = "jti";
     /// <summary>Hạn token, giây Unix.</summary>
@@ -27,6 +29,8 @@ public static class SystemRoles
     public const string CustomerStaff = "customer_staff";
     /// <summary>Quản trị Việt An (trang /admin) — tài khoản cố định trong code, không phải khách.</summary>
     public const string VietAnAdmin = "va_admin";
+    /// <summary>Nhân viên Việt An (dbo.USERS) đăng nhập portal, chọn khách rồi dùng trang của khách để tạo đơn giúp.</summary>
+    public const string VietAnStaff = "va_staff";
 }
 
 /// <summary>1 quyền và các vai trò được cấp quyền này (khai báo trong code, không lưu DB).</summary>

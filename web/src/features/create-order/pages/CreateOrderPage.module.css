@@ -25,6 +25,11 @@
   min-width: 0;
 }
 
+/* Tiêu đề các khung (Thông tin người gửi, Hàng & dịch vụ, Invoice…) 13px — Card đọc biến này */
+.form {
+  --card-title-size: 13px;
+}
+
 /* Nội dung đã nhập / điền sẵn có màu riêng để dễ phân biệt với nhãn và gợi ý. */
 .form input:not([type='checkbox']):not([type='radio']):not([type='file']):not(:disabled),
 .form textarea:not(:disabled),
@@ -46,34 +51,84 @@
 }
 
 /*
- * THỬ NGHIỆM giao diện dọc: dòng thời gian các bước bên trái (ghim theo khi cuộn, cao bằng màn hình)
- * + form 1 cột rộng tối đa 900px theo thứ tự khai bill; cả khối căn giữa.
+ * Thanh các bước ngang trên cùng (trải 2 cột) · cột trái khung Hỗ trợ khách hàng (ghim theo khi cuộn)
+ * + form rộng tối đa 1240px theo thứ tự khai bill (người gửi | người nhận cùng hàng); cả khối căn giữa.
  */
 .layout {
   display: grid;
-  grid-template-columns: 220px minmax(0, 900px);
+  grid-template-columns: 180px minmax(0, 1240px);
   justify-content: center;
   align-items: start;
   gap: var(--space-5);
 }
 
-/* Cột trái ghim theo khi cuộn: khung các bước + khung Hỗ trợ khách hàng, mỗi khung cao vừa nội dung */
+/*
+ * Thanh các bước trải hết 2 cột, ghim ngay dưới thanh trên cùng khi cuộn (nền trùng nền trang để che nội dung cuộn qua):
+ * chế độ 1 trang cuộn tới phần nào thì bước đó sáng lên, bấm bước thì cuộn tới phần đó.
+ */
+.steps {
+  grid-column: 1 / -1;
+  position: sticky;
+  top: var(--topbar-h);
+  z-index: 6;
+  padding-block: var(--space-2);
+  margin-block: calc(var(--space-2) * -1);
+  background: var(--color-bg);
+}
+
+/* Cột trái ghim theo khi cuộn, ngay dưới thanh các bước: khung Tiện ích, cao vừa nội dung */
 .nav {
   position: sticky;
-  top: calc(var(--topbar-h) + var(--space-4));
+  top: calc(var(--topbar-h) + 72px);
   z-index: 4;
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
 }
 
-/* Mỗi khung có id để dòng thời gian nhảy tới — chừa chỗ cho thanh trên cùng khi cuộn tới */
+/* Bước đầu 2 cột: trái người gửi + dịch vụ + thông tin đơn hàng (hẹp, 2/5), phải người nhận (rộng, 3/5; kéo dài bằng cột trái) */
+.parties {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+  gap: var(--space-4);
+  align-items: stretch;
+}
+
+.column {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+/* Khung cuối cột trái (Hàng & dịch vụ) kéo xuống cho đáy 2 cột thẳng hàng — không để khoảng xám dưới cột trái */
+.column > .section:last-child {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.column > .section:last-child > *,
+.fillColumn > * {
+  flex: 1;
+}
+
+.fillColumn {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Mỗi khung có id để thanh các bước nhảy tới — chừa chỗ cho thanh trên cùng + thanh các bước đang ghim */
 .section {
-  scroll-margin-top: calc(var(--topbar-h) + var(--space-4));
+  scroll-margin-top: calc(var(--topbar-h) + 84px);
 }
 
 /* Màn hình hẹp: dòng thời gian thành thanh ngang, ghim ngay dưới thanh trên cùng */
 @media (max-width: 1100px) {
+  .parties {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
   .layout {
     grid-template-columns: minmax(0, 1fr);
     gap: var(--space-3);
@@ -87,7 +142,7 @@
   }
 
   .section {
-    scroll-margin-top: calc(var(--topbar-h) + 64px);
+    scroll-margin-top: calc(var(--topbar-h) + 84px);
   }
 }
 
@@ -113,4 +168,18 @@
 
 .drafts {
   margin-top: var(--space-5);
+}
+
+/* Nút "Lưu nháp": nền cam mơ như mục đang chọn trên thanh menu, chữ nâu đậm (04/11/2026) */
+.draftButton {
+  border-color: var(--color-draft);
+  background: var(--color-draft);
+  color: var(--color-on-draft);
+  font-weight: 600;
+}
+
+.draftButton:hover:not(:disabled) {
+  border-color: var(--color-draft-hover);
+  background: var(--color-draft-hover);
+  color: var(--color-on-draft);
 }

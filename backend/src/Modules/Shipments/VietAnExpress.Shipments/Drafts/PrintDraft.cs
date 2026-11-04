@@ -49,6 +49,13 @@ internal sealed class PrintDraftHandler(
 
             var (packages, items) = await DraftStore.LinesAsync(db, [order.Id], ct);
             var payload = OrderCopy.FromLegacy(order, packages[(int)order.Id].ToList(), items[(int)order.Id].ToList());
+            // Kiểm tra đủ ô bắt buộc như form tạo đơn — nháp lưu dở (vd chưa chọn hub) không được cấp bill.
+            var missing = PrintReadiness.Missing(payload);
+            if (missing.Count > 0)
+            {
+                failure = Error.BusinessRule("DRAFT_NOT_READY", $"Đơn còn thiếu: {string.Join(", ", missing)} — mở đơn, hoàn tất rồi bấm In");
+                return;
+            }
             var taxValidation = new ReceiverTaxValidator().Validate(payload.Receiver);
             if (!taxValidation.IsValid)
             {
@@ -67,6 +74,7 @@ internal sealed class PrintDraftHandler(
             order.Status = LegacyOrder.IssuedStatus;
             order.CreateDate = today;
             order.ModifyDate = today;
+            access.StampModifier(order);
             RemoteAreaColumns.Apply(order, remote);
             code = LegacyOrderView.BillOf(order);
             await db.SaveChangesAsync(ct);

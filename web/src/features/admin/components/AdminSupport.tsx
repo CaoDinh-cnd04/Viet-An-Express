@@ -5,7 +5,7 @@ import { cx } from '@/shared/lib/cx';
 import { Button, DataTable, Drawer, Notice, StatusPill, TextAreaField, useToast, type Column } from '@/shared/ui';
 import { FilterBar, type FilterOption } from '@/features/notifications';
 import { kindOf, SupportThreadList, ticketTitle, SUPPORT_PRIORITY, SUPPORT_STATUS, type SupportStatus } from '@/features/support';
-import { useAdminSupportTickets, useReplyAdminSupportTicket, type AdminSupportTicket } from '../api';
+import { useAdminSupportTickets, useReplyAdminSupportTicket, type AdminSupportTicket, type SupportSource } from '../api';
 import { adminKindLabel, filterSupportTickets, isContactMessage, matchesFilter, matchesStaff, staffOptions, SUPPORT_FILTERS, ticketActions, UNASSIGNED, type SupportFilter } from '../lib/support';
 import styles from './AdminSupport.module.css';
 
@@ -13,9 +13,9 @@ import styles from './AdminSupport.module.css';
  * Tab "Hỗ trợ & sự cố" của trang quản trị: lọc theo trạng thái + nhân viên phụ trách + tìm, bảng mỗi yêu cầu 1 dòng,
  * bấm 1 dòng → khung chi tiết; mỗi nút ở chân khung đổi trạng thái kèm câu trả lời (nếu có) — lưu vào yêu cầu, khách xem ở trang Hỗ trợ & góp ý.
  */
-export function AdminSupport() {
+export function AdminSupport({ source = 'admin' }: { source?: SupportSource }) {
   const { t } = useI18n();
-  const list = useAdminSupportTickets(true);
+  const list = useAdminSupportTickets(true, source);
   const [filter, setFilter] = useState<SupportFilter>('open');
   const [staff, setStaff] = useState('');
   const [query, setQuery] = useState('');
@@ -89,15 +89,15 @@ export function AdminSupport() {
       </div>
       {!!shown.length && <p className={styles.count}>{t('{n} yêu cầu · bấm vào dòng để xem và trả lời', { n: shown.length })}</p>}
 
-      <TicketDrawer item={current} onClose={() => setOpenId(null)} />
+      <TicketDrawer item={current} source={source} onClose={() => setOpenId(null)} />
     </div>
   );
 }
 
-function TicketDrawer({ item, onClose }: { item: AdminSupportTicket | null; onClose: () => void }) {
+function TicketDrawer({ item, source, onClose }: { item: AdminSupportTicket | null; source: SupportSource; onClose: () => void }) {
   const { t } = useI18n();
   const toast = useToast();
-  const reply = useReplyAdminSupportTicket();
+  const reply = useReplyAdminSupportTicket(source);
   const [note, setNote] = useState('');
 
   const close = () => {

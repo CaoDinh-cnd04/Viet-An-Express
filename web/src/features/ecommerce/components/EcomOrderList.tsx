@@ -177,7 +177,7 @@ export function EcomOrderList({ scope }: { scope: OrderScope }) {
               <>
                 {canProcess && (
                   <Button variant="primary" size="sm" disabled={confirm.isPending} onClick={() => confirm.mutate({ ids: [...selected], confirm: true }, { onSuccess: clearSelection })}>
-                    <Icon name="send" size={15} /> {t('Xác nhận gửi')}
+                    {t('Xác nhận gửi')}
                   </Button>
                 )}
                 <PrintMenu orders={selectedOrders} />
@@ -196,7 +196,7 @@ export function EcomOrderList({ scope }: { scope: OrderScope }) {
             {/* Chỉ đơn nhập tay / file chưa gửi xóa được; đơn đồng bộ từ sàn không xóa trong portal. */}
             {scope === 'inbox' && canProcess && selectedOrders.some(o => o.deletable) && (
               <Button size="sm" onClick={() => setDeleting(selectedOrders.filter(o => o.deletable))}>
-                <Icon name="trash" size={15} /> {t('Xóa')}
+                {t('Xóa')}
               </Button>
             )}
             <Button size="sm" variant="ghost" onClick={clearSelection}>{t('Bỏ chọn')}</Button>
@@ -211,7 +211,7 @@ export function EcomOrderList({ scope }: { scope: OrderScope }) {
               action={
                 <div className={styles.emptyActions}>
                   <LinkButton to="/ecommerce?tab=orders" size="sm">{t('Đến tab Đơn hàng')}</LinkButton>
-                  <LinkButton to="/ecommerce?tab=add" size="sm" variant="primary"><Icon name="plus" size={15} /> {t('Thêm đơn')}</LinkButton>
+                  <LinkButton to="/ecommerce?tab=add" size="sm" variant="primary">{t('Thêm đơn')}</LinkButton>
                 </div>
               }
             />
@@ -219,7 +219,7 @@ export function EcomOrderList({ scope }: { scope: OrderScope }) {
             <EmptyState
               title="Chưa có đơn cần giao"
               description="Đơn chưa giao trên shop đã kết nối sẽ về đây khi đồng bộ. Đơn bán ngoài sàn thì thêm tay hoặc từ file."
-              action={<LinkButton to="/ecommerce?tab=add" size="sm"><Icon name="plus" size={15} /> {t('Thêm đơn')}</LinkButton>}
+              action={<LinkButton to="/ecommerce?tab=add" size="sm">{t('Thêm đơn')}</LinkButton>}
             />
           ) : (
             <EmptyState
@@ -228,7 +228,7 @@ export function EcomOrderList({ scope }: { scope: OrderScope }) {
               action={
                 <div className={styles.emptyActions}>
                   <LinkButton to="/ecommerce?tab=add" size="sm">{t('Thêm đơn')}</LinkButton>
-                  <LinkButton to="/ecommerce?tab=connect" size="sm" variant="primary"><Icon name="link" size={15} /> {t('Kết nối sàn')}</LinkButton>
+                  <LinkButton to="/ecommerce?tab=connect" size="sm" variant="primary">{t('Kết nối sàn')}</LinkButton>
                 </div>
               }
             />
@@ -295,7 +295,7 @@ function StoreSyncBar({ stores }: { stores: ReadonlyArray<StoreConnection> }) {
               allowed(PERMISSIONS.ecommerceConnect) && <LinkButton to="/ecommerce?tab=connect" size="sm" variant="primary">{t('Ủy quyền lại')}</LinkButton>
             ) : allowed(PERMISSIONS.ecommerceOrders) && (
               <Button size="sm" disabled={sync.isPending} onClick={() => sync.mutate(s.id)}>
-                <Icon name="refresh" size={15} /> {t(sync.isPending && sync.variables === s.id ? 'Đang đồng bộ…' : 'Đồng bộ')}
+                {t(sync.isPending && sync.variables === s.id ? 'Đang đồng bộ…' : 'Đồng bộ')}
               </Button>
             )}
           </div>

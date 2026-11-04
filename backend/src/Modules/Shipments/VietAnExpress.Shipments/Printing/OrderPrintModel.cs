@@ -25,6 +25,9 @@ internal sealed record PrintItem(string Description, decimal Quantity, string Un
 /// </summary>
 internal sealed record OrderPrintModel(LegacyOrder Order, IReadOnlyList<PrintItem> Items, IReadOnlyList<PrintPackage>? PackageLines = null)
 {
+    /// <summary>DDU / DDP khi lệnh in lúc tạo đơn gửi kèm (không lưu database) — in lên invoice; null = không in dòng này.</summary>
+    public string? DutyTerms { get; init; }
+
     public IReadOnlyList<PrintPackage> Packages => PackageLines ?? [];
 
     public string Bill => LegacyOrderView.BillOf(Order);

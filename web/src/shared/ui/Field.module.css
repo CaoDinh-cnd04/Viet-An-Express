@@ -40,6 +40,9 @@
 
 .required {
   color: var(--color-danger);
+  font-size: 1.2em;
+  font-weight: 800;
+  line-height: 1;
 }
 
 .aside {

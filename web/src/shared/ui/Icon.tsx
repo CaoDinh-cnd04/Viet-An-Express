@@ -24,6 +24,8 @@ const PATHS = {
   plus: 'M12 5v14M5 12h14',
   check: 'm5 12 5 5 9-10',
   alert: 'M12 3 2 20h20zM12 10v4M12 17h.01',
+  /** Phễu lọc gạch chéo — nút Xóa lọc. */
+  filterClear: 'M3 5h18l-7 8v5l-4 2v-7zM16 16l5 5M21 16l-5 5',
   printer: 'M6 9V3h12v6M6 18H4a1 1 0 0 1-1-1v-6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v6a1 1 0 0 1-1 1h-2M6 14h12v7H6z',
   upload: 'M12 16V4M7 9l5-5 5 5M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3',
   download: 'M12 4v12M7 11l5 5 5-5M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3',

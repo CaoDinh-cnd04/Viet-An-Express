@@ -3,10 +3,13 @@ import { Navigate, useLocation } from 'react-router-dom';
 import { useI18n } from '@/shared/i18n';
 import { Button, Card, EmptyState } from '@/shared/ui';
 import { useSession } from '../api';
-import { loginPath } from '../lib/session';
+import { CHOOSE_CUSTOMER_PATH, loginPath, needsCustomer } from '../lib/session';
 import styles from './RequireAuth.module.css';
 
-/** Chặn các trang portal khi chưa đăng nhập — chuyển về /login?next=<trang đang mở>. */
+/**
+ * Chặn các trang portal khi chưa đăng nhập — chuyển về /login?next=<trang đang mở>.
+ * Nhân viên Việt An chưa chọn khách → chuyển sang trang chọn khách (chọn xong quay lại trang đang mở).
+ */
 export function RequireAuth({ children }: { children: ReactNode }) {
   const session = useSession();
   const { t } = useI18n();
@@ -30,6 +33,9 @@ export function RequireAuth({ children }: { children: ReactNode }) {
   }
   if (session.data.status === 'anonymous') {
     return <Navigate to={loginPath(pathname + search)} replace />;
+  }
+  if (session.data.status === 'authenticated' && needsCustomer(session.data.user, pathname)) {
+    return <Navigate to={`${CHOOSE_CUSTOMER_PATH}?next=${encodeURIComponent(pathname + search)}`} replace />;
   }
   return children;
 }

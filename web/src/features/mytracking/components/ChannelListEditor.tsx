@@ -1,6 +1,6 @@
 import { useFieldArray, type UseFormReturn } from 'react-hook-form';
 import { useI18n } from '@/shared/i18n';
-import { Button, Icon, SelectField, TextField } from '@/shared/ui';
+import { Button, SelectField, TextField } from '@/shared/ui';
 import { CHANNELS, MAX_CHANNELS, type ContactType, type SocialType } from '../lib/channels';
 import type { MyTrackingConfig } from '../schema';
 import styles from '../pages/MyTrackingPage.module.css';
@@ -38,7 +38,7 @@ export function ChannelListEditor({ form, name, types }: Props) {
     <div>
       <Button size="sm" disabled={fields.length >= MAX_CHANNELS || free.length === 0}
         onClick={() => append({ type: free[0] as ContactType, value: '' })}>
-        <Icon name="plus" size={14} /> {t('Thêm mục ({n}/{max})', { n: fields.length, max: MAX_CHANNELS })}
+        {t('Thêm mục ({n}/{max})', { n: fields.length, max: MAX_CHANNELS })}
       </Button>
     </div>
   </div>;

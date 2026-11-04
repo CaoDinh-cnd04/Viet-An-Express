@@ -196,11 +196,11 @@ export function PortalSection({ loggedIn, onLogin }: { loggedIn: boolean; onLogi
           <div className={styles.portalActions}>
             {loggedIn ? (
               <LinkButton to={PORTAL_HOME} variant="primary" className={styles.bigButton}>
-                {t('Vào portal')} <Icon name="arrowRight" size={16} />
+                {t('Vào portal')}
               </LinkButton>
             ) : (
               <Button variant="primary" className={styles.bigButton} onClick={onLogin}>
-                {t('Đăng nhập portal')} <Icon name="arrowRight" size={16} />
+                {t('Đăng nhập')}
               </Button>
             )}
             <span className={styles.cardText}>

@@ -10,6 +10,10 @@ describe('parsePrintJob', () => {
     expect(parsePrintJob(JSON.stringify({ cancel: true, at: 1 }))).toEqual({ cancel: true });
   });
 
+  it('giữ hình thức chịu thuế gửi kèm lệnh in lúc tạo đơn', () => {
+    expect(parsePrintJob(JSON.stringify({ bills: ['VA1'], doc: 'invoice', duty: 'DDP', at: 1 }))).toEqual({ bills: ['VA1'], doc: 'invoice', duty: 'DDP' });
+  });
+
   it('dữ liệu rỗng / hỏng / sai dạng → null', () => {
     expect(parsePrintJob(null)).toBeNull();
     expect(parsePrintJob('{')).toBeNull();

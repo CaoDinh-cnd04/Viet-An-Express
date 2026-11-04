@@ -1,12 +1,13 @@
 import { z } from 'zod';
 import { fill } from '@/shared/i18n';
 import { isPhone, PHONE_MESSAGE } from '@/shared/lib/phone';
-import { MULTI_CATEGORY, RULES } from './constants';
+import { MULTI_CATEGORY, PACKAGE_ITEM_DESCRIPTION, RULES } from './constants';
 import { DEFAULT_UNIT, qtyError, UNIT_MAX } from './lib/units';
 import { hasMaxDecimals } from './lib/decimal';
 import { euCountryCode } from '@/shared/config/eu';
-import { DEFAULT_SERVICE, isPerPackageInvoice } from '@/shared/config/domain';
-import { packageCount, packageInvoiceIssues } from './lib/package-invoice';
+import { hasDiacritics } from '@/shared/lib/text';
+import { isPerPackageInvoice, stateRequired } from '@/shared/config/domain';
+import { invoicePackageCount, packageInvoiceIssues } from './lib/package-invoice';
 import { EORI_MESSAGE, IOSS_MESSAGE, validateEoriNo, validateIossNo } from './lib/eu-tax';
 
 /*
@@ -124,9 +125,12 @@ export const createOrderSchema = z
     const countryCode = euCountryCode(v.receiver.country.trim() ? v.receiver.country : v.receiver.countryCode);
     if (!validateIossNo(countryCode, v.receiver.iossNo)) issue(['receiver', 'iossNo'], IOSS_MESSAGE);
     if (!validateEoriNo(countryCode, v.receiver.eoriNo)) issue(['receiver', 'eoriNo'], EORI_MESSAGE);
+    // Mỹ, Canada, Úc: hãng cần Tỉnh / Bang để giao hàng (cả chứng từ lẫn hàng hóa).
+    if (stateRequired(v.receiver.country, v.receiver.countryCode) && !v.receiver.state.trim())
+      issue(['receiver', 'state'], 'Nhập tỉnh / bang (bắt buộc với Mỹ, Canada, Úc)');
 
     if (v.shipment.type === 'DOC') {
-      // Chứng từ: chỉ khai số kiện + cân nặng; nội dung mặc định "Documents"
+      // Chứng từ: chỉ khai số kiện + cân nặng; nội dung mặc định "Document" (như hệ thống cũ)
       const pcs = Number(v.shipment.pieces);
       if (!isNumber(v.shipment.pieces) || pcs < 1 || !Number.isInteger(pcs)) issue(['shipment', 'pieces'], 'Số kiện tối thiểu là 1');
       if (!isNumber(v.shipment.grossWeight) || Number(v.shipment.grossWeight) < 0.01) issue(['shipment', 'grossWeight'], 'Nhập cân nặng (kg)');
@@ -134,14 +138,15 @@ export const createOrderSchema = z
     }
 
     // Hàng hóa (PACK): mô tả tổng quan (content) bắt buộc; số kiện / cân lấy từ bảng kiện
-    if (!v.goods.description.trim()) issue(['goods', 'description'], 'Nhập mô tả tổng quan hàng hóa');
+    if (!v.goods.description.trim()) issue(['goods', 'description'], 'Nhập mô tả chi tiết hàng hóa');
+    else if (hasDiacritics(v.goods.description)) issue(['goods', 'description'], 'Ghi mô tả bằng tiếng Anh, không dấu (vd: Soft dried mango)');
     else if (v.goods.description.trim().length > RULES.contentMax) issue(['goods', 'description'], maxLen(RULES.contentMax));
 
     // Hàng hóa (PACK): bắt buộc chi tiết kiện và invoice. Mỗi dòng kiện chọn nhóm hàng;
     // mô tả mặt hàng chỉ cần khi dòng đó chọn "Nhiều loại hàng" (nhóm khác thì tên nhóm là nội dung hàng).
     v.packages.forEach((p, i) => {
       if (!(p.category ?? '').trim()) issue(['packages', i, 'category'], 'Chọn nhóm hàng hóa');
-      else if (p.category === MULTI_CATEGORY && !(p.description ?? '').trim()) issue(['packages', i, 'description'], 'Nhập mô tả mặt hàng');
+      else if (PACKAGE_ITEM_DESCRIPTION && p.category === MULTI_CATEGORY && !(p.description ?? '').trim()) issue(['packages', i, 'description'], 'Nhập mô tả mặt hàng');
     });
     if (!v.packages.length) issue(['packages'], 'Cần ít nhất 1 kiện');
     const declared = Number(v.shipment.pieces);
@@ -161,7 +166,7 @@ export const createOrderSchema = z
     if (!v.invoice.items.length) issue(['invoice', 'items'], 'Cần ít nhất 1 mặt hàng');
     // Tuyến khai invoice riêng từng kiện: kiện nào cũng phải có mặt hàng, không còn dòng hàng của kiện đã bớt.
     if (isPerPackageInvoice(v.service.hub)) {
-      const [first] = packageInvoiceIssues(v.invoice.items, packageCount(v.packages));
+      const [first] = packageInvoiceIssues(v.invoice.items, invoicePackageCount(v.shipment.pieces, v.packages));
       if (first) issue(['invoice', 'items', 'root'], first);
     }
     v.invoice.items.forEach((it, i) => {
@@ -183,10 +188,13 @@ export type CreateOrderValues = z.infer<typeof createOrderSchema>;
 export type PackageValues = z.infer<typeof packageSchema>;
 export type InvoiceItemValues = z.infer<typeof invoiceItemSchema>;
 
-/** Nhóm trường theo bước wizard — dùng để kiểm tra từng bước trước khi sang bước sau. */
+/**
+ * Nhóm trường theo bước wizard — dùng để kiểm tra từng bước trước khi sang bước sau.
+ * `goods` (mô tả tổng quan hàng hóa) nằm ở khung "Thông tin đơn hàng" của bước đầu.
+ */
 export const STEP_FIELDS = [
-  ['shipper', 'service', 'shipment', 'receiver'],
-  ['goods', 'packages', 'addons'],
+  ['shipper', 'service', 'shipment', 'goods', 'receiver'],
+  ['packages', 'addons'],
   ['invoice']
 ] as const satisfies ReadonlyArray<ReadonlyArray<keyof CreateOrderValues>>;
 
@@ -194,8 +202,9 @@ export const emptyPackage = (): PackageValues => ({ qty: '1', packaging: 'Thùng
 export const emptyInvoiceItem = (): InvoiceItemValues => ({ descEn: '', descVi: '', manufacturer: '', origin: 'VN', hs: '', qty: '', unit: DEFAULT_UNIT, price: '', package: '' });
 
 export const defaultValues = (): CreateOrderValues => ({
-  shipper: { company: '', originalShipper: '', contact: '', tel: '', address: '', taxId: '', email: '', country: 'Vietnam', branch: 'TP.HCM' },
-  service: { carrier: DEFAULT_SERVICE.carrier, hub: DEFAULT_SERVICE.hub, reference: '' },
+  shipper: { company: '', originalShipper: '', contact: '', tel: '', address: '', taxId: '', email: '', country: 'Vietnam', branch: '' },
+  // Chi nhánh, dịch vụ để trống cho khách tự chọn (04/11/2026); dịch vụ / hub chọn sau nước đến (lọc theo nước).
+  service: { carrier: '', hub: '', reference: '' },
   shipment: { type: 'PACK', pieces: '1', grossWeight: '' },
   receiver: { country: '', countryCode: '', iossNo: '', eoriNo: '', city: '', company: '', contact: '', tel: '', phoneCode: '', taxId: '', email: '', postal: '', state: '', addr1: '', addr2: '', addr3: '' },
   goods: { category: '', description: '', docContent: '', multi: [] },

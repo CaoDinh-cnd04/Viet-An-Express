@@ -15,8 +15,9 @@ export function useIssueAndPrint() {
   /**
    * <paramref>getId</paramref>: id đơn có sẵn, hoặc hàm lưu đơn trước rồi trả id (Tạo đơn & in bill) — chạy sau khi đã mở tab in.
    * onDone: cấp bill xong; onFail: lưu / cấp bill lỗi (tab in tự đóng).
+   * duty: hình thức chịu thuế (DDU / DDP) khách chọn ở form tạo đơn — chỉ in lên invoice, không lưu.
    */
-  const run = (getId: string | (() => Promise<string>), onDone?: () => void, onFail?: () => void) =>
+  const run = (getId: string | (() => Promise<string>), onDone?: () => void, onFail?: () => void, duty?: string) =>
     void printDocuments(
       () =>
         (typeof getId === 'string' ? Promise.resolve(getId) : getId())
@@ -29,7 +30,8 @@ export function useIssueAndPrint() {
             onFail?.();
             return [];
           }),
-      ISSUE_PRINT_DOCS
+      ISSUE_PRINT_DOCS,
+      { duty }
     );
 
   return { run, isPending: issue.isPending, pendingId: issue.isPending ? issue.variables : undefined };

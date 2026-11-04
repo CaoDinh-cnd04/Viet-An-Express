@@ -5,8 +5,9 @@ namespace VietAnExpress.Identity.MyTracking;
 /// <summary>
 /// Phần mở rộng của trang MyTracking như trang mytracking.top cũ: ưu đãi, ảnh nền, mạng xã hội ở dbo.TCustomer_MyTracking,
 /// ảnh quảng cáo ở dbo.TCustomer_MyTracking_Banner (mạng xã hội: xem <see cref="MyTrackingChannels"/>).
-/// Thương hiệu + cổng liên lạc nằm ở hồ sơ khách dbo.TCustomer (<see cref="MyTrackingBrand"/>) — các cột thương hiệu
-/// của bảng này (CompanyName, Address, Tel, Logo, Website, Color_*, Email, CongTinNhan_*) hệ thống cũ không dùng, portal không ghi.
+/// Thương hiệu + cổng liên lạc nằm ở hồ sơ khách dbo.TCustomer (<see cref="MyTrackingBrand"/>). Tên công ty / địa chỉ / điện thoại
+/// mặc định theo hồ sơ khách; khách sửa ở MyTracking thì lưu riêng vào cột CompanyName / Address / Tel của bảng này (TCustomer không đổi).
+/// Các cột thương hiệu khác của bảng (Logo, Website, Color_*, Email, CongTinNhan_*) hệ thống cũ không dùng, portal không ghi.
 /// </summary>
 internal sealed partial class MyTrackingPage
 {
@@ -28,6 +29,10 @@ internal sealed partial class MyTrackingPage
     public string? Description { get; private set; }
     /// <summary>Đường dẫn ảnh nền/banner, tối đa 250 ký tự (Str1, vd "/Upload/Banner/…jpg").</summary>
     public string? Background { get; private set; }
+    /// <summary>Tên công ty / địa chỉ / điện thoại khách tự sửa cho trang tracking; null = theo hồ sơ khách.</summary>
+    public string? CompanyName { get; private set; }
+    public string? Address { get; private set; }
+    public string? Phone { get; private set; }
     public List<MyTrackingBanner> Banners { get; private set; } = [];
 
     /// <summary>Mạng xã hội theo thứ tự ô (social_line01…07 của trang cũ).</summary>
@@ -56,7 +61,32 @@ internal sealed partial class MyTrackingPage
                 Banners.Add(new MyTrackingBanner(CustomerId, Banners.Count, image));
     }
 
+    /// <summary>
+    /// Ghi tên công ty / địa chỉ / điện thoại khách nhập; ô trống hoặc giống hồ sơ khách thì để NULL — trang tiếp tục theo hồ sơ
+    /// (CS đổi hồ sơ sau này vẫn hiện đúng).
+    /// </summary>
+    public void SetContactInfo(JsonObject? brand, MyTrackingProfile profile)
+    {
+        CompanyName = Override(MyTrackingJson.Text(brand, "companyName"), profile.CompanyName);
+        Address = Override(MyTrackingJson.Text(brand, "address"), profile.Address);
+        Phone = Override(MyTrackingJson.Text(brand, "phone"), profile.Phone);
+    }
+
+    private static string? Override(string? value, string profile) => Blank(value) is { } v && v != profile ? v : null;
+
     private static string? Blank(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+}
+
+/// <summary>Tên công ty / địa chỉ / điện thoại theo hồ sơ khách (TCustomer) — giá trị mặc định của trang tracking.</summary>
+internal sealed record MyTrackingProfile(string CompanyName, string Address, string Phone)
+{
+    public static MyTrackingProfile From(MyTrackingBrandView brand, string? companyName)
+    {
+        var name = companyName?.Trim() ?? "";
+        // Cột CompanyName của bảng cũ chỉ 250 ký tự; InvoiceCustomerName có thể dài tới 500.
+        if (name.Length > MyTrackingChannels.ValueMaxLength) name = name[..MyTrackingChannels.ValueMaxLength].TrimEnd();
+        return new(name, brand.Brand?.Address?.Trim() ?? "", brand.Brand?.Phone?.Trim() ?? "");
+    }
 }
 
 /// <summary>1 ảnh quảng cáo: Str1 = mã ảnh, Url_Hinh = ảnh, Link = link đích, Str2 = tiêu đề, Str3 = chữ trên nút.</summary>
@@ -102,20 +132,4 @@ internal static class MyTrackingJson
     /// <summary>Giá trị chuỗi của khóa; không có / không phải chuỗi → null.</summary>
     public static string? Text(JsonObject? root, string key) =>
         root?[key] is JsonValue value && value.TryGetValue<string>(out var text) ? text : null;
-
-    /// <summary>
-    /// Tên công ty trên trang MyTracking luôn theo hồ sơ khách (TCustomer.InvoiceCustomerName, trống thì CustomerName), khách không tự sửa:
-    /// ghi đè <c>brand.companyName</c>; tên rỗng thì giữ nguyên JSON.
-    /// </summary>
-    public static string WithCompanyName(string json, string? companyName)
-    {
-        var name = companyName?.Trim();
-        if (string.IsNullOrEmpty(name)) return json;
-        // Cột CompanyName của bảng cũ chỉ 250 ký tự; InvoiceCustomerName có thể dài tới 500.
-        if (name.Length > MyTrackingChannels.ValueMaxLength) name = name[..MyTrackingChannels.ValueMaxLength].TrimEnd();
-        var root = Object(json);
-        if (root["brand"] is not JsonObject brand) root["brand"] = brand = new JsonObject();
-        brand["companyName"] = name;
-        return root.ToJsonString();
-    }
 }

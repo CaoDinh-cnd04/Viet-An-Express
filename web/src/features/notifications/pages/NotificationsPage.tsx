@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { isNotImplemented } from '@/shared/api/http';
 import { useI18n } from '@/shared/i18n';
-import { Button, Drawer, Icon, PageHeader } from '@/shared/ui';
+import { Button, Drawer, PageHeader } from '@/shared/ui';
 import { useMarkAllRead, useMarkRead, useNotifications, type Notification } from '../api';
 import { FilterBar, type FilterOption } from '../components/FilterBar';
 import { NoticeContent } from '../components/NoticeContent';
@@ -65,7 +65,7 @@ export default function NotificationsPage() {
         description="Tin từ Việt An và cập nhật yêu cầu hỗ trợ của bạn"
         actions={
           <Button variant="ghost" onClick={() => markAll.mutate()} disabled={!data?.unreadCount || markAll.isPending}>
-            <Icon name="check" size={15} /> {t('Đánh dấu đã đọc hết')}
+            {t('Đánh dấu đã đọc hết')}
           </Button>
         }
       />

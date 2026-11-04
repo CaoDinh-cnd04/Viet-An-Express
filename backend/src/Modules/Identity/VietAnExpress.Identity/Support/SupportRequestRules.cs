@@ -126,6 +126,13 @@ internal static class SupportRequestRules
             HtmlBody: EmailTemplate.Html(content, company));
     }
 
+    /// <summary>
+    /// Người nhận email hỗ trợ / góp ý của khách: nhân viên phụ trách khách (TCustomer.Staff_ID → USERS.EMAIL1, đang hoạt động).
+    /// Khách chưa có người phụ trách / người đó chưa có email → null = hộp thư Việt An (Email:InboxAddress). Hàm thuần — có test.
+    /// </summary>
+    public static IReadOnlyList<string>? CsRecipients(AccountManager? manager) =>
+        manager is { Active: true } && VietAnStaff.VietAnOtp.ValidEmail(manager.Email) is { } email ? [email] : null;
+
     public static string? Cut(string? value, int max) =>
         string.IsNullOrWhiteSpace(value) ? null : value.Trim() is var v && v.Length > max ? v[..max] : value.Trim();
 }

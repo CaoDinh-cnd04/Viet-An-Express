@@ -26,6 +26,8 @@ internal sealed class LegacyCustomer
     public int? Status { get; private set; }
     /// <summary>Nhân viên Việt An phụ trách khách (Staff_ID → dbo.USERS.ID) — CMS phân công.</summary>
     public int AccountManagerId { get; private set; }
+    /// <summary>Tên đăng nhập portal / hệ thống cũ (TCustomer.Login_UserName) — chỉ để nhân viên Việt An tìm khách.</summary>
+    public string? LoginUserName { get; private set; }
 
     /// <summary>Độ dài cột trong dbo.TCustomer.</summary>
     public const int CompanyNameMaxLength = 250;
@@ -50,5 +52,6 @@ internal sealed class LegacyCustomerConfiguration : IEntityTypeConfiguration<Leg
         b.Property(x => x.Address1).HasMaxLength(LegacyCustomer.AddressMaxLength);
         b.Property(x => x.TaxCode).HasMaxLength(LegacyCustomer.TextMaxLength);
         b.Property(x => x.AccountManagerId).HasColumnName("Staff_ID");
+        b.Property(x => x.LoginUserName).HasColumnName("Login_UserName").HasMaxLength(50);
     }
 }

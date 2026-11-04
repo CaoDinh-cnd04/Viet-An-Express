@@ -11,10 +11,13 @@ import { defaultValues, type CreateOrderValues } from '@/features/order-form';
 
 /**
  * Khóa bản tự lưu theo tài khoản đang đăng nhập (mã khách + tên đăng nhập) — admin đăng xuất, nhân viên đăng nhập
- * cùng tab sẽ không thấy đơn đang điền dở (kèm người gửi) của tài khoản trước.
+ * cùng tab sẽ không thấy đơn đang điền dở (kèm người gửi) của tài khoản trước. Nhân viên Việt An làm thay khách: thêm tiền tố "va:"
+ * (không trùng tài khoản con cùng tên) và đổi khách là đổi khóa — không hiện nhầm đơn dở của khách trước.
  */
-export function autosaveKey(user?: { customerCode: string; userName?: string } | null): string {
-  return user ? `va.createOrder.autosave:${user.customerCode}:${user.userName ?? ''}` : 'va.createOrder.autosave';
+export function autosaveKey(user?: { customerCode: string; userName?: string; accountType?: string } | null): string {
+  if (!user) return 'va.createOrder.autosave';
+  const who = `${user.accountType === 'vietan' ? 'va:' : ''}${user.userName ?? ''}`;
+  return `va.createOrder.autosave:${user.customerCode}:${who}`;
 }
 
 /** Khóa bản tự lưu của 1 đơn nháp đang sửa — tách khỏi bản tự lưu của đơn mới. Hàm thuần — có test. */

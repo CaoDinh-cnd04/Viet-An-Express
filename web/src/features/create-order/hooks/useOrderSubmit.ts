@@ -94,7 +94,9 @@ export function useOrderSubmit({ form, isWizard, draftId, finishAutosave, retain
       () => {
         persisting.current = false;
         if (saved) navigate('/drafts');
-      }
+      },
+      // Hình thức chịu thuế không có cột trong MaVanDon: chỉ gửi kèm lệnh in để in lên invoice (hàng hóa)
+      values.shipment.type === 'PACK' ? values.invoice.dutyTerms : undefined
     );
   };
 

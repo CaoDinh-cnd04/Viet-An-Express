@@ -45,7 +45,7 @@ export function NotificationItemEditor({ item: it, index: i, count, focused, upl
           <button type="button" className={styles.tool} onClick={() => onMove(i - 1)} disabled={i === 0}>↑ {t('Lên')}</button>
           <button type="button" className={styles.tool} onClick={() => onMove(i + 1)} disabled={i === count - 1}>↓ {t('Xuống')}</button>
           <button type="button" className={cx(styles.tool, styles.danger)} onClick={onRemove} disabled={!many}>
-            <Icon name="trash" size={13} /> {t('Xóa tin')}
+            {t('Xóa tin')}
           </button>
         </span>
       </div>
@@ -75,7 +75,7 @@ export function NotificationItemEditor({ item: it, index: i, count, focused, upl
                 <button type="button" onClick={() => onChange({ images: move(it.images, k, k - 1) })} disabled={k === 0} aria-label={t('Đưa ảnh lên trước')}>←</button>
                 <button type="button" onClick={() => onChange({ images: move(it.images, k, k + 1) })} disabled={k === it.images.length - 1} aria-label={t('Đưa ảnh ra sau')}>→</button>
                 <button type="button" onClick={() => onChange({ images: it.images.filter((_, x) => x !== k) })}>
-                  <Icon name="close" size={12} /> {t('Bỏ ảnh')}
+                  {t('Bỏ ảnh')}
                 </button>
               </span>
             </div>
@@ -119,7 +119,7 @@ export function NotificationItemEditor({ item: it, index: i, count, focused, upl
             {toPlainText(editorValue(it.detail)) || t('Chưa có nội dung chi tiết')}
           </span>
           <button type="button" className={styles.action} onClick={() => setEditingDetail(true)}>
-            <Icon name="edit" size={14} /> {t(toPlainText(editorValue(it.detail)) ? 'Sửa nội dung chi tiết' : 'Soạn nội dung chi tiết')}
+            {t(toPlainText(editorValue(it.detail)) ? 'Sửa nội dung chi tiết' : 'Soạn nội dung chi tiết')}
           </button>
         </div>
       )}
@@ -177,7 +177,7 @@ function DetailEditor({ title, initial, onCancel, onSave }: { title: string; ini
         <>
           <Button variant="ghost" onClick={onCancel}>{t('Hủy')}</Button>
           <Button variant="primary" onClick={() => onSave(html)} disabled={!text || text.length > LIMITS.detail}>
-            <Icon name="check" size={15} /> {t('Lưu nội dung chi tiết')}
+            {t('Lưu nội dung chi tiết')}
           </Button>
         </>
       }

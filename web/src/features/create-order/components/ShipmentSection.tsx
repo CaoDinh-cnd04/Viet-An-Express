@@ -1,6 +1,6 @@
 import { Controller, useFormContext, useWatch } from 'react-hook-form';
 import { useI18n } from '@/shared/i18n';
-import { Card, FormGrid, SegmentedControl, TextField } from '@/shared/ui';
+import { FormGrid, SegmentedControl, TextField } from '@/shared/ui';
 import { RULES } from '@/features/order-form';
 import { useFieldBinder } from '../hooks/useFieldBinder';
 import type { CreateOrderValues } from '@/features/order-form';
@@ -21,12 +21,13 @@ const TYPE_OPTIONS = [
 
 export function ShipmentSection({ onShipmentInput, onTypeChange, docConverted }: ShipmentSectionProps) {
   const bind = useFieldBinder();
-  const { t, lang } = useI18n();
+  const { t } = useI18n();
   const { control } = useFormContext<CreateOrderValues>();
   const type = useWatch({ control, name: 'shipment.type' });
 
   return (
-    <Card accent title="Thông tin đơn hàng" subtitle={lang === 'vi' ? '(Info shipment)' : undefined}>
+    // Loại hàng + mô tả (PACK) / số kiện, cân (DOC) — nằm trong khung "Hàng & dịch vụ" (dưới ServiceSection).
+    <div className={styles.spaced}>
       <div className={styles.typeRow}>
         <span className={styles.typeLabel}>{t('Loại hàng')} <span className={styles.required}>*</span></span>
         <Controller
@@ -39,25 +40,26 @@ export function ShipmentSection({ onShipmentInput, onTypeChange, docConverted }:
       </div>
       {type === 'DOC' ? (
         <>
-          {/* Chứng từ: chỉ khai số kiện + cân nặng, nội dung mặc định Documents */}
+          {/* Chứng từ: chỉ khai số kiện + cân nặng, nội dung mặc định Document như hệ thống cũ */}
           <FormGrid>
             <TextField label="Số kiện" required type="number" min={1} step={1} suffix={t('kiện')} {...bind('shipment.pieces', { onChange: onShipmentInput })} />
-            <TextField label="Cân nặng (gross weight)" required type="number" min={0} step={0.1} suffix="kg" {...bind('shipment.grossWeight', { onChange: onShipmentInput })} />
+            <TextField label="Cân nặng" required type="number" min={0} step={0.1} suffix="kg" {...bind('shipment.grossWeight', { onChange: onShipmentInput })} />
           </FormGrid>
           <p className={styles.hint}>
-            {t('Chứng từ không cần khai thêm — nội dung mặc định là Documents. Trên {kg}kg sẽ tự chuyển sang hàng hóa (PACK).', { kg: RULES.docMaxWeightKg })}
+            {t('Chứng từ không cần khai thêm — nội dung mặc định là Document. Trên {kg}kg sẽ tự chuyển sang hàng hóa (PACK).', { kg: RULES.docMaxWeightKg })}
           </p>
         </>
       ) : (
         <>
-          {/* Hàng hóa: mô tả tổng quan; số kiện và cân nặng khai theo từng dòng ở "Chi tiết kiện hàng" */}
+          {/* Hàng hóa: mô tả chi tiết từng loại hàng; số kiện và cân nặng khai theo từng dòng ở "Chi tiết kiện hàng" */}
           <FormGrid>
             <TextField
-              label="Mô tả tổng quan hàng hóa (content)"
+              label="Mô tả chi tiết hàng hóa"
               required
               wide
               maxLength={RULES.contentMax}
-              placeholder="Ghi bằng tiếng Anh (vd: Clothes, Dried food, Cosmetics)"
+              placeholder="Tiếng Anh, ghi rõ từng loại hàng (vd: Soft dried mango, Cotton T-shirt, Dress)"
+              hint="Mô tả hàng hóa cụ thể giúp quá trình thông quan thuận lợi hơn."
               {...bind('goods.description')}
             />
           </FormGrid>
@@ -68,6 +70,6 @@ export function ShipmentSection({ onShipmentInput, onTypeChange, docConverted }:
           {t('Tài liệu trên {kg}kg được xem là hàng hóa. Hệ thống đã chuyển sang PACK — vui lòng khai Invoice đầy đủ.', { kg: RULES.docMaxWeightKg })}
         </p>
       )}
-    </Card>
+    </div>
   );
 }

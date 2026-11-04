@@ -40,6 +40,12 @@ internal static class LegacyOrderFactory
         return names.Count > 0 ? string.Join(", ", names) : GoodsName(p.Goods.Category, p.Goods.Description);
     }
 
+    /// <summary>Ten_hang của đơn chứng từ — proc hệ thống cũ lọc DOC bằng <c>Ten_hang = 'Document'</c>.</summary>
+    public const string LegacyDocumentGoodsName = "Document";
+
+    /// <summary>Ly_Do_Xuat_Hang của đơn chứng từ hệ thống cũ (form cũ hiện "khác").</summary>
+    public const string LegacyDocumentExportReason = "ReasonExport";
+
     public static LegacyOrder FromPayload(OrderPayload p, LegacyCustomerRef customer, long orderNumber, DateTime todayVn,
         int? consigneeCountryId = null)
     {
@@ -90,13 +96,15 @@ internal static class LegacyOrderFactory
             ConsigneePhoneCode = Clip(new string(p.Receiver.PhoneCode.Where(char.IsAsciiDigit).ToArray()), 50),
 
             ServiceName = Clip(ServiceName(p.Service.Hub, p.Service.Carrier), 50),
-            GoodsName = Clip(string.IsNullOrWhiteSpace(goods) ? (isDoc ? "Documents" : "Goods") : goods, 150),
+            // Chứng từ ghi đúng như hệ thống cũ: phần mềm cũ nhận DOC khi Ten_hang = 'Document' (khác chữ là PACK).
+            GoodsName = isDoc ? LegacyDocumentGoodsName : Clip(string.IsNullOrWhiteSpace(goods) ? "Goods" : goods, 150),
             Pieces = pieces,
             WeightKg = Round(weight),
             GoodsValue = Round(value),
             Currency = Clip(string.IsNullOrWhiteSpace(p.Invoice.Currency) ? "USD" : p.Invoice.Currency, 50),
             ShippingFee = Num(p.Invoice.ShippingFee),
-            ExportReason = Clip(p.Invoice.ExportType, 150),
+            // Chứng từ: lý do xuất "khác" như form cũ (giá trị lưu 'ReasonExport'); hàng hóa theo khách chọn.
+            ExportReason = isDoc ? LegacyDocumentExportReason : Clip(p.Invoice.ExportType, 150),
             CustomerBill = Clip(p.Service.Reference, 50),
 
             Service = NewService,

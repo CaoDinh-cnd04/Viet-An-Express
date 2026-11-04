@@ -59,7 +59,8 @@ export default function StaffPage() {
         <>
           {/* Chức năng (tab lọc) bên trái · ô tìm + nút thao tác bên phải */}
           <div className={ws.toolbar}>
-            <div className={ws.tabs} role="tablist" aria-label={t('Tài khoản nhân viên')}>
+            {/* data-tour: mốc cho hướng dẫn từng nút của trang (features/onboarding) */}
+            <div className={ws.tabs} role="tablist" aria-label={t('Tài khoản nhân viên')} data-tour="staff-tabs">
               {FILTERS.map(f => (
                 <button
                   key={f.key}
@@ -75,7 +76,7 @@ export default function StaffPage() {
             </div>
             <div className={ws.tools}>
               <input className={ws.search} value={query} onChange={e => setQuery(e.target.value)} placeholder={t('Tìm tên, tên đăng nhập, email…')} aria-label={t('Tìm nhân viên')} />
-              <button type="button" className={ws.btn} onClick={create} disabled={full} title={full ? t('Đã đủ {max} tài khoản', { max: MAX_STAFF }) : undefined}>
+              <button type="button" className={ws.btn} onClick={create} disabled={full} title={full ? t('Đã đủ {max} tài khoản', { max: MAX_STAFF }) : undefined} data-tour="staff-add">
                 + {t('Thêm nhân viên')}
               </button>
             </div>
@@ -116,7 +117,7 @@ export default function StaffPage() {
                         </td>
                         <td className={s.active ? styles.active : styles.locked}>{t(s.active ? 'Đang hoạt động' : 'Đã khóa')}</td>
                         <td>
-                          <span className={styles.actions}>
+                          <span className={styles.actions} data-tour="staff-actions">
                             <button type="button" className={ws.linkBtn} onClick={() => setDialog({ kind: 'edit', staff: s })}>{t('Sửa')}</button>
                             <button type="button" className={ws.linkBtn} onClick={() => setDialog({ kind: 'password', staff: s })}>{t('Đặt lại mật khẩu')}</button>
                             <button type="button" className={ws.linkBtn} onClick={() => setActive(s, !s.active)}>{t(s.active ? 'Khóa' : 'Mở khóa')}</button>

@@ -15,7 +15,9 @@ internal static class OrderCopy
     private static string N(decimal? v) => v?.ToString("0.############################", CultureInfo.InvariantCulture) ?? "";
     public static OrderPayload FromLegacy(LegacyOrder o, IReadOnlyList<LegacyPackageLine> packages, IReadOnlyList<LegacyInvoiceLine> items)
     {
-        var doc = LegacyOrderView.IsDocument(o.GoodsName);
+        // Nháp chứng từ lưu trước 03/11/2026 để Ten_hang NULL (không có kiện, không có invoice) — vẫn là chứng từ.
+        var doc = LegacyOrderView.IsDocument(o.GoodsName)
+            || (string.IsNullOrWhiteSpace(o.GoodsName) && packages.Count == 0 && items.Count == 0 && o.WeightKg > 0);
         var route = S(o.ServiceName).Replace("|", " - ");
         var carrier = route.Split(" - ", 2)[0];
         return new OrderPayload
@@ -24,7 +26,7 @@ internal static class OrderCopy
             {
                 Company = S(o.SenderName), OriginalShipper = S(o.ForwarderShipperName), Contact = S(o.SenderContactName),
                 Tel = S(o.SenderPhone), Address = S(o.SenderAddress), Email = S(o.SenderEmail), TaxId = S(o.SenderTax),
-                Country = "Vietnam", Branch = VaBillCode.BranchOf(o.VaBill) ?? VaBillCode.BranchOfPrefix(o.VaBill) ?? "TP.HCM"
+                Country = "Vietnam", Branch = VaBillCode.BranchOf(o.VaBill) ?? VaBillCode.BranchOfPrefix(o.VaBill) ?? "" // không lưu chi nhánh → để trống cho khách chọn (04/11/2026)
             },
             Receiver = new()
             {
@@ -48,7 +50,7 @@ internal static class OrderCopy
             }).ToList(),
             Invoice = new()
             {
-                Currency = S(o.Currency).Length > 0 ? S(o.Currency) : "USD", ExportType = S(o.ExportReason), DutyTerms = "DDU",
+                Currency = S(o.Currency).Length > 0 ? S(o.Currency) : "USD", ExportType = doc && S(o.ExportReason) == LegacyOrderFactory.LegacyDocumentExportReason ? "" : S(o.ExportReason), DutyTerms = "DDU",
                 ShippingFee = N(o.ShippingFee), DeclaredValue = N(o.GoodsValue),
                 Items = items.Select(i => new OrderPayload.InvoiceItemPart
                 {

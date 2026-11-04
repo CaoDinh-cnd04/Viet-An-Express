@@ -1,140 +1,93 @@
-/*
- * Dòng thời gian dọc các bước tạo đơn: mỗi bước có mô tả + trạng thái, thanh tiến độ ở đáy; khung cao vừa nội dung.
- */
-.panel {
-  /* Cao vừa nội dung (không kéo giãn theo màn hình) */
-  display: flex;
-  flex: none;
-  flex-direction: column;
-  padding: var(--space-4);
+/* Thanh các bước tạo đơn nằm ngang trên đầu trang: các bước dàn đều hết chiều ngang, nối bằng đường mảnh. */
+.bar {
+  padding: var(--space-2) var(--space-4);
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
 }
 
-.timeline {
-  --num: 30px;
+.steps {
   display: flex;
-  flex: 1;
-  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-/* Các bước cách nhau 1 khoảng cố định */
 .step {
-  position: relative;
-  padding-bottom: var(--space-5);
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
 }
 
-.step:last-child {
-  flex: 0 0 auto;
-  padding-bottom: 0;
-}
-
-/* Đường nối từ vòng số bước này xuống bước sau */
-.step:not(:last-child)::before {
+/* Đường nối giãn đều giữa các bước — các bước dàn đều hết chiều ngang */
+.step:not(:last-child)::after {
   content: '';
-  position: absolute;
-  top: calc(var(--num) + 4px);
-  bottom: 4px;
-  left: calc(var(--num) / 2 - 1px);
-  width: 2px;
-  border-radius: 2px;
+  flex: 1;
+  height: 1px;
+  min-width: var(--space-4);
   background: var(--color-border-strong);
 }
 
-.passed::before {
-  background: var(--color-brand) !important;
+.step:last-child {
+  flex: none;
 }
 
 .head {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-3);
-  width: 100%;
-  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 4px 6px;
   border: 0;
+  border-radius: var(--radius-sm);
   background: none;
-  text-align: left;
-  color: var(--color-text);
+  color: var(--color-text-faint);
+  font: inherit;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.head:hover {
+  background: var(--color-surface-muted);
 }
 
 .num {
-  flex: none;
-  display: grid;
+  display: inline-grid;
   place-items: center;
-  width: var(--num);
-  height: var(--num);
-  border: 2px solid var(--color-border-strong);
+  width: 24px;
+  height: 24px;
+  flex: none;
+  border: 1px solid var(--color-border-strong);
   border-radius: 50%;
-  background: var(--color-surface);
-  font-size: var(--text-sm);
-  font-weight: 700;
-  color: var(--color-text-muted);
-}
-
-.active .num {
-  border-color: var(--color-brand);
-  background: var(--color-brand);
-  color: #fff;
-  box-shadow: 0 0 0 4px var(--color-brand-soft);
-}
-
-.passed .num {
-  border-color: var(--color-brand);
-  color: var(--color-brand-strong);
-}
-
-.numDone {
-  background: var(--color-brand) !important;
-  color: #fff !important;
-}
-
-.text {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-  padding-top: 3px;
-}
-
-.text strong {
-  font-size: var(--text-md);
-  font-weight: 700;
-}
-
-.text small {
   font-size: var(--text-xs);
-  color: var(--color-text-muted);
-}
-
-/* Trạng thái: Đã xong / Đang điền / Chưa làm */
-.state {
-  align-self: flex-start;
-  margin-top: 4px;
-  padding: 1px 8px;
-  border-radius: 999px;
-  background: var(--color-surface-muted);
-  color: var(--color-text-muted);
-  font-size: 10.5px;
   font-weight: 600;
 }
 
-.active .state {
+.title {
+  font-weight: 500;
+}
+
+.active .head {
+  color: var(--color-text);
+}
+
+.active .title {
+  font-weight: 700;
+}
+
+.active .num {
+  background: var(--color-brand);
+  border-color: var(--color-brand);
+  color: #fff;
+}
+
+.passed .num {
   background: var(--color-brand-soft);
-  color: var(--color-brand-strong);
-}
-
-.passed .state {
-  background: var(--color-success-soft);
-  color: var(--color-success-strong);
-}
-
-.missing .state {
-  background: var(--color-warning-soft);
-  color: var(--color-warning);
+  border-color: var(--color-brand-soft);
+  color: var(--color-brand);
 }
 
 .missing .num {
@@ -142,85 +95,21 @@
   color: var(--color-warning);
 }
 
-/* Thanh tiến độ ở đáy khung */
-.progress {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin-top: var(--space-4);
-  padding-top: var(--space-3);
-  border-top: 1px solid var(--color-border);
-  color: var(--color-text-muted);
+.missingText {
+  padding: 1px 8px;
+  border-radius: var(--radius-sm);
+  background: var(--color-warning-soft);
+  color: var(--color-warning);
   font-size: var(--text-xs);
+  font-weight: 600;
 }
 
-.track {
-  height: 6px;
-  overflow: hidden;
-  border-radius: 999px;
-  background: var(--color-surface-muted);
-}
-
-.track i {
-  display: block;
-  height: 100%;
-  border-radius: 999px;
-  background: var(--color-brand);
-  transition: width 0.25s;
-}
-
-.active .text strong {
-  color: var(--color-brand-strong);
-}
-
-.head:hover .text strong {
-  color: var(--color-brand-strong);
-}
-
-/* Màn hình hẹp: thanh ngang gọn phía trên form — chỉ số + tên bước, bỏ khung con và đường nối */
-@media (max-width: 1100px) {
-  .panel {
-    height: auto;
-    min-height: 0;
-    padding: 6px;
-    overflow: visible;
-  }
-
-  .timeline {
-    --num: 24px;
-    display: grid;
-    grid-auto-flow: column;
-    grid-auto-columns: minmax(0, 1fr);
-    gap: var(--space-1);
-  }
-
-  .step {
-    padding: 0;
-  }
-
-  .step::before,
-  .text small,
-  .state,
-  .progress {
+@media (max-width: 640px) {
+  .title {
     display: none;
   }
 
-  .head {
-    align-items: center;
-    gap: var(--space-2);
-    padding: 6px var(--space-2);
-    border-radius: var(--radius-sm);
-  }
-
-  .active .head {
-    background: var(--color-brand-softer);
-  }
-
-  .text {
-    padding-top: 0;
-  }
-
-  .active .num {
-    box-shadow: none;
+  .active .title {
+    display: inline;
   }
 }

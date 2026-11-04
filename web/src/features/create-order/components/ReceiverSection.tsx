@@ -2,11 +2,12 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useFormContext, useWatch } from 'react-hook-form';
 import { Button, Card, FormGrid, Icon, TextField, type TextFieldProps } from '@/shared/ui';
 import { useI18n } from '@/shared/i18n';
+import { cx } from '@/shared/lib/cx';
 import { useDebouncedCallback } from '@/shared/lib/useDebouncedCallback';
 import { sanitizePhone } from '@/shared/lib/phone';
 import { euCountryCode, isEuCountry } from '@/shared/config/eu';
 import { useAddressSuggestions, useCountries, usePostalSearch, useReceiverBook, useRecentReceivers, useRemoteAreas } from '../api';
-import { COUNTRIES } from '../constants';
+import { COUNTRIES, stateRequired } from '../constants';
 import { RULES, defaultValues, type CreateOrderValues } from '@/features/order-form';
 import { useCombobox } from '../hooks/useCombobox';
 import { usePostalPlaceBox } from '../hooks/usePostalPlaceBox';
@@ -16,6 +17,8 @@ import { remoteAreaCarriers } from '../lib/remote-area';
 import { receiverFields, recentReceiverQuery, recentReceiverSubtitle, type RecentReceiver } from '../lib/recent-receivers';
 import { addressQuery, findCountry, normalizePostal, shouldResetAddress, suggestionFields, type AddressSuggestion } from '../lib/geo';
 import { AddressPickerDialog } from './AddressPickerDialog';
+import { SectionTitle } from './SectionTitle';
+import { COUNTRY_INPUT_ID } from './ServiceSection';
 import { SuggestionList } from './SuggestionList';
 import styles from './form.module.css';
 
@@ -30,7 +33,7 @@ interface AddressFieldExtra {
 
 export function ReceiverSection() {
   const bind = useFieldBinder();
-  const { t, lang } = useI18n();
+  const { t } = useI18n();
   const { control, setValue, getValues, clearErrors, setFocus, trigger } = useFormContext<CreateOrderValues>();
   const [addr1 = '', addr2 = '', addr3 = ''] = useWatch({ control, name: ['receiver.addr1', 'receiver.addr2', 'receiver.addr3'] });
   const [picking, setPicking] = useState(false);
@@ -86,16 +89,14 @@ export function ReceiverSection() {
   const remoteHits = remoteQuery && normalizePostal(postalText) === remoteQuery.postal ? remote.data ?? [] : [];
 
   // ---------- Khách đổi sang nước khác → xoá mã bưu chính, thành phố, tỉnh / bang của nước cũ ----------
-  /** Nước nhận ra gần nhất (cả khi điền bằng code: sổ địa chỉ, mở nháp) — chỉ để so sánh, không tự xoá. */
+  /**
+   * Nước nhận ra gần nhất. Ô Nước đến nằm ở khung Hàng & dịch vụ (ServiceSection) nên theo dõi giá trị thay vì sự kiện gõ.
+   * Điền sẵn bằng code (sổ địa chỉ, mở nháp, copy đơn) đặt trước giá trị này → không bị xoá nhầm địa chỉ vừa điền.
+   */
   const lastCountryCode = useRef<string | undefined>(undefined);
+  const countryKey = country?.code;
   useEffect(() => {
-    if (country) lastCountryCode.current = country.code;
-  }, [country]);
-
-  /** Chỉ chạy khi khách tự gõ / chọn ở ô Nước đến (sự kiện nhập), không chạy khi form được điền sẵn. */
-  const onCountryInput = (e: { target: { value: string } }) => {
-    const next = findCountry(countryList, e.target.value)?.code;
-    if (shouldResetAddress(lastCountryCode.current, next)) {
+    if (shouldResetAddress(lastCountryCode.current, countryKey)) {
       const opts = { shouldDirty: true } as const;
       setValue('receiver.postal', '', opts);
       setValue('receiver.city', '', opts);
@@ -103,8 +104,8 @@ export function ReceiverSection() {
       clearErrors(['receiver.postal', 'receiver.city', 'receiver.state']);
       setPostalQuery(null);
     }
-    if (next) lastCountryCode.current = next;
-  };
+    if (countryKey) lastCountryCode.current = countryKey;
+  }, [countryKey, setValue, clearErrors]);
 
   const postalHint = country && postalQuery && !postal.isFetching && postal.data?.length === 0
     ? 'Không tìm thấy mã này — vui lòng tự nhập thành phố, tỉnh / bang'
@@ -154,7 +155,8 @@ export function ReceiverSection() {
     <TextField
       label={label}
       required={required}
-      wide
+      // Địa chỉ 1 | 2 cùng hàng (mỗi ô 30 ký tự), địa chỉ 3 cả hàng
+      wide={name === 'addr3'}
       // Địa chỉ 3 nhận phần dồn xuống từ địa chỉ 1 / 2: giới hạn theo cột database (250), không hiện bộ đếm.
       maxLength={name === 'addr3' ? RULES.receiverAddress3Max : undefined}
       aside={name === 'addr3' ? undefined : `${value.length}/${MAX}`}
@@ -195,25 +197,25 @@ export function ReceiverSection() {
 
   return (
     <Card accent
-      title="Thông tin người nhận"
-      subtitle={lang === 'vi' ? '(Receiver)' : undefined}
-      className={styles.fill}
+      title={<SectionTitle plain icon="mapPin" title="Thông tin người nhận" />}
+      className={cx(styles.fill, styles.cleanCard)}
       actions={
-        <div className={styles.cardActions}>
-          <Button size="sm" onClick={clearReceiver} title={t('Xóa toàn bộ thông tin người nhận')}>
-            <Icon name="refresh" size={14} /> {t('Làm mới')}
+        <div className={styles.cardActions} data-tour="create-address-book">
+          <Button size="sm" iconOnly onClick={clearReceiver} title={t('Làm mới — xóa toàn bộ thông tin người nhận')} aria-label={t('Làm mới — xóa toàn bộ thông tin người nhận')}>
+            <Icon name="refresh" size={15} />
           </Button>
           <Button size="sm" onClick={() => setPicking(true)}>{t('Sổ địa chỉ')}</Button>
         </div>
       }
     >
-      {/* Thứ tự: tên công ty → liên hệ → nước / mã bưu chính / thành phố / tỉnh → địa chỉ. */}
+      {/* 2 phần: 01 liên hệ (tên công ty → liên hệ → tax / email → IOSS / EORI nếu nước EU) · 02 địa chỉ (nước / mã bưu chính / thành phố / tỉnh → địa chỉ). */}
+      <p className={styles.partTitle}>01 <span>/</span> {t('Thông tin liên hệ')}</p>
       <FormGrid>
+        {/* Tên công ty cả hàng · Người liên hệ | Điện thoại · Email | Tax ID */}
         <div className={styles.suggestWrap}>
           <TextField
-            label="Tên công ty (company name)"
+            label="Tên công ty"
             required
-            wide
             {...companyBox.inputProps}
             {...bind('receiver.company', {
               onChange: () => {
@@ -233,25 +235,36 @@ export function ReceiverSection() {
             />
           )}
         </div>
-        <TextField label="Người liên hệ (contact name)" required {...bind('receiver.contact')} />
-        <TextField label="Điện thoại (tel)" required type="tel" prefix={dialCode || undefined} {...bind('receiver.tel', { onChange: e => { const clean = sanitizePhone(e.target.value); if (clean !== e.target.value) setValue('receiver.tel', clean, { shouldDirty: true }); } })} />
-        <TextField label="Tax ID" {...bind('receiver.taxId')} />
+        <TextField label="Người liên hệ" required {...bind('receiver.contact')} />
+        <TextField label="Điện thoại" required type="tel" prefix={dialCode || undefined} {...bind('receiver.tel', { onChange: e => { const clean = sanitizePhone(e.target.value); if (clean !== e.target.value) setValue('receiver.tel', clean, { shouldDirty: true }); } })} />
         <TextField label="Email" type="email" {...bind('receiver.email')} />
+        <TextField label="Tax ID" {...bind('receiver.taxId')} />
         {showEuTaxFields && (
           <>
             <TextField label="IOSS No" placeholder="IM1234567890" {...bind('receiver.iossNo', { onBlur: () => void trigger('receiver.iossNo') })} />
             <TextField label="EORI No" placeholder="DE123456789012345" {...bind('receiver.eoriNo', { onBlur: () => void trigger('receiver.eoriNo') })} />
           </>
         )}
-        <TextField label="Nước đến (country)" required list="va-countries" autoComplete="country-name" {...bind('receiver.country', { onChange: onCountryInput })} />
+      </FormGrid>
+      <hr className={styles.partDivider} />
+      <p className={styles.partTitle}>02 <span>/</span> {t('Địa chỉ nhận hàng')}</p>
+      <FormGrid>
+        {/* Nước đến chọn ở khung Hàng & dịch vụ (trước Dịch vụ / Hub) — ở đây chỉ hiện để khách thấy */}
+        <div className={styles.countryReadonly}>
+          <span className={styles.countryReadonlyLabel}>{t('Nước đến')}</span>
+          <div className={styles.countryReadonlyBox}>
+            {countryText.trim() ? <strong>{countryText}</strong> : <span>{t('Chưa chọn — chọn ở khung Hàng & dịch vụ')}</span>}
+            <button type="button" onClick={() => document.getElementById(COUNTRY_INPUT_ID)?.focus()}>{t('Đổi')}</button>
+          </div>
+        </div>
         <div className={styles.suggestCell}>
-          <TextField label="Mã bưu chính (postal code)" hint={postalHint} {...postalBox.inputProps} {...bind('receiver.postal', { onChange: postalBox.onType, onBlur: postalBox.onBlur })} />
+          <TextField label="Mã bưu chính" hint={postalHint} {...postalBox.inputProps} {...bind('receiver.postal', { onChange: postalBox.onType, onBlur: postalBox.onBlur })} />
           {postalBox.list}
         </div>
-        <TextField label="Thành phố (city)" required {...bind('receiver.city')} />
-        <TextField label="Tỉnh / bang (state)" {...bind('receiver.state')} />
-        <div className={styles.suggestWrap}>
-          {addressField('addr1', 'Địa chỉ 1 (address 1)', addr1, true, addr1Extra)}
+        <TextField label="Thành phố" required {...bind('receiver.city')} />
+        <TextField label="Tỉnh / bang" required={stateRequired(countryText, countryCode)} {...bind('receiver.state')} />
+        <div className={styles.suggestCell}>
+          {addressField('addr1', 'Địa chỉ 1', addr1, true, addr1Extra)}
           {addrBox.visible.length > 0 && (
             <SuggestionList
               id={addrBox.listId}
@@ -263,21 +276,22 @@ export function ReceiverSection() {
             />
           )}
         </div>
-        {addressField('addr2', 'Địa chỉ 2 (address 2)', addr2, true)}
-        {addressField('addr3', 'Địa chỉ 3 (address 3)', addr3, false)}
+        {addressField('addr2', 'Địa chỉ 2', addr2, true)}
+        {addressField('addr3', 'Địa chỉ 3', addr3, false)}
       </FormGrid>
       <datalist id="va-countries">
         {countryList.map(c => <option key={c.code} value={c.name} />)}
       </datalist>
 
+      {/* Chỉ báo khi địa chỉ thuộc vùng sâu vùng xa (kèm lưu ý chỉ mang tính tham khảo) */}
       {remoteHits.length > 0 && remoteQuery && (
         <div className={styles.remoteArea} role="alert">
           <span>
             <strong>{t('Khu vực VSVX: {carriers}', { carriers: remoteAreaCarriers(remoteHits) })}</strong> {t('· có thể bị hãng thu phụ phí ODA')}
           </span>
+          <small>{t('Hệ thống kiểm tra VSVX chỉ mang tính chất tham khảo. Vui lòng tự kiểm tra VSVX với hãng trước khi gửi hàng.')}</small>
         </div>
       )}
-      <p className={styles.warning}>{t('Hệ thống kiểm tra VSVX chỉ mang tính chất tham khảo. Vui lòng tự kiểm tra VSVX với hãng trước khi gửi hàng.')}</p>
 
       <AddressPickerDialog
         open={picking}

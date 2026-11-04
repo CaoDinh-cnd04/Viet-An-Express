@@ -15,6 +15,10 @@ public static class IdentityPermissions
     public const string SupportRequests = "account.troubles";
     /// <summary>Xem, trả lời, đổi trạng thái yêu cầu hỗ trợ &amp; sự cố của mọi khách — chỉ quản trị Việt An (vai trò va_admin).</summary>
     public const string AdminSupportRequests = "admin.troubles";
+    /// <summary>Nhân viên Việt An (dbo.USERS) đăng nhập portal: chọn / đổi khách để làm thay.</summary>
+    public const string ActForCustomer = "vietan.act";
+    /// <summary>Nhân viên Việt An: trang Hỗ trợ &amp; góp ý thành trang quản lý — xem, trả lời, đổi trạng thái yêu cầu của khách mình phụ trách.</summary>
+    public const string ManageSupportRequests = "vietan.troubles";
 
     /// <summary>Chỉ tài khoản chính có: quản lý tài khoản con, MyTracking, tự đổi mật khẩu.</summary>
     public static readonly IReadOnlySet<string> AdminOnly = new HashSet<string>(StringComparer.Ordinal) { ManageStaff, MyTracking, ChangePassword };

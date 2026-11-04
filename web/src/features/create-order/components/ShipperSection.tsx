@@ -14,13 +14,14 @@ import { useCombobox } from '../hooks/useCombobox';
 import { useFieldBinder } from '../hooks/useFieldBinder';
 import { recentSenderQuery, recentSenderSubtitle, senderFields, type RecentSender } from '../lib/recent-senders';
 import { shipperFromProfile } from '../lib/shipper-profile';
+import { SectionTitle } from './SectionTitle';
 import { SuggestionList } from './SuggestionList';
 import type { CreateOrderValues } from '@/features/order-form';
 import styles from './form.module.css';
 
 export function ShipperSection() {
   const bind = useFieldBinder();
-  const { t, lang } = useI18n();
+  const { t } = useI18n();
   const { setValue, getValues, control } = useFormContext<CreateOrderValues>();
   const shipper = useWatch({ control, name: 'shipper' });
   const address = shipper?.address ?? '';
@@ -65,14 +66,14 @@ export function ShipperSection() {
 
   return (
     <Card accent
-      title="Thông tin người gửi"
-      subtitle={lang === 'vi' ? '(Shipper)' : undefined}
+      className={cx(styles.shipperCard, styles.cleanCard)}
+      title={<SectionTitle plain icon="user" title="Thông tin người gửi" />}
       actions={
         <>
-          {profile?.accountType !== 'staff' && <LinkButton to="/troubles?new=sender-info" size="sm" variant="ghost">{t('Sửa hồ sơ người gửi')}</LinkButton>}
-          <SelectField className={styles.shipperBranch} label="Chi nhánh gửi hàng" required options={BRANCHES} placeholder="Chọn chi nhánh" {...bind('shipper.branch')} />
-          <Button size="sm" variant="ghost" aria-expanded={expanded} aria-controls="shipper-fields" onClick={() => setOpen(!expanded)}>
-            {t(expanded ? 'Thu gọn' : 'Mở rộng')} <Icon name="chevronDown" size={14} className={cx(styles.chevron, expanded && styles.chevronOpen)} />
+          {/* Chi nhánh cùng hàng tiêu đề (nhãn bên trái ô) + mũi tên thu gọn / mở các ô người gửi */}
+          <SelectField className={styles.shipperBranch} label="Chi nhánh" required options={BRANCHES} placeholder="Chọn" {...bind('shipper.branch')} />
+          <Button size="sm" variant="ghost" className={styles.shipperToggle} aria-expanded={expanded} aria-controls="shipper-fields" aria-label={t(expanded ? 'Thu gọn' : 'Mở rộng')} title={t(expanded ? 'Thu gọn' : 'Mở rộng')} onClick={() => setOpen(!expanded)}>
+            <Icon name="chevronDown" size={14} className={cx(styles.chevron, expanded && styles.chevronOpen)} />
           </Button>
         </>
       }
@@ -86,13 +87,12 @@ export function ShipperSection() {
           <span className={styles.summarySub}>
             {[shipper?.contact, shipper?.tel, shipper?.email].filter(v => v?.trim()).join(' · ')}
           </span>
-          <span className={styles.summarySub}>
-            {[shipper?.address, shipper?.branch && `${t('Chi nhánh')} ${shipper.branch}`].filter(Boolean).join(' · ')}
-          </span>
-          <span className={styles.summaryEdit}><Icon name="edit" size={14} /> {t('Sửa')}</span>
+          <span className={styles.summarySub}>{shipper?.address}</span>
+          <span className={styles.summaryEdit}>{t('Chỉnh sửa')}</span>
         </button>
       )}
       {/* Ô nhập luôn giữ trong form (chỉ ẩn) để giá trị và kiểm tra lỗi không bị mất khi thu gọn. */}
+      {/* 2 ô 1 hàng: tên · shipper gốc / liên hệ · điện thoại / địa chỉ lấy hàng (cả hàng) / MST · email / quốc gia · link sửa hồ sơ. */}
       <div id="shipper-fields" hidden={!expanded}>
       <FormGrid>
         <div className={styles.suggestCell}>
@@ -121,12 +121,12 @@ export function ShipperSection() {
         </div>
         <TextField
           label="Tên shipper gốc"
-          hint="Dành cho đơn vị forwarder gửi hộ khách — không bắt buộc"
+          placeholder="Khi forwarder gửi hộ"
           maxLength={RULES.originalShipperMax}
           {...bind('shipper.originalShipper')}
         />
-        <TextField label="Người liên hệ (contact name)" required {...bind('shipper.contact')} />
-        <TextField label="Điện thoại (tel)" required type="tel" {...bind('shipper.tel', { onChange: e => keepPhone('shipper.tel', e.target.value) })} />
+        <TextField label="Người liên hệ" required {...bind('shipper.contact')} />
+        <TextField label="Điện thoại" required type="tel" {...bind('shipper.tel', { onChange: e => keepPhone('shipper.tel', e.target.value) })} />
         <TextField
           label="Địa chỉ lấy hàng"
           required
@@ -139,9 +139,14 @@ export function ShipperSection() {
         <TextField label="Mã số thuế / CCCD / CMND" {...bind('shipper.taxId')} />
         <TextField label="Email" type="email" {...bind('shipper.email')} />
         <TextField label="Quốc gia gửi" required {...bind('shipper.country')} />
+        {/* Hồ sơ người gửi (tên công ty, địa chỉ) do CS sửa: gửi yêu cầu hỗ trợ — cùng hàng với quốc gia, không thêm dòng */}
+        {profile?.accountType !== 'staff' && (
+          <div className={styles.profileLink}>
+            <LinkButton to="/troubles?new=sender-info" size="sm" variant="ghost">{t('Sửa hồ sơ người gửi')}</LinkButton>
+          </div>
+        )}
       </FormGrid>
       </div>
-
     </Card>
   );
 }

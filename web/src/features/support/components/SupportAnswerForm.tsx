@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useI18n } from '@/shared/i18n';
-import { Button, Icon } from '@/shared/ui';
+import { Button } from '@/shared/ui';
 import { useAnswerSupportTicket } from '../api';
 import styles from './SupportAnswerForm.module.css';
 
@@ -19,7 +19,7 @@ export function SupportAnswerForm({ id }: { id: string }) {
         placeholder={t('Trả lời CS Việt An…')} />
       <div className={styles.actions}>
         <Button variant="primary" size="sm" disabled={!text.trim() || answer.isPending} onClick={send}>
-          <Icon name="send" size={13} /> {t(answer.isPending ? 'Đang gửi…' : 'Gửi phản hồi')}
+          {t(answer.isPending ? 'Đang gửi…' : 'Gửi phản hồi')}
         </Button>
       </div>
     </div>

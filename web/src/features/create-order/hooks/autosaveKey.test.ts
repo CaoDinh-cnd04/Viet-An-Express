@@ -15,6 +15,13 @@ describe('autosaveKey', () => {
     expect(admin).toBe('va.createOrder.autosave:SGB:admin');
   });
 
+  it('nhân viên Việt An làm thay khách: khóa riêng theo khách, không trùng tài khoản con cùng tên', () => {
+    const agentSgb = autosaveKey({ customerCode: 'SGB', userName: 'vo.hanh', accountType: 'vietan' });
+    expect(agentSgb).toBe('va.createOrder.autosave:SGB:va:vo.hanh');
+    expect(agentSgb).not.toBe(autosaveKey({ customerCode: 'SCS', userName: 'vo.hanh', accountType: 'vietan' }));
+    expect(agentSgb).not.toBe(autosaveKey({ customerCode: 'SGB', userName: 'vo.hanh', accountType: 'staff' }));
+  });
+
   it('chưa có phiên (backend chưa bật đăng nhập) dùng khóa chung', () => {
     expect(autosaveKey(null)).toBe('va.createOrder.autosave');
   });

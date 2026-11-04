@@ -10,7 +10,7 @@ export function TrackingPreview({ config }: { config: MyTrackingConfig }) {
   const { t } = useI18n();
   const [mode, setMode] = useState<'desktop' | 'mobile'>('desktop');
 
-  return <section className={`${styles.card} ${styles.previewCard}`}>
+  return <section className={`${styles.card} ${styles.previewCard}`} data-tour="mt-preview">
     <div className={styles.previewHeader}>
       <h2>{t('Xem trước MyTracking')}</h2>
       <SegmentedControl ariaLabel={t('Chế độ xem trước')} value={mode} onChange={setMode}

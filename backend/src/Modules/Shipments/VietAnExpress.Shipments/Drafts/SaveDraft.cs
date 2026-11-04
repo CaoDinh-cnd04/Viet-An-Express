@@ -53,6 +53,8 @@ internal sealed class SaveDraftHandler(ShipmentsDbContext db, OrderAccess access
                 fresh.CreateDate = existing.CreateDate;
                 // Sửa nháp không đổi người tạo (tài khoản chính sửa nháp của nhân viên thì nháp vẫn của nhân viên đó).
                 fresh.CustomerStaffId = existing.CustomerStaffId;
+                fresh.CreateUser = existing.CreateUser;
+                access.StampModifier(fresh);
                 db.Entry(existing).CurrentValues.SetValues(fresh);
                 await DraftStore.RemoveLinesAsync(db, existing.Id, ct);
                 await db.SaveChangesAsync(ct);

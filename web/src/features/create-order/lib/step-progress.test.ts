@@ -8,6 +8,10 @@ describe('completedSteps', () => {
     expect(completedSteps([['packages', 0, 'weight']], 3)).toEqual([true, false, true]);
     expect(completedSteps([], 2)).toEqual([true, true]);
   });
+
+  it('thiếu mô tả tổng quan hàng hóa thì bước đầu chưa xong (ô nằm ở khung Thông tin đơn hàng)', () => {
+    expect(completedSteps([['goods', 'description']], 3)).toEqual([false, true, true]);
+  });
 });
 
 describe('stepProgress', () => {

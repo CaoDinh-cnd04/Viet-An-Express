@@ -145,6 +145,7 @@ internal static class CommercialInvoice
 
               <div class="inv-foot">
                 <p>Reason for Export: <b>{{Doc.H(o.ExportReason)}}</b></p>
+                {{(m.DutyTerms is { } duty ? $"<p>Terms of delivery: <b>{Doc.H(duty)}</b> ({(duty == "DDP" ? "duties and taxes paid by shipper" : "duties and taxes paid by receiver")})</p>" : "")}}
                 <p>I declare that the information is true and correct to the best of my knowledge<br>and that the goods are of Viet Nam origin.</p>
                 <p>I (name) &nbsp;<b>{{Doc.H(o.SenderName)}}</b>&nbsp; certify that the particulars and<br>quantity of goods specified in this document are goods which are submitted for<br>clearance for export out of Viet Nam.</p>
               </div>

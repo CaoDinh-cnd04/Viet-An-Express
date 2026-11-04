@@ -4,6 +4,7 @@ using VietAnExpress.Customers.Contracts;
 using VietAnExpress.SharedKernel.Application;
 using VietAnExpress.Shipments.Contracts;
 using VietAnExpress.Shipments.Drafts;
+using VietAnExpress.Shipments.OrderData;
 using VietAnExpress.Shipments.Orders;
 using VietAnExpress.Shipments.Shared;
 using Xunit;
@@ -22,11 +23,14 @@ public class OrderScopeTests
         .UseSqlServer("Server=localhost;Database=TranslationOnly;Integrated Security=True;Encrypt=True")
         .Options);
 
-    private static ICurrentUser User(long? staffId, params string[] permissions)
+    private static ICurrentUser User(long? staffId, params string[] permissions) => User(staffId, null, permissions);
+
+    private static ICurrentUser User(long? staffId, int? vietAnUserId, params string[] permissions)
     {
         var user = new Mock<ICurrentUser>();
         user.SetupGet(u => u.CustomerId).Returns(CustomerId);
         user.SetupGet(u => u.StaffId).Returns(staffId);
+        user.SetupGet(u => u.VietAnUserId).Returns(vietAnUserId);
         user.Setup(u => u.HasPermission(It.IsAny<string>())).Returns<string>(permissions.Contains);
         return user.Object;
     }
@@ -69,5 +73,21 @@ public class OrderScopeTests
         Assert.Contains("[Customer_Staff_ID] =", await Where(User(StaffId)));
         Assert.DoesNotContain("[Customer_Staff_ID] =", await Where(User(null)));
         Assert.Contains("[Status] = 0", await Where(User(null)));
+    }
+
+    [Fact]
+    public void Nhan_vien_Viet_An_lam_thay_khach_ghi_CreateUser_ModifyUser_khach_tu_tao_ghi_0()
+    {
+        var byAgent = new LegacyOrder();
+        new OrderAccess(User(null, 42), Mock.Of<ICustomersApi>()).StampCreator(byAgent);
+        Assert.Equal((0L, 42, 42), (byAgent.CustomerStaffId!.Value, byAgent.CreateUser!.Value, byAgent.ModifyUser!.Value));
+
+        // Khách sửa / in nháp nhân viên đã tạo: người tạo giữ nguyên, người sửa = 0.
+        new OrderAccess(User(null), Mock.Of<ICustomersApi>()).StampModifier(byAgent);
+        Assert.Equal((42, 0), (byAgent.CreateUser!.Value, byAgent.ModifyUser!.Value));
+
+        var byCustomer = new LegacyOrder();
+        new OrderAccess(User(StaffId), Mock.Of<ICustomersApi>()).StampCreator(byCustomer);
+        Assert.Equal((StaffId, 0, 0), (byCustomer.CustomerStaffId!.Value, byCustomer.CreateUser!.Value, byCustomer.ModifyUser!.Value));
     }
 }

@@ -45,8 +45,9 @@ internal sealed class CreateSupportRequestHandler(IdentityDbContext db, ICurrent
         if (file is not null) ticket.NoteAttachment(file.Name);
         db.SupportRequests.Add(ticket);
         await db.SaveChangesAsync(ct);
-        // Báo về hộp thư Việt An ở nền (kèm tệp) — yêu cầu đã lưu ở dbo.TContact, xử lý ở phần mềm cũ / trang /admin.
-        jobs.EnqueueEmail($"email {ticket.Code}", SupportRequestRules.InboxEmail(ticket, customer, userName, file, company));
+        // Báo nhân viên phụ trách khách ở nền (kèm tệp; chưa có người phụ trách thì hộp thư Việt An) — yêu cầu đã lưu ở dbo.TContact.
+        var cs = SupportRequestRules.CsRecipients(await customers.GetAccountManagerAsync(customerId, ct));
+        jobs.EnqueueEmail($"email {ticket.Code}", SupportRequestRules.InboxEmail(ticket, customer, userName, file, company) with { To = cs });
         return SupportRequestRules.ToDto(ticket);
     }
 }

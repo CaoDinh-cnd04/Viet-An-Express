@@ -3,7 +3,7 @@ import { useFormContext, useWatch } from 'react-hook-form';
 import { isPerPackageInvoice } from '@/shared/config/domain';
 import { useI18n } from '@/shared/i18n';
 import { Icon } from '@/shared/ui';
-import { packageCount, writeInvoiceItems } from '@/features/order-form';
+import { invoicePackageCount, writeInvoiceItems } from '@/features/order-form';
 import type { CreateOrderValues, InvoiceItemValues } from '@/features/order-form';
 import { HsLookupDialog } from './HsLookupDialog';
 import { InvoiceToolbar } from './InvoiceToolbar';
@@ -19,10 +19,10 @@ export function QuickLookup() {
   const { getValues, setValue } = useFormContext<CreateOrderValues>();
   const isDoc = useWatch<CreateOrderValues, 'shipment.type'>({ name: 'shipment.type' }) === 'DOC';
   const [hsOpen, setHsOpen] = useState(false);
-  const [hub, packages = []] = useWatch<CreateOrderValues, ['service.hub', 'packages']>({ name: ['service.hub', 'packages'] });
+  const [hub, packages = [], pieces] = useWatch<CreateOrderValues, ['service.hub', 'packages', 'shipment.pieces']>({ name: ['service.hub', 'packages', 'shipment.pieces'] });
   // Tuyến khai invoice riêng từng kiện: chọn kiện nhận mặt hàng thêm từ thư viện / invoice cũ / Excel.
   const perPackage = !isDoc && isPerPackageInvoice(hub);
-  const count = packageCount(packages);
+  const count = invoicePackageCount(pieces, packages);
   const [target, setTarget] = useState(1);
   const pkg = Math.min(Math.max(1, target), Math.max(1, count));
 
@@ -33,27 +33,33 @@ export function QuickLookup() {
   };
 
   return (
-    <section className={styles.box} aria-label={t('Hỗ trợ khách hàng')}>
-      <div className={styles.title}><Icon name="help" size={15} /> {t('Hỗ trợ khách hàng')}</div>
+    <section className={styles.box} aria-label={t('Tiện ích')}>
+      <div className={styles.title}>{t('Tiện ích')}</div>
 
-      <button type="button" className={styles.hsButton} onClick={() => setHsOpen(true)}>
+      {/* Gọn: mỗi công cụ 1 dòng icon + tên; mô tả ở chú thích khi rê chuột */}
+      <button type="button" className={styles.hsButton} onClick={() => setHsOpen(true)} title={t('Theo nước nhập khẩu: Mỹ, Anh, Úc')}>
         <Icon name="search" size={16} />
-        <span><b>{t('Tra mã HS')}</b><small>{t('Theo nước nhập khẩu: Mỹ, Anh, Úc')}</small></span>
-        <Icon name="chevronRight" size={14} />
+        <span><b>{t('Tra mã HS')}</b></span>
       </button>
 
-      <div className={styles.section}>{t('Khai invoice')}</div>
       {perPackage && count > 1 && (
         <label className={styles.target}>
           <span>{t('Thêm vào')}</span>
           <select value={pkg} onChange={e => setTarget(Number(e.target.value))}>
             {Array.from({ length: count }, (_, i) => (
-              <option key={i + 1} value={i + 1}>{t('Kiện {n}/{count}', { n: i + 1, count })}</option>
+              <option key={i + 1} value={i + 1}>{t('Invoice kiện {n}/{count}', { n: i + 1, count })}</option>
             ))}
           </select>
         </label>
       )}
       {isDoc ? <p className={styles.hint}>{t('Đơn chứng từ (DOC) không cần khai invoice.')}</p> : <InvoiceToolbar onItems={writeItems} />}
+
+      {/* Gợi ý nhanh cuối cột */}
+      <div className={styles.tip}>
+        <Icon name="help" size={15} />
+        <b>{t('Gửi hàng nhanh hơn')}</b>
+        <span>{t('Chọn người nhận từ Sổ địa chỉ để tự động điền thông tin.')}</span>
+      </div>
 
       <HsLookupDialog open={hsOpen} onClose={() => setHsOpen(false)} />
     </section>

@@ -30,7 +30,7 @@ export function HeroPanel({ initialBills, onTrack, tracking }: HeroPanelProps) {
         onChange={next => void navigate({ pathname: next === 'login' ? '/login' : '/', search }, { replace: true })}
         options={[
           { value: 'track', label: 'Tra cứu vận đơn' },
-          { value: 'login', label: 'Đăng nhập portal' }
+          { value: 'login', label: 'Đăng nhập' }
         ]}
       />
       {tab === 'track' ? (
@@ -80,7 +80,7 @@ function TrackForm({ initialBills, onTrack, tracking }: HeroPanelProps) {
         }}
       />
       <Button variant="primary" type="submit" className={styles.submit} disabled={tracking}>
-        <Icon name="search" size={16} />
+
         {t(tracking ? 'Đang tra cứu…' : 'Theo dõi vận đơn')}
       </Button>
     </form>

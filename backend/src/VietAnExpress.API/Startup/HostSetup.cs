@@ -18,6 +18,8 @@ internal static class HostSetup
             ContentRootPath = useInstallDir ? AppContext.BaseDirectory : null
         });
         builder.Host.UseWindowsService(o => o.ServiceName = "VietAnExpressApi"); // không phải service thì không làm gì
+        // Không lộ nền tảng qua header "Server: Kestrel" (IIS: ẩn Server / X-Powered-By trong web.config).
+        builder.WebHost.ConfigureKestrel(o => o.AddServerHeader = false);
 
         builder.Host.UseSerilog((context, services, logger) =>
         {

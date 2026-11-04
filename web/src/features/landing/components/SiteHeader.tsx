@@ -89,11 +89,11 @@ export function SiteHeader({ onLogin }: SiteHeaderProps) {
           </Button>
           {loggedIn ? (
             <LinkButton to={PORTAL_HOME} variant="primary" size="sm" className={styles.cta}>
-              {t('Vào portal')} <Icon name="arrowRight" size={14} />
+              {t('Vào portal')}
             </LinkButton>
           ) : (
             <Button variant="primary" size="sm" className={styles.cta} onClick={login}>
-              <Icon name="user" size={14} /> {t('Đăng nhập')}
+              {t('Đăng nhập')}
             </Button>
           )}
           <Button

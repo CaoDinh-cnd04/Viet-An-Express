@@ -36,7 +36,7 @@ export default function AdminPage() {
           <div className={styles.headActions}>
             <ThemeToggle />
             <Button size="sm" variant="ghost" onClick={() => { adminLogout(); setSignedIn(false); }}>
-              <Icon name="arrowRight" size={14} /> {t('Đăng xuất')}
+              {t('Đăng xuất')}
             </Button>
           </div>
         </header>

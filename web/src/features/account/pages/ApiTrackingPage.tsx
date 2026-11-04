@@ -4,7 +4,7 @@ import { customerTrackingUrl, MYTRACKING_URL } from '@/features/mytracking';
 import { TRACKING_URL, trackingLink } from '@/shared/config/domain';
 import { useI18n } from '@/shared/i18n';
 import { useCopyToClipboard } from '@/shared/lib/useCopyToClipboard';
-import { Button, Card, Icon, LinkButton, Notice, PageHeader, TextField } from '@/shared/ui';
+import { Button, Card, LinkButton, Notice, PageHeader, TextField } from '@/shared/ui';
 import styles from './account.module.css';
 
 /** Mã HTML ô tra cứu để khách dán vào web — chữ trên ô theo ngôn ngữ đang chọn. */
@@ -36,7 +36,7 @@ export default function ApiTrackingPage() {
       <PageHeader
         title="API Tracking"
         description="Gắn link hoặc ô tra cứu vận đơn Việt An vào website, tin nhắn gửi khách."
-        actions={<LinkButton to="/ecommerce?tab=conn" size="sm"><Icon name="key" size={15} /> {t('API key tạo đơn')}</LinkButton>}
+        actions={<LinkButton to="/ecommerce?tab=conn" size="sm">{t('API key tạo đơn')}</LinkButton>}
       />
       <div className="page-stack">
         <Card title="1. Link tra cứu cho từng đơn">
@@ -49,7 +49,7 @@ export default function ApiTrackingPage() {
           </div>
           <div className={styles.linkBox}>
             <code>{link}</code>
-            <Button size="sm" onClick={() => void copy(link, t('Đã sao chép link tra cứu'))}><Icon name="copy" size={15} /> {t('Sao chép')}</Button>
+            <Button size="sm" onClick={() => void copy(link, t('Đã sao chép link tra cứu'))}>{t('Sao chép')}</Button>
             {bill.trim() && <a className={styles.open} href={link} target="_blank" rel="noreferrer">{t('Mở thử')}</a>}
           </div>
           <p className={styles.hint}>
@@ -60,7 +60,7 @@ export default function ApiTrackingPage() {
         <Card title="2. Ô tra cứu trên website của bạn">
           <p className={styles.hint}>{t('Dán đoạn HTML dưới đây vào trang web; khách nhập mã bill và bấm Tra cứu sẽ mở trang theo dõi của Việt An.')}</p>
           <pre className={styles.code}>{code}</pre>
-          <Button size="sm" onClick={() => void copy(code, t('Đã sao chép mã nhúng'))}><Icon name="copy" size={15} /> {t('Sao chép mã nhúng')}</Button>
+          <Button size="sm" onClick={() => void copy(code, t('Đã sao chép mã nhúng'))}>{t('Sao chép mã nhúng')}</Button>
         </Card>
 
         <Notice title="Cần lấy trạng thái đơn qua API?">

@@ -1,7 +1,7 @@
 import { useEffect, useId, useState } from 'react';
 import { useI18n } from '@/shared/i18n';
 import { cx } from '@/shared/lib/cx';
-import { Button, ExternalLinkButton, Icon, Modal } from '@/shared/ui';
+import { Button, ExternalLinkButton, Modal } from '@/shared/ui';
 import { notificationImageUrl } from '../api';
 import type { InboxPart } from '../lib/inbox';
 import { safeLink } from '../lib/link';
@@ -77,11 +77,11 @@ export function NoticeContent({ title, meta, imp, pin, parts }: NoticeContentPro
               <div className={styles.link}>
                 {p.detail ? (
                   <Button variant="primary" onClick={() => setDetail(p)}>
-                    {t('Xem chi tiết')} <Icon name="arrowRight" size={15} />
+                    {t('Xem chi tiết')}
                   </Button>
                 ) : (
                   <ExternalLinkButton variant="primary" href={link!}>
-                    {t('Xem chi tiết')} <Icon name="arrowRight" size={15} />
+                    {t('Xem chi tiết')}
                   </ExternalLinkButton>
                 )}
               </div>

@@ -29,12 +29,12 @@ describe('draftDetail', () => {
     expect(d.shippingFee).toBe(3);
   });
 
-  it('chứng từ: không có kiện / invoice, nội dung mặc định Documents', () => {
+  it('chứng từ: không có kiện / invoice, nội dung mặc định Document', () => {
     const d = draftDetail({ ...pack, shipment: { type: 'DOC', pieces: '1', grossWeight: '0.5' } });
     expect(d.isDoc).toBe(true);
     expect(d.packages).toEqual([]);
     expect(d.items).toEqual([]);
-    expect(d.shipment).toContainEqual(['Nội dung hàng', 'Documents']);
+    expect(d.shipment).toContainEqual(['Nội dung hàng', 'Document']);
     expect(d.shipment).toContainEqual(['Cân nặng', '0.5 kg']);
   });
 

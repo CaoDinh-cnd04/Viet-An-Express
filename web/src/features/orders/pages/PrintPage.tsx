@@ -35,7 +35,7 @@ export default function PrintPage() {
         window.close();
         return;
       }
-      fetchPrintHtml(j.bills, j.doc)
+      fetchPrintHtml(j.bills, j.doc, j.duty)
         .then(html => {
           document.open();
           document.write(html);

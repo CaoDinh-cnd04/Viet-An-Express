@@ -14,9 +14,12 @@ namespace VietAnExpress.Shipments.Printing;
 // ---------- In chứng từ (bill A4, invoice, CVCK, nhãn A6) ----------
 
 /// <summary>Trả trang HTML sẵn để in cho 1 hoặc nhiều đơn (≤ <see cref="MaxBills"/>).</summary>
-internal sealed record PrintOrdersQuery(IReadOnlyList<string> Bills, string Doc) : IRequest<Result<string>>
+/// <param name="Duty">Hình thức chịu thuế (DDU / DDP) khách chọn lúc tạo đơn — chỉ in lên invoice, không lưu; giá trị khác → bỏ qua.</param>
+internal sealed record PrintOrdersQuery(IReadOnlyList<string> Bills, string Doc, string? Duty = null) : IRequest<Result<string>>
 {
     public const int MaxBills = 100;
+
+    public static readonly IReadOnlySet<string> DutyTerms = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "DDU", "DDP" };
 }
 
 internal sealed class PrintOrdersHandler(
@@ -47,6 +50,10 @@ internal sealed class PrintOrdersHandler(
             .DistinctBy(o => o.Id)
             .Select(o => lines.TryGetValue(o.Id, out var l) ? new OrderPrintModel(o, l.Items, l.Packages) : new OrderPrintModel(o, []))
             .ToList();
+
+        // Hình thức chịu thuế không có cột trong MaVanDon: chỉ in khi lệnh in (lúc tạo đơn) gửi kèm.
+        var duty = q.Duty?.Trim() is { } d && PrintOrdersQuery.DutyTerms.Contains(d) ? d.ToUpperInvariant() : null;
+        if (duty is not null) models = models.Select(m => m with { DutyTerms = duty }).ToList();
 
         var now = VietnamTime.Now(clock);
         return OrderDocumentRenderer.RenderMany(PrintDocs.Parse(q.Doc), models, company.Value, now);

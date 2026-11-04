@@ -59,7 +59,7 @@ export function NotificationBell({ className, badgeClassName }: { className?: st
         <div className={styles.head}>
           <strong>{t('Thông báo')}</strong>
           <button type="button" className={styles.markAll} onClick={() => markAll.mutate()} disabled={!unread || markAll.isPending}>
-            <Icon name="check" size={13} /> {t('Đã đọc hết')}
+            {t('Đã đọc hết')}
           </button>
         </div>
 
@@ -78,7 +78,7 @@ export function NotificationBell({ className, badgeClassName }: { className?: st
         </div>
 
         <button type="button" className={styles.all} onClick={() => go('/notifications')}>
-          {t('Xem tất cả thông báo')} <Icon name="arrowRight" size={14} />
+          {t('Xem tất cả thông báo')}
         </button>
       </div>
     </DropdownMenu>

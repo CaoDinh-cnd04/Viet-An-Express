@@ -30,7 +30,13 @@ internal sealed class CustomerLogin
     /// <summary>TCustomer.ViewLinkTracking (chỉ đọc, CMS bật / tắt): 1 = khách được vào trang cấu hình MyTracking.</summary>
     public int? ViewLinkTracking { get; private set; }
 
+    /// <summary>TCustomer.Email — email hồ sơ khách (CMS / phần mềm cũ dùng chung); OTP khách gửi mã về đây, khách xác nhận ở lần đăng nhập đầu.</summary>
+    public string? Email { get; private set; }
+
     public bool MyTrackingAllowed => ViewLinkTracking == 1;
+
+    /// <summary>Email nhận OTP khách vừa xác nhận — ghi đè TCustomer.Email (người dùng chọn 04/11/2026).</summary>
+    public void SetEmail(string email) => Email = email.Trim();
 
     public bool HasPassword => !string.IsNullOrEmpty(Password);
 
@@ -48,5 +54,6 @@ internal sealed class CustomerLoginConfiguration : IEntityTypeConfiguration<Cust
         b.Property(x => x.Password).HasColumnName("Login_Password").HasMaxLength(150);
         b.Property(x => x.CustomerTypeId).HasColumnName("CustomerTypeID");
         b.Property(x => x.ViewLinkTracking).HasColumnName("ViewLinkTracking");
+        b.Property(x => x.Email).HasColumnName("Email").HasMaxLength(1500);
     }
 }

@@ -14,7 +14,7 @@
   align-items: center;
   padding: 3px var(--space-3);
   border: 2px solid transparent;
-  border-radius: var(--radius-control);
+  border-radius: calc(var(--radius-control) - 3px);
   font-size: var(--text-sm);
   font-weight: 500;
   color: var(--color-text-muted);

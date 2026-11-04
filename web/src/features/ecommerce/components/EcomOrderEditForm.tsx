@@ -105,7 +105,7 @@ export function EcomOrderEditForm({ order, onDone }: { order: EcomOrder; onDone:
           })}
         </div>
         <Button size="sm" disabled={fields.length >= MAX_LINES} onClick={() => append({ name: '', sku: '', qty: '1', price: '', hsCode: '' })}>
-          <Icon name="plus" size={15} /> {t('Thêm sản phẩm')}
+          {t('Thêm sản phẩm')}
         </Button>
       </section>
 
@@ -114,7 +114,7 @@ export function EcomOrderEditForm({ order, onDone }: { order: EcomOrder; onDone:
       <div className={styles.formActions}>
         <Button onClick={onDone}>{t('Hủy')}</Button>
         <Button variant="primary" type="submit" disabled={save.isPending}>
-          <Icon name="check" size={15} /> {t(save.isPending ? 'Đang lưu…' : 'Lưu thay đổi')}
+          {t(save.isPending ? 'Đang lưu…' : 'Lưu thay đổi')}
         </Button>
       </div>
     </form>

@@ -80,7 +80,8 @@ internal static partial class LegacyOrderView
             Photos: 0,
             PodEstimate: Date(o.PodEstimate),
             RemoteArea: RemoteAreaText(o),
-            ChargeableWeight: o.WeightKg);
+            ChargeableWeight: o.WeightKg,
+            CreatedByVietAn: o.CreateUser > 0);
     }
 
     /// <summary>Danh sách "Đơn hàng của tôi": kèm người nhận đầy đủ để bảng xổ chi tiết (người liên hệ, SĐT, địa chỉ) — cùng dòng đã đọc, không truy vấn thêm.</summary>

@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { useI18n } from '@/shared/i18n';
-import { Button, Icon, TextField, useToast } from '@/shared/ui';
+import { Button, TextField, useToast } from '@/shared/ui';
 import { isWebUrl } from '../schema';
 import { readImage, validateImageUrl } from '../lib/images';
 import styles from '../pages/MyTrackingPage.module.css';
@@ -32,7 +32,7 @@ export function ImagePicker({ onAdd, disabled, onBusy, label, allowUrl = true }:
   return <div>
     <div className={allowUrl ? styles.source : undefined}>
       <Button variant="primary" disabled={disabled || loading} onClick={() => fileInput.current?.click()}>
-        <Icon name="upload" size={14} /> {t(label === 'Logo' ? (loading ? 'Đang xử lý ảnh…' : 'Tải logo lên') : 'Thêm ảnh mới')}
+        {t(label === 'Logo' ? (loading ? 'Đang xử lý ảnh…' : 'Tải logo lên') : 'Thêm ảnh mới')}
       </Button>
       {allowUrl && <>
       <TextField label={label === 'Logo' ? 'URL logo' : 'Nhập URL ảnh từ internet'} placeholder="https://" value={url} disabled={disabled || loading} onChange={e => setUrl(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); void addFromUrl(); } }} />

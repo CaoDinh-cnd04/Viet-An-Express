@@ -74,7 +74,7 @@ export function OrdersTable(props: OrdersTableProps) {
         <div className={styles.cellBar} data-cell-toolbar>
           <span>{t('Đã chọn {n} ô', { n: cells.count })}</span>
           <Button size="sm" variant="primary" onClick={() => void cells.copy()}>
-            <Icon name="copy" size={14} /> {t('Sao chép')} <kbd className={styles.kbd}>Ctrl+C</kbd>
+            {t('Sao chép')} <kbd className={styles.kbd}>Ctrl+C</kbd>
           </Button>
           <Button size="sm" variant="ghost" onClick={cells.clear}>{t('Bỏ chọn')}</Button>
         </div>
@@ -180,6 +180,7 @@ function OrderRow({ order: o, index, checked, onToggle, actions, cell }: OrderRo
           <ExpandButton open={showDetail} label={t('Xem liên hệ, địa chỉ người nhận')} onToggle={() => setShowDetail(v => !v)} />
         </div>
         {o.ct && <div className={styles.cneeCountry}>{o.ct}</div>}
+        {o.createdByVietAn && <StatusPill tone="brand">{t('Việt An tạo giúp')}</StatusPill>}
         {showDetail && loadingDetail && <div className={styles.more}><Nil>{'Đang tải…'}</Nil></div>}
         {showDetail && r && (
           <div className={styles.more}>
@@ -218,16 +219,17 @@ function OrderRow({ order: o, index, checked, onToggle, actions, cell }: OrderRo
           </>
         ) : null}
       </td>
-      <td className={styles.colTracking} {...cell(6)}><TrackingLinks bill={o.bill} refNo={o.ref} /></td>
+      <td className={styles.colTracking} {...cell(6)} data-tour="orders-tracking"><TrackingLinks bill={o.bill} refNo={o.ref} /></td>
       <td className={styles.colCreated} {...cell(7)}>
         {/* 3 dòng: ngày tạo · kiện, cân · tên hàng */}
         <div className="tabular">{datePart(o.created)}</div>
         <div className={styles.pcs}>{t(o.pcs)}</div>
         {o.content && <div className={styles.content}>{o.content}</div>}
       </td>
-      <td className={styles.colPrint}><PrintButtons order={o} /></td>
-      <td className={styles.colLabel}><LabelButton order={o} /></td>
-      <td className={styles.colMore}><RowTools order={o} actions={actions} /></td>
+      {/* Mốc hướng dẫn trùng ở mọi dòng — hướng dẫn chỉ vào dòng đầu tiên */}
+      <td className={styles.colPrint} data-tour="orders-print"><PrintButtons order={o} /></td>
+      <td className={styles.colLabel} data-tour="orders-label"><LabelButton order={o} /></td>
+      <td className={styles.colMore} data-tour="orders-tools"><RowTools order={o} actions={actions} /></td>
     </tr>
   );
 }

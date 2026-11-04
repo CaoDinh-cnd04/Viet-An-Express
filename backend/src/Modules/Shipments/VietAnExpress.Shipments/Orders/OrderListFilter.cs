@@ -36,12 +36,28 @@ internal static class OrderListFilter
             .Distinct()
             .ToList();
 
-    /// <summary>Lọc trạng thái (chọn nhiều → khớp bất kỳ). Tách khỏi <see cref="Apply"/> vì số đếm các tab tính trước bước này.</summary>
+    /// <summary>2 nhóm trạng thái chồng nhau: hành trình (chưa đi / đã đi) và giao hàng (chưa phát / đã phát).</summary>
+    private static readonly string[][] StatusGroups =
+    [
+        [LegacyOrderStatus.Waiting, LegacyOrderStatus.InTransit],
+        [LegacyOrderStatus.NotDelivered, LegacyOrderStatus.Delivered]
+    ];
+
+    /// <summary>
+    /// Lọc trạng thái, chọn được nhiều: trong 1 nhóm khớp bất kỳ (OR), giữa 2 nhóm phải khớp cả hai (AND) —
+    /// vd "Đã đi" + "Chưa phát" = hàng đang trên đường (trước đây OR nên ra gần hết đơn). Chọn đủ 2 ô của 1 nhóm = nhóm đó không lọc.
+    /// Tách khỏi <see cref="Apply"/> vì số đếm các tab tính trước bước này.
+    /// </summary>
     public static IQueryable<LegacyOrder> ApplyStatus(IQueryable<LegacyOrder> query, string? status, DateTime today)
     {
         var list = Statuses(status);
-        if (list.Count == 0 || list.Count == LegacyOrderStatus.All.Length) return query;
-        return query.Where(AnyOf(list.Select(s => LegacyOrderStatus.Is(s, today))));
+        foreach (var group in StatusGroups)
+        {
+            var picked = group.Where(list.Contains).ToList();
+            if (picked.Count is 0 || picked.Count == group.Length) continue;
+            query = query.Where(AnyOf(picked.Select(s => LegacyOrderStatus.Is(s, today))));
+        }
+        return query;
     }
 
     private static readonly string[] SearchFields = ["all", "cnee", "bill", "ref", "ct", "svc"];
@@ -110,12 +126,15 @@ internal static class OrderListFilter
             "ct" => o => EF.Functions.Like(o.ConsigneeCountry!.ToUpper(), like),
             // Dịch vụ lưu dạng "Hãng|Tuyến" (vd "DHL|Singapore", "Chuyên tuyến|Taiwan") — gõ "DHL" hay "Chuyên tuyến" đều ra.
             "svc" => o => EF.Functions.Like(o.ServiceName!.ToUpper(), like),
+            // "Tất cả": mọi trường ở trên — số bill, mã tham chiếu, người nhận (công ty + người liên hệ), nước đến, hãng / dịch vụ.
             _ => o => (digits && o.OrderNumber != null && EF.Functions.Like(o.OrderNumber.Value.ToString(), like))
                 || EF.Functions.Like(o.VaBill!.ToUpper(), like)
                 || EF.Functions.Like(o.BillConnect!.ToUpper(), like)
                 || EF.Functions.Like(o.CustomerBill!.ToUpper(), like)
                 || EF.Functions.Like(o.ConsigneeName!.ToUpper(), like)
+                || EF.Functions.Like(o.ConsigneeContactName!.ToUpper(), like)
                 || EF.Functions.Like(o.ConsigneeCountry!.ToUpper(), like)
+                || EF.Functions.Like(o.ServiceName!.ToUpper(), like)
         };
     }
 

@@ -20,30 +20,34 @@ interface OrderOverviewProps {
 }
 
 /**
- * Đầu trang Đơn hàng: 5 ô số liệu bấm được (Tất cả + 4 trạng thái) — nền nhạt cùng màu trạng thái, ô đang chọn đặc màu;
- * mỗi ô có số đơn và % trên tổng. Bấm để lọc, chọn được nhiều; "Tất cả" bỏ hết lựa chọn.
- * Hàng dưới: tổng kiện / tổng cân / số kết quả theo bộ lọc đang áp + thao tác.
+ * Đầu trang Đơn hàng: 5 ô số liệu bấm được (Tất cả + 4 trạng thái) — nền trắng, chấm màu + nhãn, số đơn, "% tổng" và
+ * thanh tỉ lệ theo màu trạng thái; ô đang chọn đặc màu chữ trắng. Bấm để lọc, chọn được nhiều; "Tất cả" bỏ hết lựa chọn.
+ * Dòng dưới (căn phải, không khung): tổng kiện / tổng cân / số kết quả theo bộ lọc đang áp + thao tác.
  */
 export function OrderOverview({ status, onStatusChange, counts, totalPieces, totalWeight, totalRows, actions }: OrderOverviewProps) {
   const { t } = useI18n();
   const fmt = new Intl.NumberFormat('vi-VN');
   const picked = new Set(parseStatuses(status));
   const all = picked.size === 0;
-  const share = (n: number) => (counts?.all ? `${Math.round((n / counts.all) * 100)}%` : '—');
+  const percent = (n: number) => (counts?.all ? Math.round((n / counts.all) * 100) : 0);
 
   const tile = (key: 'all' | OrderStatus, label: string, on: boolean, onClick: () => void) => {
     const n = counts?.[key];
+    const p = n === undefined ? 0 : percent(n);
     return (
       <button key={key} type="button" aria-pressed={on} className={cx(styles.tile, styles[key], on && styles.on)} onClick={onClick}>
         <span className={styles.label}>{t(label)}</span>
-        <span className={styles.count}>{n === undefined ? '—' : fmt.format(n)}</span>
-        <span className={styles.share}>{n === undefined ? '' : t('{p} tổng', { p: share(n) })}</span>
+        <span className={styles.figure}>
+          <span className={styles.count}>{n === undefined ? '—' : fmt.format(n)}</span>
+          {n !== undefined && <span className={styles.share}>{t('{p} tổng', { p: `${p}%` })}</span>}
+        </span>
+        <span className={styles.bar} aria-hidden><span style={{ width: `${p}%` }} /></span>
       </button>
     );
   };
 
   return (
-    <section className={styles.overview} aria-label={t('Tổng quan đơn hàng')}>
+    <section className={styles.overview} aria-label={t('Tổng quan đơn hàng')} data-tour="orders-status">
       <div className={styles.tiles} role="group" aria-label={t('Lọc theo trạng thái (chọn được nhiều)')}>
         {tile('all', 'Tất cả', all, () => onStatusChange('all'))}
         {ALL_STATUSES.map(s => tile(s, ORDER_STATUS[s].label, picked.has(s), () => onStatusChange(toggleStatus(status, s))))}

@@ -82,13 +82,14 @@ export default function SupportPage() {
       </header>
 
       <div className={styles.top}>
-        <section className={styles.box} ref={formRef}>
+        {/* data-tour: mốc cho hướng dẫn từng nút của trang (features/onboarding) */}
+        <section className={styles.box} ref={formRef} data-tour="support-form">
           <h2>{t('Gửi yêu cầu mới')}</h2>
           <div className={styles.pad}>
             <SupportRequestForm key={formKey} preset={preset} onSent={onSent} />
           </div>
         </section>
-        <section className={styles.box}>
+        <section className={styles.box} data-tour="support-contacts">
           <h2>{t('Liên hệ nhanh')}</h2>
           <div className={styles.pad}>
             <SupportContacts />
@@ -96,7 +97,7 @@ export default function SupportPage() {
         </section>
       </div>
 
-      <section className={styles.box}>
+      <section className={styles.box} data-tour="support-tickets">
         <h2>
           {t('Yêu cầu đã gửi')} <small>{t('bấm 1 dòng để xem chi tiết và trao đổi với CS')}</small>
         </h2>

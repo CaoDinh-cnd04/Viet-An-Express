@@ -116,18 +116,18 @@ export function EcomOrderDrawer({ order, onClose, onDelete, onConfirm, confirmin
               <Button size="sm" disabled={confirming} onClick={() => onConfirm(o, false)}>{t('Trả về Đơn hàng')}</Button>
             ) : (
               <Button size="sm" variant="primary" disabled={confirming || issues.length > 0} onClick={() => onConfirm(o, true)}>
-                <Icon name="send" size={15} /> {t('Xác nhận gửi')}
+                {t('Xác nhận gửi')}
               </Button>
             ))}
             <PrintMenu orders={[o]} variant={o.confirmed ? 'primary' : undefined} />
             {o.editable && canProcess && (
               <>
                 <Button size="sm" onClick={() => setEditing(true)}>
-                  <Icon name="edit" size={15} /> {t('Sửa đơn')}
+                  {t('Sửa đơn')}
                 </Button>
                 {o.deletable && (
                   <Button size="sm" variant="ghost" onClick={() => onDelete(o)}>
-                    <Icon name="trash" size={15} /> {t('Xóa đơn')}
+                    {t('Xóa đơn')}
                   </Button>
                 )}
               </>

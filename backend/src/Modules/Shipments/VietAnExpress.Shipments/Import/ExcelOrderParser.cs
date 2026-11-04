@@ -28,7 +28,6 @@ internal static partial class ExcelOrderParser
     ];
 
     /// <summary>Nước bắt buộc có bang / tỉnh.</summary>
-    private static readonly HashSet<string> StateRequired = ["US", "CA", "AU"];
 
     public static IReadOnlyList<string> MissingHeaders(IEnumerable<string> headers)
     {
@@ -60,7 +59,7 @@ internal static partial class ExcelOrderParser
 
         foreach (var c in new[] { "cnee_company", "cnee_contact_name", "cnee_tel", "cnee_city", "add1", "add2" })
             Required(c, row[c]);
-        if (country is not null && StateRequired.Contains(country.Code) && row["cnee_state"].Length == 0)
+        if (country is not null && ReceiverStateRule.Countries.Contains(country.Code) && row["cnee_state"].Length == 0)
             errors.Add($"Thiếu Cnee_State (bắt buộc với {country.Name})");
         foreach (var c in new[] { "add1", "add2" })
             if (row[c].Length > AddressMax) errors.Add($"{DisplayName(c)} dài {row[c].Length} ký tự, tối đa {AddressMax}");

@@ -49,12 +49,17 @@ export const orders: Record<string, string> = {
   'Xóa lọc': 'Clear filters',
 
   // Tổng hợp & thao tác
+  // Thanh lọc (nhãn bên trái ô)
+  'Ngày': 'Date',
+  'Cân': 'Weight',
+  'từ': 'from',
+  'đến': 'to',
   'Tổng kiện': 'Total pieces',
   'Tổng cân': 'Total weight',
   'Kết quả': 'Results',
   'Hiển thị': 'Show',
   'In nhiều bill': 'Print selected bills',
-  'In nhiều bill ({n})': 'Print selected bills ({n})',
+  'In bill ({n})': 'Print bills ({n})',
   'Đang xuất…': 'Exporting…',
   'Xuất bảng kê gửi hàng': 'Export shipment list',
   'Đã xuất bảng kê gửi hàng': 'Shipment list exported',
@@ -89,7 +94,6 @@ export const orders: Record<string, string> = {
   'Đang tải ảnh…': 'Loading photos…',
   'Chức năng xem ảnh kiện đang được phát triển.': 'Package photo viewing is under development.',
   'Ảnh kiện {n}': 'Package photo {n}',
-  'Kiện {n}': 'Piece {n}',
 
   // Link tracking
   'Sao chép link': 'Copy link',
@@ -241,6 +245,6 @@ export const orders: Record<string, string> = {
   // Trạng thái đơn
   // Thanh thao tác
   'Xuất bảng kê': 'Export manifest',
-  // Ô cân bộ lọc
+  // Ô trạng thái
   '{p} tổng': '{p} of total'
 };

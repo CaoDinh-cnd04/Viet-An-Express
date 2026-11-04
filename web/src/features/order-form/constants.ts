@@ -3,6 +3,12 @@
 /** Giá trị "nhóm hàng" đặc biệt: kiện gồm nhiều nhóm → khai bảng phân loại. */
 export const MULTI_CATEGORY = 'Nhiều loại hàng';
 
+/**
+ * Cột "Mô tả mặt hàng" của bảng kiện (nhập khi chọn "Nhiều loại hàng") — tạm ẩn (02/11/2026, người dùng yêu cầu):
+ * ẩn cột và không bắt buộc nhập. Bật lại: đổi thành true.
+ */
+export const PACKAGE_ITEM_DESCRIPTION = false;
+
 /** Hình thức xuất khẩu — lưu mã vào MaVanDon.Ly_Do_Xuat_Hang (dữ liệu cũ: GIFT, SAMPLE). */
 export const EXPORT_TYPES = [
   { value: 'GIFT', label: 'gift (no commercial value)' },

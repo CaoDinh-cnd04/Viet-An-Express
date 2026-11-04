@@ -1,5 +1,24 @@
 import { describe, expect, it } from 'vitest';
-import { initialsOf, loginPath, PORTAL_HOME, safeNextPath } from './session';
+import type { SessionUser } from '../types';
+import { CHOOSE_CUSTOMER_PATH, initialsOf, isVietAnAgent, loginPath, needsCustomer, PORTAL_HOME, safeNextPath } from './session';
+
+describe('needsCustomer', () => {
+  const agent: SessionUser = { accountType: 'vietan', customerCode: '', companyName: '', agentName: 'Võ Hạnh' };
+  it('nhân viên Việt An chưa chọn khách phải chọn trước khi vào trang của khách', () => {
+    expect(isVietAnAgent(agent)).toBe(true);
+    expect(needsCustomer(agent, '/orders/new')).toBe(true);
+    expect(needsCustomer(agent, CHOOSE_CUSTOMER_PATH)).toBe(false);
+    expect(needsCustomer(agent, '/troubles')).toBe(false); // trang quản lý hỗ trợ không cần khách
+  });
+  it('đã chọn khách hoặc là tài khoản khách thì không', () => {
+    expect(needsCustomer({ ...agent, customerCode: 'SGB' }, '/orders/new')).toBe(false);
+    expect(needsCustomer({ accountType: 'customer', customerCode: 'SGB', companyName: 'SGB' }, '/orders/new')).toBe(false);
+    expect(needsCustomer(undefined, '/orders/new')).toBe(false);
+  });
+  it('trang chọn khách không dùng làm đích quay lại sau đăng nhập', () => {
+    expect(safeNextPath(CHOOSE_CUSTOMER_PATH)).toBe(PORTAL_HOME);
+  });
+});
 
 describe('safeNextPath', () => {
   it('giữ đường dẫn nội bộ kèm query', () => {

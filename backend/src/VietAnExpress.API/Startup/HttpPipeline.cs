@@ -19,8 +19,20 @@ internal static class HttpPipeline
     });
 
     /// <summary>
+    /// CSP của API: phản hồi API chỉ là JSON / ảnh / tệp tải về (trang in được portal tải bằng fetch rồi ghi vào trang portal — chịu CSP của
+    /// portal, xem frontend.web.config) → không cho chạy gì, không cho nhúng ngoài portal.
+    /// </summary>
+    internal const string ApiCsp = "default-src 'none'; frame-ancestors 'self'; base-uri 'none'; form-action 'none'";
+
+    /// <summary>Tắt các quyền thiết bị portal không dùng (camera, micro, vị trí, thanh toán…); clipboard vẫn cho trang mình (dán mã OTP, sao chép).</summary>
+    internal const string PermissionsPolicy =
+        "camera=(), microphone=(), geolocation=(), payment=(), usb=(), serial=(), bluetooth=(), hid=(), midi=(), magnetometer=(), " +
+        "gyroscope=(), accelerometer=(), display-capture=(), browsing-topics=(), clipboard-read=(self), clipboard-write=(self), fullscreen=(self)";
+
+    /// <summary>
     /// Dữ liệu API là dữ liệu riêng của khách: không cho trình duyệt / proxy lưu đệm (bấm Back sau đăng xuất không còn dữ liệu cũ),
-    /// không cho đoán loại nội dung. Endpoint tự đặt Cache-Control (nếu có) được giữ nguyên.
+    /// không cho đoán loại nội dung, CSP chặt (<see cref="ApiCsp"/>), tắt quyền thiết bị. Endpoint tự đặt Cache-Control (nếu có) được giữ nguyên.
+    /// Swagger (chỉ bật khi dev / cấu hình) cần chạy script nên không áp CSP chặt.
     /// </summary>
     public static IApplicationBuilder UseSecurityHeaders(this IApplicationBuilder app) => app.Use((context, next) =>
     {
@@ -30,7 +42,11 @@ internal static class HttpPipeline
             if (!headers.ContainsKey("Cache-Control")) headers.CacheControl = "no-store";
             headers["X-Content-Type-Options"] = "nosniff";
             headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
-            DenyFraming(headers);
+            headers["Permissions-Policy"] = PermissionsPolicy;
+            headers["X-Frame-Options"] = "SAMEORIGIN";
+            if (!headers.ContainsKey("Content-Security-Policy") && !context.Request.Path.StartsWithSegments("/swagger"))
+                headers.ContentSecurityPolicy = ApiCsp;
+            headers.Remove("X-Powered-By");
             return Task.CompletedTask;
         });
         return next(context);

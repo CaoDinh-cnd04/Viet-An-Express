@@ -59,22 +59,22 @@ export function InvoiceToolbar({ onItems }: InvoiceToolbarProps) {
 
   return (
     <div className={panel.actions}>
-      <button type="button" className={panel.action} onClick={() => setDialog('library')}>
+      <button type="button" className={panel.action} onClick={() => setDialog('library')} title={t('Chọn hàng đã lưu')}>
         <Icon name="bag" size={15} />
-        <span><b>{t('Thư viện mặt hàng')}</b><small>{t('Chọn hàng đã lưu')}</small></span>
+        <span><b>{t('Thư viện mặt hàng')}</b></span>
       </button>
-      <button type="button" className={panel.action} onClick={() => setDialog('recent')}>
+      <button type="button" className={panel.action} onClick={() => setDialog('recent')} title={t('Chép từ đơn trước')}>
         <Icon name="clock" size={15} />
-        <span><b>{t('Invoice cũ')}</b><small>{t('Chép từ đơn trước')}</small></span>
+        <span><b>{t('Invoice cũ')}</b></span>
       </button>
       {/* Nhập từ Excel | File mẫu: 1 chức năng, nút tách đôi */}
       <div className={panel.split}>
-        <button type="button" className={panel.action} onClick={() => fileRef.current?.click()} disabled={importing}>
+        <button type="button" className={panel.action} onClick={() => fileRef.current?.click()} disabled={importing} title={t('File Excel theo mẫu, tối đa 49 mặt hàng')}>
           <Icon name="upload" size={15} />
-          <span><b>{t(importing ? 'Đang đọc file…' : 'Nhập từ Excel')}</b><small>{t('File Excel theo mẫu, tối đa 49 mặt hàng')}</small></span>
+          <span><b>{t(importing ? 'Đang đọc file…' : 'Nhập từ Excel')}</b></span>
         </button>
         <a className={panel.splitSide} href={INVOICE_TEMPLATE_URL} download="Mau_Import_Invoice.xlsx">
-          <Icon name="download" size={13} /> {t('Tải file mẫu Excel')}
+          <Icon name="download" size={15} /> {t('Tải mẫu Excel')}
         </a>
       </div>
       <input ref={fileRef} type="file" accept=".xlsx,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv" className="visually-hidden" tabIndex={-1} onChange={e => { void importFile(e.target.files?.[0]); e.target.value = ''; }} />

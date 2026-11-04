@@ -30,7 +30,6 @@ export const landing: Record<string, string> = {
   'theo dõi hành trình': 'shipment tracking',
   'Chọn chức năng': 'Choose a function',
   'Tra cứu vận đơn': 'Track shipments',
-  'Đăng nhập portal': 'Sign in to portal',
   'Số vận đơn': 'Bill numbers',
   'Mỗi dòng 1 số vận đơn\nVD: 6156979': 'One bill number per line\ne.g. 6156979',
   'Tối đa {max} số mỗi lần, cách nhau bằng xuống dòng hoặc dấu phẩy': 'Up to {max} numbers at a time, separated by new lines or commas',
@@ -111,7 +110,7 @@ export const landing: Record<string, string> = {
   'Để lại lời nhắn, nhân viên Việt An sẽ gọi lại cho bạn trong giờ làm việc.': 'Leave a message and Viet An staff will call you back during working hours.',
   'Tổng đài': 'Switchboard',
   'Trụ sở': 'Head office',
-  'Chi nhánh': 'Branches',
+  'Chi nhánh': 'Branch',
   'TP. Hồ Chí Minh': 'Ho Chi Minh City',
   'Bảo Lộc, Lâm Đồng': 'Bao Loc, Lam Dong',
   // Địa danh (tên chi nhánh, nước) — chỉ đổi chữ hiển thị, giá trị gửi backend giữ tiếng Việt
