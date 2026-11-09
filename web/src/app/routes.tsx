@@ -1,6 +1,6 @@
 import { lazy, Suspense, type ComponentType, type LazyExoticComponent } from 'react';
 import { createBrowserRouter, Navigate, useLocation, useParams, type RouteObject } from 'react-router-dom';
-import { CHOOSE_CUSTOMER_PATH, isVietAnAgent, PERMISSIONS, RequireAuth, RequirePermission, useCan, useSession } from '@/features/auth';
+import { CHOOSE_CUSTOMER_PATH, isVietAnAgent, MANAGED_ORDERS_PATH, PERMISSIONS, RequireAuth, RequirePermission, useCan, useSession } from '@/features/auth';
 import LandingPage from '@/features/landing/pages/LandingPage';
 import TrackingPage from '@/features/landing/pages/TrackingPage';
 import { isMyTrackingHost } from '@/features/mytracking';
@@ -36,6 +36,7 @@ const pages = {
   staff: lazy(() => import('@/features/staff/pages/StaffPage')),
   orderImport: lazy(() => import('@/features/order-import/pages/OrderImportPage')),
   orders: lazy(() => import('@/features/orders/pages/OrdersPage')),
+  managedOrders: lazy(() => import('@/features/orders/pages/ManagedOrdersPage')),
   drafts: lazy(() => import('@/features/drafts/pages/DraftsPage')),
   pricing: lazy(() => import('@/features/pricing/pages/PricingPage')),
   ecommerce: lazy(() => import('@/features/ecommerce/pages/EcommercePage')),
@@ -61,7 +62,9 @@ const page = (path: string, title: string, Page: ComponentType, permission?: str
 /** Hỗ trợ & góp ý: nhân viên Việt An thấy trang quản lý yêu cầu của khách mình phụ trách, khách thấy trang gửi yêu cầu. */
 function SupportEntry() {
   const session = useSession();
-  return isVietAnAgent(session.data?.status === 'authenticated' ? session.data.user : undefined) ? <pages.managedSupport /> : <pages.support />;
+  const user = session.data?.status === 'authenticated' ? session.data.user : undefined;
+  // Nhân viên đã chọn khách → mặc định chỉ yêu cầu của khách đó; chưa chọn → mọi khách trong phạm vi.
+  return isVietAnAgent(user) ? <pages.managedSupport customerCode={user?.customerCode || undefined} companyName={user?.companyName} /> : <pages.support />;
 }
 
 function HomeRedirect() {
@@ -102,6 +105,7 @@ const routes: RouteObject[] = [
       { path: 'orders/create/quick', element: <RedirectKeepQuery to="/orders/new/quick" /> },
       page('orders/import', 'Tạo đơn từ Excel', pages.orderImport, PERMISSIONS.shipmentsCreate),
       page('orders', 'Đơn hàng của tôi', pages.orders, PERMISSIONS.shipmentsView),
+      page(MANAGED_ORDERS_PATH.slice(1), 'Đơn khách phụ trách', pages.managedOrders, PERMISSIONS.managedOrders),
       page('drafts', 'Đơn nháp & chưa in', pages.drafts, PERMISSIONS.shipmentsView),
       page('pricing', 'Giá & gợi ý dịch vụ', pages.pricing),
       page('ecommerce', 'E-commerce', pages.ecommerce, PERMISSIONS.ecommerceView),

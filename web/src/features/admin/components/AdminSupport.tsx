@@ -184,7 +184,7 @@ function TicketDrawer({ item, source, onClose }: { item: AdminSupportTicket | nu
               maxLength={4000}
               value={note}
               onChange={e => setNote(e.target.value)}
-              hint={t('Lưu vào yêu cầu, khách xem ở trang Hỗ trợ & góp ý. Bấm "Chờ khách" để khách trả lời lại.')}
+              hint={t('Lưu vào yêu cầu, khách xem và nhắn lại ở trang Hỗ trợ & góp ý.')}
             />
           )}
         </>

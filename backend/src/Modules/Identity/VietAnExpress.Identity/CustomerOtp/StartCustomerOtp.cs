@@ -62,7 +62,7 @@ internal sealed class StartCustomerOtpHandler(
 }
 
 /// <summary>Cấp mã + gửi email OTP khách (dùng ở bước mật khẩu và bước nhập email lần đầu). Null = không gửi được (đã ghi log).</summary>
-internal sealed class CustomerOtpMailer(CustomerOtpStore otps, IEmailSender email, IHostEnvironment env, ILogger<CustomerOtpMailer> logger)
+internal sealed class CustomerOtpMailer(CustomerOtpStore otps, IEmailSender email, EmailCompany company, IHostEnvironment env, ILogger<CustomerOtpMailer> logger)
 {
     public async Task<CustomerOtpChallengeDto?> SendAsync(CustomerOtpStore.Pending pending, string to, string name, CancellationToken ct)
     {
@@ -80,7 +80,7 @@ internal sealed class CustomerOtpMailer(CustomerOtpStore otps, IEmailSender emai
         }
         try
         {
-            await email.SendAsync(CustomerOtpRules.Email(to, name, code), ct);
+            await email.SendAsync(CustomerOtpRules.Email(to, name, code, company), ct);
         }
         catch (Exception e) when (e is not OperationCanceledException)
         {

@@ -95,18 +95,3 @@ export function FileDrop({ accept, onFile, onFiles, title = 'Kéo & thả tệp 
     </div>
   );
 }
-
-/** Danh sách cặp nhãn – giá trị (chi tiết đơn, ticket…). */
-export function KeyValueList({ items }: { items: ReadonlyArray<[label: string, value: ReactNode]> }) {
-  const tr = useTranslateNode();
-  return (
-    <dl className={styles.kv}>
-      {items.map(([k, v]) => (
-        <div key={k}>
-          <dt>{tr(k)}</dt>
-          <dd>{tr(v)}</dd>
-        </div>
-      ))}
-    </dl>
-  );
-}

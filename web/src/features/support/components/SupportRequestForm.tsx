@@ -4,9 +4,11 @@ import { useI18n } from '@/shared/i18n';
 import { cx } from '@/shared/lib/cx';
 import { Button, Icon } from '@/shared/ui';
 import { useBillLookup, useCreateSupportRequest, useRecentBills } from '../api';
-import { FEEDBACK_TOPICS, FILE_ACCEPT, FILE_MAX_MB, HELP_TOPICS, SUPPORT_KIND_ORDER, SUPPORT_KINDS } from '../constants';
+import { FAQ, FEEDBACK_TOPICS, FILE_ACCEPT, FILE_MAX_MB, HELP_TOPICS, SUPPORT_KIND_ORDER, SUPPORT_KINDS, TOPIC_FAQ } from '../constants';
+import { faqForTopic } from '../lib/faq';
 import { draftError, newDraft, toNewSupportRequest, type RequestDraft, type RequestPreset } from '../lib/draft';
 import type { SupportTicket } from '../types';
+import { FaqEntry } from './SupportFaq';
 import styles from './SupportRequestForm.module.css';
 
 const RATES = ['Rất tệ', 'Tệ', 'Tạm', 'Tốt', 'Rất tốt'];
@@ -39,6 +41,7 @@ export function SupportRequestForm({ preset = {}, onSent, onCancel }: SupportReq
   const set = (patch: Partial<RequestDraft>) => setDraft(d => ({ ...d, ...patch }));
 
   const recent = useRecentBills();
+  const suggestions = faqForTopic(FAQ, TOPIC_FAQ, draft.topic);
   const found = useBillLookup(help ? draft.bill.trim() : '').data;
 
   const pickFile = (f: File | undefined) => {
@@ -86,7 +89,7 @@ export function SupportRequestForm({ preset = {}, onSent, onCancel }: SupportReq
               <div className={styles.chips}>
                 <span>{t('Đơn gần đây:')}</span>
                 {recent.data.map(o => (
-                  <button key={o.bill} type="button" className="mono" onClick={() => set({ bill: o.bill })}>{o.bill}</button>
+                  <button key={o.bill} type="button" onClick={() => set({ bill: o.bill })}>{o.bill}</button>
                 ))}
               </div>
             )}
@@ -102,6 +105,16 @@ export function SupportRequestForm({ preset = {}, onSent, onCancel }: SupportReq
           {(help ? HELP_TOPICS : FEEDBACK_TOPICS).map(x => <option key={x} value={x}>{t(x)}</option>)}
         </select>
       </div>
+
+      {help && !!suggestions.length && (
+        <div className={styles.row}>
+          <span />
+          <div className={styles.suggest}>
+            <div className={styles.suggestTitle}>{t('Có thể câu trả lời đã có ở đây')}</div>
+            {suggestions.map(f => <FaqEntry key={f.q} item={f} compact />)}
+          </div>
+        </div>
+      )}
 
       {!help && (
         <div className={styles.row}>

@@ -28,6 +28,24 @@ internal sealed record OrderPrintModel(LegacyOrder Order, IReadOnlyList<PrintIte
     /// <summary>DDU / DDP khi lệnh in lúc tạo đơn gửi kèm (không lưu database) — in lên invoice; null = không in dòng này.</summary>
     public string? DutyTerms { get; init; }
 
+    /// <summary>
+    /// Mã dịch vụ in dưới số bill (TBaseCode.Option2 như bill cũ, vd "CT-Au_Toll (Tp/Mp)") — điền ở PrintOrdersHandler
+    /// (<see cref="Services.ServiceHubRules.PrintCode"/>); null (chưa tra danh mục) → "Hãng - Hub".
+    /// </summary>
+    public string? ServiceCode { get; init; }
+
+    public string ServiceText => ServiceCode ?? (Order.ServiceName ?? "").Trim().Replace("|", " - ");
+
+    /// <summary>
+    /// Mã nước đến (2 ký tự) tra từ dbo.Countries theo ConsigneeCountryID / tên nước — tên trong bảng cũ kiểu "Korea, South"
+    /// không khớp tên chuẩn nên phải tra bảng; null = đoán theo tên (<see cref="BillA4.CountryCode"/>).
+    /// </summary>
+    public string? DestinationCode { get; init; }
+
+    public string Destination => string.IsNullOrWhiteSpace(DestinationCode)
+        ? BillA4.CountryCode(Order.ConsigneeCountry)
+        : DestinationCode.Trim().ToUpperInvariant();
+
     public IReadOnlyList<PrintPackage> Packages => PackageLines ?? [];
 
     public string Bill => LegacyOrderView.BillOf(Order);

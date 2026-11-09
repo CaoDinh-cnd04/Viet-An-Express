@@ -1,38 +1,59 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { isNotImplemented } from '@/shared/api/http';
 import { useI18n } from '@/shared/i18n';
-import { useSupportTickets } from '../api';
-import { SupportContacts } from '../components/SupportContacts';
-import { SupportRequestForm } from '../components/SupportRequestForm';
-import { SupportTicketsTable, ticketRowId } from '../components/SupportTicketsTable';
-import { SENDER_INFO_TOPIC } from '../constants';
+import { Button, Icon } from '@/shared/ui';
+import { useSupportLive, useSupportTickets } from '../api';
+import { NewSupportRequestDialog } from '../components/NewSupportRequestDialog';
+import { SupportFaq } from '../components/SupportFaq';
+import { FilterSelect, SupportFilterBar, SupportHeader, SupportHotline, SupportShell, SupportSplit } from '../components/SupportLayout';
+import { SupportOverview } from '../components/SupportOverview';
+import { SupportTicketDetail } from '../components/SupportTicketDetail';
+import { SupportTicketList, ticketRowId } from '../components/SupportTicketList';
+import { CONTACTS, SENDER_INFO_TOPIC, TICKET_KIND_FILTERS, TICKET_PAGE_SIZE, TICKET_PERIODS, TICKET_TILES } from '../constants';
 import type { RequestPreset } from '../lib/draft';
-import { defaultFilter, filterCounts, filterTickets, type TicketFilter } from '../lib/requests';
+import { defaultFilter, filterCounts, filterTickets, type TicketFilter, type TicketKindFilter, type TicketPeriod } from '../lib/requests';
 import type { SupportTicket } from '../types';
-import styles from './SupportPage.module.css';
 
 /**
- * Hỗ trợ & góp ý (dbo.TContact, như form "Yêu cầu" của Bill Online cũ): trên là form gửi yêu cầu mới + liên hệ nhanh,
- * dưới là bảng yêu cầu đã gửi — bấm 1 dòng xem chi tiết và trao đổi với CS; CS "Chờ khách phản hồi" thì khách trả lời ngay trong dòng đó.
- * Link: ?bill=… điền sẵn mã vận đơn; ?new=sender-info chọn sẵn vấn đề "Sửa thông tin người gửi"; ?id=TRB-… mở sẵn yêu cầu đó.
+ * Hỗ trợ & góp ý của khách (dbo.TContact, như form "Yêu cầu" của Bill Online cũ):
+ * - Đầu trang: hotline, nút Câu hỏi thường gặp + Tạo yêu cầu (hộp thoại); 4 ô trạng thái như trang Đơn hàng; hàng lọc Tìm · Ngày · Loại · Đặt lại.
+ * - Thân: trái danh sách thẻ yêu cầu (phân trang), phải chi tiết + lịch sử trao đổi + ô trả lời khi CS chờ khách;
+ *   chưa chọn yêu cầu thì bên phải là Câu hỏi thường gặp (bớt yêu cầu không cần thiết).
+ * Link: ?bill=… mở hộp gửi yêu cầu điền sẵn vận đơn; ?new=sender-info chọn sẵn "Sửa thông tin người gửi"; ?id=TRB-… mở sẵn yêu cầu đó.
  */
 export default function SupportPage() {
   const { t } = useI18n();
   const { data: tickets = [], isLoading, isError, error } = useSupportTickets();
+  // CS trả lời / đổi trạng thái → hiện ngay (SignalR), không cần tải lại trang.
+  useSupportLive();
   const [params, setParams] = useSearchParams();
   const [filter, setFilter] = useState<TicketFilter | null>(null);
+  const [kind, setKind] = useState<TicketKindFilter>('');
+  const [period, setPeriod] = useState<TicketPeriod>('');
   const [query, setQuery] = useState('');
+  const [newestFirst, setNewestFirst] = useState(true);
+  const [page, setPage] = useState(1);
   const [openId, setOpenId] = useState<string | null>(null);
-  const [preset, setPreset] = useState<RequestPreset>({});
-  const [formKey, setFormKey] = useState(0);
+  const [faq, setFaq] = useState(false);
+  const [compose, setCompose] = useState<RequestPreset | null>(null);
   const [scrollTo, setScrollTo] = useState<string | null>(null);
-  const formRef = useRef<HTMLElement>(null);
 
   const ready = !isLoading;
-  const active = filter ?? (ready ? defaultFilter(tickets) : 'open');
-  const rows = useMemo(() => filterTickets(tickets, active, query), [tickets, active, query]);
+  const active = filter ?? (ready ? defaultFilter(tickets) : 'waitc');
   const counts = useMemo(() => filterCounts(tickets), [tickets]);
+  const rows = useMemo(() => {
+    const list = filterTickets(tickets, { filter: active, kind, period, query });
+    return newestFirst ? list : list.reverse();
+  }, [tickets, active, kind, period, query, newestFirst]);
+  const pageCount = Math.max(1, Math.ceil(rows.length / TICKET_PAGE_SIZE));
+  const shownPage = Math.min(page, pageCount);
+  const pageRows = rows.slice((shownPage - 1) * TICKET_PAGE_SIZE, shownPage * TICKET_PAGE_SIZE);
+  const current = openId ? tickets.find(x => x.id === openId) ?? null : null;
+  const tile = TICKET_TILES.find(x => x.key === active)!;
+
+  // Đổi lọc → về trang 1
+  const reset = <T,>(set: (v: T) => void) => (v: T) => { set(v); setPage(1); };
 
   // Link từ đơn hàng / form tạo đơn
   useEffect(() => {
@@ -40,11 +61,9 @@ export default function SupportPage() {
     const id = params.get('id');
     const isNew = params.get('new') === 'sender-info';
     if (!bill && !id && !isNew) return;
-    if (bill || isNew) {
-      setPreset(bill ? { kind: 'ho_tro', bill } : { kind: 'ho_tro', topic: SENDER_INFO_TOPIC });
-      setFormKey(k => k + 1);
-      formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    } else if (id) {
+    if (bill) setCompose({ kind: 'ho_tro', bill });
+    else if (isNew) setCompose({ kind: 'ho_tro', topic: SENDER_INFO_TOPIC });
+    else if (id) {
       setFilter('all');
       setOpenId(id.toUpperCase());
       setScrollTo(id.toUpperCase());
@@ -52,67 +71,91 @@ export default function SupportPage() {
     setParams({}, { replace: true });
   }, [params, setParams]);
 
-  // Mở từ link ?id= / vừa gửi xong: đợi bảng có dòng rồi cuộn tới
+  // Mở từ link ?id= / vừa gửi xong: đợi danh sách có thẻ rồi cuộn tới
   useEffect(() => {
     if (!scrollTo || !ready) return;
-    document.getElementById(ticketRowId(scrollTo))?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    const i = rows.findIndex(x => x.id === scrollTo);
+    if (i >= 0 && Math.floor(i / TICKET_PAGE_SIZE) + 1 !== shownPage) return setPage(Math.floor(i / TICKET_PAGE_SIZE) + 1);
+    document.getElementById(ticketRowId(scrollTo))?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     setScrollTo(null);
-  }, [scrollTo, ready, rows]);
+  }, [scrollTo, ready, rows, shownPage]);
 
-  const toggle = (ticket: SupportTicket) => setOpenId(openId === ticket.id ? null : ticket.id);
+  const open = (ticket: SupportTicket) => {
+    setOpenId(ticket.id);
+    setFaq(false);
+  };
 
   const onSent = (ticket: SupportTicket) => {
-    setFilter('open');
+    setCompose(null);
+    setFilter('doing');
+    setKind('');
+    setPeriod('');
     setQuery('');
-    setOpenId(ticket.id);
-    setPreset({});
+    setPage(1);
+    open(ticket);
     setScrollTo(ticket.id);
   };
 
+  const clearFilters = () => {
+    setKind('');
+    setPeriod('');
+    setQuery('');
+    setPage(1);
+  };
+  const filtered = !!(kind || period || query);
+
   const note = isLoading ? t('Đang tải…')
     : isError ? t(isNotImplemented(error) ? 'Chức năng hỗ trợ đang được kết nối máy chủ. Cần gấp, vui lòng gọi hotline Việt An.' : 'Không tải được danh sách yêu cầu')
-      : !rows.length ? t(tickets.length ? 'Không có yêu cầu nào ở mục này.' : 'Chưa có yêu cầu nào. Điền form phía trên khi cần CS hỗ trợ.')
+      : !rows.length ? t(tickets.length ? 'Không có yêu cầu nào ở mục này.' : 'Chưa có yêu cầu nào. Bấm "Tạo yêu cầu" khi cần CS hỗ trợ.')
         : null;
 
   return (
-    <div className={styles.page}>
-      <header className={styles.head}>
-        <h1>{t('Hỗ trợ & góp ý')}</h1>
-        <p>{t('Gửi yêu cầu cho CS Việt An và theo dõi kết quả. CS trả lời ngay trong từng yêu cầu bên dưới.')}</p>
-      </header>
+    <SupportShell>
+      <SupportHeader title="Hỗ trợ & góp ý" sub="Theo dõi yêu cầu và trao đổi với đội ngũ chăm sóc khách hàng.">
+        <SupportHotline href={CONTACTS[0]!.href} value={CONTACTS[0]!.value} />
+        <Button size="sm" onClick={() => { setFaq(true); setOpenId(null); }} data-tour="support-faq">
+          <Icon name="help" size={14} /> {t('Câu hỏi thường gặp')}
+        </Button>
+        <Button variant="primary" size="sm" onClick={() => setCompose({})} data-tour="support-new">
+          <Icon name="plus" size={14} /> {t('Tạo yêu cầu')}
+        </Button>
+      </SupportHeader>
 
-      <div className={styles.top}>
-        {/* data-tour: mốc cho hướng dẫn từng nút của trang (features/onboarding) */}
-        <section className={styles.box} ref={formRef} data-tour="support-form">
-          <h2>{t('Gửi yêu cầu mới')}</h2>
-          <div className={styles.pad}>
-            <SupportRequestForm key={formKey} preset={preset} onSent={onSent} />
-          </div>
-        </section>
-        <section className={styles.box} data-tour="support-contacts">
-          <h2>{t('Liên hệ nhanh')}</h2>
-          <div className={styles.pad}>
-            <SupportContacts />
-          </div>
-        </section>
-      </div>
+      <SupportOverview tiles={TICKET_TILES} counts={counts} value={active} onChange={reset(setFilter)} />
 
-      <section className={styles.box} data-tour="support-tickets">
-        <h2>
-          {t('Yêu cầu đã gửi')} <small>{t('bấm 1 dòng để xem chi tiết và trao đổi với CS')}</small>
-        </h2>
-        <SupportTicketsTable
-          rows={rows}
-          counts={counts}
-          filter={active}
-          onFilter={setFilter}
-          query={query}
-          onQuery={setQuery}
-          openId={openId}
-          onToggle={toggle}
-          note={note}
-        />
-      </section>
-    </div>
-  );
+      <SupportFilterBar query={query} onQuery={reset(setQuery)} placeholder="Tìm mã yêu cầu, vận đơn hoặc nội dung…" canReset={filtered} onReset={clearFilters}>
+        <FilterSelect label="Ngày" value={period} options={TICKET_PERIODS} onChange={reset(setPeriod)} />
+        <FilterSelect label="Loại" value={kind} options={TICKET_KIND_FILTERS} onChange={reset(setKind)} />
+      </SupportFilterBar>
+
+      <SupportSplit
+        tour="support-tickets"
+        list={
+          <SupportTicketList
+            rows={pageRows}
+            total={rows.length}
+            group={tile}
+            newestFirst={newestFirst}
+            onToggleSort={() => setNewestFirst(v => !v)}
+            openId={openId}
+            onOpen={open}
+            page={shownPage}
+            pageCount={pageCount}
+            pageSize={TICKET_PAGE_SIZE}
+            onPage={setPage}
+            note={note}
+          />
+        }
+        pane={
+          current && !faq ? (
+            <SupportTicketDetail key={current.id} ticket={current} onNew={() => setCompose({ kind: 'ho_tro', bill: current.bill || undefined })} />
+          ) : (
+            <SupportFaq onClose={faq && openId ? () => setFaq(false) : undefined} onNew={() => setCompose({})} />
+          )
+        }
+      />
+
+      {compose && <NewSupportRequestDialog open preset={compose} onClose={() => setCompose(null)} onSent={onSent} />}
+    </SupportShell>
+    );
 }

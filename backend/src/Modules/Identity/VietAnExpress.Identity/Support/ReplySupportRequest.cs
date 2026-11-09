@@ -13,7 +13,7 @@ namespace VietAnExpress.Identity.Support;
 /// </summary>
 internal sealed record ReplySupportRequestCommand(string Id, string? Reply, string? Status) : IRequest<Result<AdminSupportRequestDto>>;
 
-internal sealed class ReplySupportRequestHandler(IdentityDbContext db, ICustomersApi customers, TimeProvider clock)
+internal sealed class ReplySupportRequestHandler(IdentityDbContext db, ICustomersApi customers, TimeProvider clock, SupportLive live)
     : IRequestHandler<ReplySupportRequestCommand, Result<AdminSupportRequestDto>>
 {
     public async Task<Result<AdminSupportRequestDto>> Handle(ReplySupportRequestCommand c, CancellationToken ct)
@@ -32,6 +32,7 @@ internal sealed class ReplySupportRequestHandler(IdentityDbContext db, ICustomer
         if (!changed && reply.Length == 0) return SupportRequestErrors.NothingToSend;
         if (reply.Length > 0) ticket.AddCsReply(reply, now);
         await db.SaveChangesAsync(ct);
+        await live.ChangedAsync(ticket, ct);
         var customer = await customers.GetByIdAsync(ticket.CustomerId, ct);
         return SupportRequestRules.ToAdminDto(ticket, customer?.Code);
     }

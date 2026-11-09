@@ -10,6 +10,10 @@
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
   </ItemGroup>
   <ItemGroup>
+    <!-- Logo nhúng trong email OTP (Shared/OtpEmail.cs) -->
+    <EmbeddedResource Include="Shared\Assets\email-logo.png" LogicalName="email-logo.png" />
+  </ItemGroup>
+  <ItemGroup>
     <InternalsVisibleTo Include="VietAnExpress.Identity.Tests" />
     <InternalsVisibleTo Include="DynamicProxyGenAssembly2" />
   </ItemGroup>

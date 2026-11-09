@@ -26,4 +26,15 @@ internal static class LegacyCountryLookup
             : string.Equals(c.Name.Trim(), countryName, StringComparison.OrdinalIgnoreCase)).Take(2).ToList();
         return matches.Count == 1 ? matches[0].Id : null;
     }
+
+    /// <summary>Mã 2 ký tự của nước đến để in: theo CountryID, không có thì khớp tên (vd "Korea, South" → KR). Hàm thuần — có test.</summary>
+    public static string? CodeOf(IReadOnlyList<LegacyCountryRow> countries, int? id, string? name)
+    {
+        static string? Iso(LegacyCountryRow? c) => c?.Code?.Trim() is { Length: 2 } code ? code.ToUpperInvariant() : null;
+        if (id is { } countryId && Iso(countries.FirstOrDefault(c => c.Id == countryId)) is { } byId) return byId;
+        var countryName = name?.Trim();
+        if (string.IsNullOrEmpty(countryName)) return null;
+        var matches = countries.Where(c => string.Equals(c.Name.Trim(), countryName, StringComparison.OrdinalIgnoreCase)).Take(2).ToList();
+        return matches.Count == 1 ? Iso(matches[0]) : null;
+    }
 }

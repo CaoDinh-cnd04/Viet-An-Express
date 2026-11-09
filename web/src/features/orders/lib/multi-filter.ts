@@ -29,7 +29,7 @@ export interface SearchTag {
   value: string;
 }
 
-const FIELDS: readonly OrderSearchField[] = ['all', 'cnee', 'bill', 'ref', 'ct', 'svc'];
+const FIELDS: readonly OrderSearchField[] = ['all', 'cnee', 'bill', 'ref', 'ct', 'svc', 'kh'];
 
 /** Ký tự chốt từ khóa đang gõ thành thẻ: chỉ dấu phẩy (dấu cách thuộc từ khóa, vd tên người nhận). */
 export const TAG_SEPARATOR = /^,$/;

@@ -53,7 +53,9 @@ internal static class LegacyOrderFactory
         // Hàng hóa: số kiện = tổng SL các dòng kiện (form không còn ô số kiện riêng); chứng từ: khách khai
         var packageQty = p.Packages.Sum(x => (int)Num(x.Qty));
         var pieces = Math.Max(1, isDoc || packageQty == 0 ? (int)Num(p.Shipment.Pieces) : packageQty);
-        var weight = isDoc ? Num(p.Shipment.GrossWeight) : ChargeableWeight(p.Packages, Num(p.Shipment.GrossWeight), p.Service.Carrier, p.Service.Hub);
+        // MaVanDon.Trong_Luong = CÂN THỰC tổng như hệ thống cũ (proc Export_CVCK / p_MaVanDon_Copy đọc làm GrossWeight; TL quy đổi
+        // hệ thống cũ tự cộng từ MaVanDon_PCS_DIM). Trước 06/11/2026 portal ghi cân tính cước → màn hình cũ hiện "TL thực" = TL quy đổi.
+        var weight = isDoc ? Num(p.Shipment.GrossWeight) : GrossWeight(p.Packages, Num(p.Shipment.GrossWeight), p.Service.Carrier, p.Service.Hub);
         var goods = isDoc ? p.Goods.DocContent : GoodsName(p);
         var value = p.Invoice.Items.Sum(i => Num(i.Qty) * Num(i.Price));
         if (value == 0) value = Num(p.Invoice.DeclaredValue);
@@ -62,10 +64,16 @@ internal static class LegacyOrderFactory
         return new LegacyOrder
         {
             CustomerId = customer.LegacyCustomerId,
-            CustomerName = Clip(customer.CompanyName, 250),
+            // Khách mới (hồ sơ chưa có tên): tên khách trên đơn theo người gửi, như hồ sơ sẽ được ghi.
+            CustomerName = Clip(customer.IsNew || string.IsNullOrWhiteSpace(customer.CompanyName) ? p.Shipper.Company : customer.CompanyName, 250),
             OrderNumber = orderNumber,
             VaBill = null, // như hệ thống cũ (23/10/2026): mã bill = OrderNumber, cột VA_Bill để NULL
             Awb = "",
+            // Mã hãng / POD để chuỗi rỗng như đơn Bill Online cũ, KHÔNG để NULL: proc CMS p_Orders_GET_POD chép
+            // Sent_Date / POD / Bill_Connect từ Orders sang MaVanDon bằng điều kiện "MVD.Bill_Connect <> T.ConnectAWB OR MVD.POD <> T.BOD"
+            // — NULL <> 'x' không bao giờ đúng nên đơn để NULL không bao giờ được cập nhật trạng thái (06/11/2026).
+            BillConnect = "",
+            Pod = "",
 
             // Việt An chỉ nhận hàng xuất đi từ Việt Nam: điền ID nước như hệ thống cũ, không để NULL.
             SenderCountryId = LegacyVietnamCountryId,
@@ -120,8 +128,8 @@ internal static class LegacyOrderFactory
     public const string DefaultPackType = "CARTON";
 
     /// <summary>
-    /// Dòng kiện (dbo.MaVanDon_PCS_DIM) cho vận đơn <paramref name="orderId"/>: cân / quy đổi / cân tính cước là tổng của dòng,
-    /// kích thước làm tròn lên cm. Chứng từ không ghi kiện (form chứng từ không có chi tiết kiện).
+    /// Dòng kiện (dbo.MaVanDon_PCS_DIM) cho vận đơn <paramref name="orderId"/>: cân / quy đổi / cân tính cước ghi theo 1 kiện như hệ thống cũ
+    /// (quy đổi / tính cước của cả dòng — đã làm tròn lên 0,5 kg theo dòng — chia đều số kiện), kích thước làm tròn lên cm. Chứng từ không ghi kiện (form chứng từ không có chi tiết kiện).
     /// </summary>
     public static List<LegacyPackageLine> PackageLines(OrderPayload p, int orderId)
     {
@@ -132,9 +140,9 @@ internal static class LegacyOrderFactory
             .Where(k => k.Qty > 0 && (k.Kg > 0 || k.L * k.W * k.H > 0))
             .Select(k =>
             {
-                var weight = Round(k.Qty * k.Kg);
                 var volumePerPiece = ShippingRules.Volume(k.L, k.W, k.H, rule);
-                var volumetric = Round(k.Qty * volumePerPiece);
+                var lineVolumetric = ShippingRules.LineVolume(k.Qty, volumePerPiece);
+                var lineChargeable = ShippingRules.LineWeight(k.Qty, k.Kg, volumePerPiece, rule);
                 return new LegacyPackageLine
                 {
                     OrderId = orderId,
@@ -143,9 +151,9 @@ internal static class LegacyOrderFactory
                     LengthCm = (int)Math.Ceiling(ShippingRules.Dimension(k.L, rule)),
                     WidthCm = (int)Math.Ceiling(ShippingRules.Dimension(k.W, rule)),
                     HeightCm = (int)Math.Ceiling(ShippingRules.Dimension(k.H, rule)),
-                    WeightKg = weight,
-                    VolumetricKg = volumetric,
-                    ChargeableKg = Round(k.Qty * ShippingRules.PieceWeight(k.Kg, volumePerPiece, rule))
+                    WeightKg = Round(k.Kg),
+                    VolumetricKg = Round(lineVolumetric / k.Qty),
+                    ChargeableKg = Round(lineChargeable / k.Qty)
                 };
             })
             .ToList();
@@ -206,11 +214,22 @@ internal static class LegacyOrderFactory
     }
 
     /// <summary>Tổng cân tính cước từng kiện, rồi làm tròn tổng theo hãng/dịch vụ; không có kiện thì lấy cân tổng khai báo.</summary>
+    /// <summary>
+    /// Cân thực tổng ghi MaVanDon.Trong_Luong: cộng SL × cân 1 kiện của các dòng kiện; không có dòng kiện → cân khách khai.
+    /// Kiện không khai cân (chỉ có kích thước) → cân tính cước, để đơn vẫn có cân (đơn đủ điều kiện in cần cân &gt; 0). Hàm thuần — có test.
+    /// </summary>
+    public static decimal GrossWeight(IReadOnlyCollection<OrderPayload.PackagePart> packages, decimal grossWeight, string? carrier = null, string? hub = null)
+    {
+        if (packages.Count == 0) return grossWeight;
+        var actual = packages.Sum(p => Num(p.Qty) * Num(p.Weight));
+        return actual > 0 ? actual : ChargeableWeight(packages, grossWeight, carrier, hub);
+    }
+
     public static decimal ChargeableWeight(IReadOnlyCollection<OrderPayload.PackagePart> packages, decimal grossWeight, string? carrier = null, string? hub = null)
     {
         if (packages.Count == 0) return grossWeight;
         var rule = ShippingRules.Rule(carrier, hub);
-        var chargeable = packages.Sum(p => (int)Num(p.Qty) * ShippingRules.PieceWeight(Num(p.Weight),
+        var chargeable = packages.Sum(p => ShippingRules.LineWeight((int)Num(p.Qty), Num(p.Weight),
             ShippingRules.Volume(Num(p.Length), Num(p.Width), Num(p.Height), rule), rule));
         return chargeable > 0 ? ShippingRules.ShipmentWeight(chargeable, rule) : grossWeight;
     }

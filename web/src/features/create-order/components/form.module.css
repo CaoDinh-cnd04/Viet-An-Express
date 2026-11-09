@@ -247,6 +247,8 @@
 .cell {
   width: 100%;
   height: var(--control-h-sm);
+  /* Bằng chiều cao ô: line-height nhỏ hơn thì Chrome cắt dấu chồng chữ hoa (NGUYỄN hiện NGUYÊN). */
+  line-height: var(--control-h-sm);
   padding: 0 var(--space-2);
   border: 1px solid var(--color-border-strong);
   border-radius: 6px;
@@ -486,6 +488,8 @@
 .pickerSearch {
   width: 100%;
   height: var(--control-h);
+  /* Bằng chiều cao ô: line-height nhỏ hơn thì Chrome cắt dấu chồng chữ hoa (NGUYỄN hiện NGUYÊN). */
+  line-height: var(--control-h);
   padding: 0 var(--space-3);
   margin-bottom: var(--space-3);
   border: 1px solid var(--color-border-strong);
@@ -1296,3 +1300,60 @@
   cursor: pointer;
 }
 
+/* Ô "Dán dữ liệu Excel" của khung Invoice (như hệ thống cũ) */
+.pastePanel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-muted);
+}
+
+.pasteHead {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.pasteHint {
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+}
+
+.pasteArea {
+  width: 100%;
+  min-height: 84px;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.pasteArea:focus {
+  outline: none;
+  border-color: var(--color-brand);
+  box-shadow: var(--focus-ring);
+}
+
+.pasteActions {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.pastePkg {
+  width: 110px;
+}
+
+/* Ghi chú khách mới (nhân viên Việt An vừa tạo) ở đầu khung người gửi */
+.newCustomerHint {
+  margin: 0 0 var(--space-3);
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}

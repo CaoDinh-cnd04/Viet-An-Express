@@ -3,6 +3,7 @@ import { useI18n } from '@/shared/i18n';
 import { cx } from '@/shared/lib/cx';
 import { Icon } from '@/shared/ui';
 import { usePrintDocuments, type PrintDoc } from '../mutations';
+import { useOrdersSource } from '../source';
 import type { Order, OrderActions } from '../types';
 import styles from './OrderRowActions.module.css';
 
@@ -43,15 +44,21 @@ export function LabelButton({ order }: { order: Order }) {
 /**
  * Cột thao tác cuối dòng: 4 nút biểu tượng nhỏ xếp 1 cột dọc (không còn menu "…" trùng với nút xem):
  * xem chi tiết · ảnh kiện hàng · copy đơn · báo sự cố. Rê chuột hiện tên thao tác.
+ * Trang "Đơn khách phụ trách" (nhân viên Việt An): chỉ xem + ảnh — copy đơn phải chọn khách như cũ.
  */
 export function RowTools({ order, actions }: { order: Order; actions: OrderActions }) {
   const { t } = useI18n();
   const navigate = useNavigate();
+  const managed = useOrdersSource() === 'managed';
   const tools = [
     { icon: 'eye', label: t('Xem chi tiết đơn {bill}', { bill: order.bill }), onClick: () => actions.onOpen(order) },
     { icon: 'image', label: order.photos ? t('Xem ảnh kiện hàng ({n})', { n: order.photos }) : t('Xem ảnh kiện hàng'), onClick: () => actions.onPhotos(order) },
-    { icon: 'copy', label: t('Copy đơn'), onClick: () => navigate(`/orders/new?from=${encodeURIComponent(order.bill)}`) },
-    { icon: 'alert', label: t('Báo sự cố'), onClick: () => actions.onReportIssue(order) }
+    ...(managed
+      ? []
+      : ([
+          { icon: 'copy', label: t('Copy đơn'), onClick: () => navigate(`/orders/new?from=${encodeURIComponent(order.bill)}`) },
+          { icon: 'alert', label: t('Báo sự cố'), onClick: () => actions.onReportIssue(order) }
+        ] as const))
   ] as const;
   return (
     <div className={styles.tools}>

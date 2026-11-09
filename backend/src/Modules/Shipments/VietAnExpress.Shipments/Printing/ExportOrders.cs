@@ -38,7 +38,8 @@ internal sealed class ExportOrdersHandler(ShipmentsDbContext db, OrderAccess acc
         var nowVn = VietnamTime.ToVietnam(clock.GetUtcNow());
         var today = nowVn.Date;
 
-        var query = OrderListFilter.Apply(access.Apply(db.LegacyOrders.AsNoTracking(), await access.ScopeAsync(ct)), f);
+        var scope = await access.ScopeAsync(f.Managed, ct);
+        var query = OrderListFilter.Apply(access.Apply(db.LegacyOrders.AsNoTracking(), scope), f, await access.CustomerMatchesAsync(scope, f, ct));
         query = OrderListFilter.ApplyStatus(query, f.Status, today);
         IQueryable<LegacyOrder> sorted = OrderListFilter.Sort(query, f.SortBy, f.SortDir);
         if (f.Page is not null && f.PageSize is not null)
@@ -47,11 +48,12 @@ internal sealed class ExportOrdersHandler(ShipmentsDbContext db, OrderAccess acc
             sorted = sorted.Skip((int)Math.Min((long)(page - 1) * size, int.MaxValue)).Take(size);
         }
         else sorted = sorted.Take(ExportOrdersQuery.MaxRows);
-        var orders = await sorted.ToListAsync(ct);
+        var orders = await sorted.Select(LegacyOrderProjections.Export).ToListAsync(ct);
 
         var customer = orders.Select(o => o.CustomerName).FirstOrDefault(n => !string.IsNullOrWhiteSpace(n));
         return new ExportedFile(
-            OrderSheet.Build(orders, today, access.IsCustomer ? customer : null, f.FromDate, f.ToDate, nowVn.DateTime, StatusLabels),
+            OrderSheet.Build(orders, today, access.IsCustomer && !scope.IsManaged ? customer : null, f.FromDate, f.ToDate, nowVn.DateTime, StatusLabels,
+                await access.CustomerLabelsAsync(scope, orders, ct)),
             $"bang-ke-gui-hang-{nowVn:yyyyMMdd-HHmm}.xlsx");
     }
 }

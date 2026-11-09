@@ -5,13 +5,9 @@
   font-size: var(--text-sm);
 }
 
-/* Mã vận đơn: số gõ vào dùng phông chữ số, chữ gợi ý dùng phông thường như các ô khác */
+/* Mã vận đơn: chữ số đều cột */
 .bill {
-  font-family: var(--font-mono);
-}
-
-.bill::placeholder {
-  font-family: var(--font-sans);
+  font-variant-numeric: tabular-nums;
 }
 
 .row {
@@ -122,12 +118,15 @@ textarea.input {
 
 .chips button {
   padding: 0 6px;
-  border: 1px solid var(--color-border-strong);
-  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
   background: var(--color-surface);
-  color: var(--color-brand);
-  font-size: var(--text-xs);
+  color: var(--color-text);
+  font: inherit;
+  font-size: 11px;
   font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: 18px;
   cursor: pointer;
 }
 
@@ -209,4 +208,18 @@ textarea.input {
   .label {
     padding-top: 0;
   }
+}
+
+/* Gợi ý câu hỏi thường gặp theo vấn đề đã chọn */
+.suggest {
+  padding: 6px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-brand-softer);
+}
+
+.suggestTitle {
+  color: var(--color-brand);
+  font-size: 11px;
+  font-weight: 700;
 }

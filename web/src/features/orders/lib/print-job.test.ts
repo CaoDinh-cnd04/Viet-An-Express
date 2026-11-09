@@ -14,6 +14,11 @@ describe('parsePrintJob', () => {
     expect(parsePrintJob(JSON.stringify({ bills: ['VA1'], doc: 'invoice', duty: 'DDP', at: 1 }))).toEqual({ bills: ['VA1'], doc: 'invoice', duty: 'DDP' });
   });
 
+  it('giữ cờ in từ trang đơn khách phụ trách, bỏ giá trị không phải true', () => {
+    expect(parsePrintJob(JSON.stringify({ bills: ['VA1'], doc: 'bill-a4', managed: true, at: 1 }))).toEqual({ bills: ['VA1'], doc: 'bill-a4', managed: true });
+    expect(parsePrintJob(JSON.stringify({ bills: ['VA1'], doc: 'bill-a4', managed: 'yes', at: 1 }))).toEqual({ bills: ['VA1'], doc: 'bill-a4' });
+  });
+
   it('dữ liệu rỗng / hỏng / sai dạng → null', () => {
     expect(parsePrintJob(null)).toBeNull();
     expect(parsePrintJob('{')).toBeNull();

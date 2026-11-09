@@ -8,11 +8,11 @@ namespace VietAnExpress.Shipments.Orders;
 internal static class OrderLookup
 {
     /// <summary>Tìm theo số VA hoặc mã hãng, trong phạm vi khách của người dùng.</summary>
-    public static async Task<LegacyOrder?> FindByBillAsync(ShipmentsDbContext db, OrderAccess access, string bill, CancellationToken ct, bool eventsOnly = false)
+    public static async Task<LegacyOrder?> FindByBillAsync(ShipmentsDbContext db, OrderAccess access, string bill, CancellationToken ct, bool eventsOnly = false, bool managed = false)
     {
         var code = bill.Trim();
         var number = VaBillCode.Number(code);
-        var query = access.Apply(db.LegacyOrders.AsNoTracking(), await access.ScopeAsync(ct));
+        var query = access.Apply(db.LegacyOrders.AsNoTracking(), await access.ScopeAsync(managed, ct));
         // Mã hãng không phải số không được khớp nhầm tất cả dòng OrderNumber NULL.
         query = number is { } parsed
             ? query.Where(o => o.OrderNumber == parsed || o.BillConnect == code)

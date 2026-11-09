@@ -43,6 +43,8 @@
 .date,
 .select {
   height: var(--control-h);
+  /* Bằng chiều cao ô: line-height nhỏ hơn thì Chrome cắt dấu chồng chữ hoa (NGUYỄN hiện NGUYÊN). */
+  line-height: var(--control-h);
   padding: 0 6px;
   border: 1px solid var(--color-border-strong);
   border-radius: var(--radius-control);

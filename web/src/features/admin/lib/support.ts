@@ -1,5 +1,5 @@
 import { stripDiacritics } from '@/shared/lib/text';
-import { kindOf, ticketTitle, SUPPORT_KINDS, type SupportStatus, type SupportTicket } from '@/features/support';
+import { kindOf, ticketTitle, SUPPORT_KINDS, type StatusTile, type SupportStatus, type SupportTicket } from '@/features/support';
 import type { AdminSupportTicket } from '../api';
 
 export type SupportFilter = 'open' | SupportStatus | 'all';
@@ -35,6 +35,10 @@ export const UNASSIGNED = 'none';
 export const matchesStaff = (x: AdminSupportTicket, staff: string) =>
   !staff || (staff === UNASSIGNED ? !x.managerId : String(x.managerId ?? '') === staff);
 
+/** Lọc theo khách (mã khách TCustomer) — trống = mọi khách; so không phân biệt hoa thường, bỏ khoảng trắng. */
+export const matchesCustomer = (x: AdminSupportTicket, customerCode: string) =>
+  !customerCode || x.customerCode.trim().toLowerCase() === customerCode.trim().toLowerCase();
+
 /** Nhân viên có trong danh sách (không trùng, theo tên) — cho ô lọc nhân viên. */
 export function staffOptions(items: readonly AdminSupportTicket[]): Array<{ id: string; name: string }> {
   const seen = new Map<string, string>();
@@ -64,13 +68,63 @@ export function ticketActions(status: SupportStatus, canWait = true): TicketActi
 
 function actionsOf(status: SupportStatus): TicketAction[] {
   switch (status) {
+    // Không còn nút "Chờ khách" (06/11/2026): khách nhắn lúc nào cũng được, không cần CS cho phép.
     case 'new':
-      return [{ status: 'waitc', label: 'Chờ khách' }, { status: 'done', label: 'Đã xử lý' }, { status: 'doing', label: 'Tiếp nhận', primary: true }];
+      return [{ status: 'done', label: 'Đã xử lý' }, { status: 'doing', label: 'Tiếp nhận', primary: true }];
     case 'doing':
-      return [{ status: 'waitc', label: 'Chờ khách' }, { status: 'done', label: 'Đã xử lý', primary: true }];
-    case 'waitc':
+      return [{ status: 'done', label: 'Đã xử lý', primary: true }];
+    case 'waitc': // dòng cũ CS đã chuyển "Chờ khách"
       return [{ status: 'doing', label: 'Đang xử lý' }, { status: 'done', label: 'Đã xử lý', primary: true }];
     case 'done':
       return [{ status: 'doing', label: 'Mở lại', primary: true }];
   }
 }
+
+// ---------- Trang Hỗ trợ & góp ý của nhân viên Việt An (ManagedSupport) — cùng bố cục trang khách ----------
+
+/** Ô trạng thái đầu trang CS. */
+export type ManagedFilter = 'new' | 'doing' | 'waitc' | 'done' | 'all';
+
+export const MANAGED_TILES: ReadonlyArray<StatusTile<ManagedFilter>> = [
+  { key: 'new', label: 'Mới', tone: 'var(--color-info)', icon: 'bell' },
+  { key: 'doing', label: 'Đang xử lý', tone: 'var(--color-status-fly)', icon: 'clock' },
+  { key: 'waitc', label: 'Chờ khách', tone: 'var(--color-warning)', icon: 'message' },
+  { key: 'done', label: 'Đã xử lý', tone: 'var(--color-success)', icon: 'checkCircle' },
+  { key: 'all', label: 'Tất cả', tone: 'var(--color-text-muted)', icon: 'inbox' }
+];
+
+/** Ô mở đầu: còn yêu cầu mới → Mới; rồi Đang xử lý, Chờ khách; không còn gì mở → Tất cả. */
+export function defaultManagedFilter(items: readonly AdminSupportTicket[]): ManagedFilter {
+  for (const f of ['new', 'doing', 'waitc'] as const) if (items.some(x => x.ticket.status === f)) return f;
+  return 'all';
+}
+
+export function managedCounts(items: readonly AdminSupportTicket[]): Record<ManagedFilter, number> {
+  const n = (s: SupportStatus) => items.filter(x => x.ticket.status === s).length;
+  return { new: n('new'), doing: n('doing'), waitc: n('waitc'), done: n('done'), all: items.length };
+}
+
+/** Lọc loại ở trang CS: hỗ trợ (gồm sự cố cũ) / góp ý / lời nhắn trang chủ; trống = tất cả. */
+export type ManagedKind = '' | 'ho_tro' | 'gop_y' | 'lien_he';
+
+export const MANAGED_KINDS: ReadonlyArray<{ value: ManagedKind; label: string }> = [
+  { value: '', label: 'Tất cả' },
+  { value: 'ho_tro', label: 'Hỗ trợ & sự cố' },
+  { value: 'gop_y', label: 'Góp ý' },
+  { value: 'lien_he', label: 'Liên hệ trang chủ' }
+];
+
+export function matchesKind(x: AdminSupportTicket, kind: ManagedKind): boolean {
+  if (!kind) return true;
+  if (isContactMessage(x.ticket)) return kind === 'lien_he';
+  return kind === 'gop_y' ? kindOf(x.ticket) === 'gop_y' : kind === 'ho_tro' && kindOf(x.ticket) !== 'gop_y';
+}
+
+/** Câu trả lời mẫu cho CS — chọn để điền sẵn ô trả lời rồi sửa thêm. Sửa / thêm câu tại đây. */
+export const CS_REPLY_TEMPLATES: readonly string[] = [
+  'Dạ em đã nhận yêu cầu, em kiểm tra với hãng và báo lại anh/chị trong hôm nay ạ.',
+  'Anh/chị gửi giúp em số điện thoại và địa chỉ đầy đủ của người nhận để em bổ sung cho hãng ạ.',
+  'Anh/chị gửi giúp em ảnh kiện hàng và ảnh bill lúc giao ạ.',
+  'Đơn đã giao thành công, anh/chị xem hành trình ở trang Tra cứu ạ.',
+  'Em đã cập nhật thông tin theo yêu cầu, anh/chị kiểm tra lại giúp em ạ.'
+];

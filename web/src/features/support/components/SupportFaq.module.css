@@ -1,0 +1,179 @@
+.faq {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-sizing: border-box;
+  height: 60px;
+  padding: 0 20px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.head h3 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.close {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.close:hover {
+  background: var(--color-surface-muted);
+}
+
+.body {
+  flex: 1;
+  min-height: 0;
+  padding: 12px 20px;
+  overflow-y: auto;
+}
+
+.search {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-surface-muted);
+  color: var(--color-text-faint);
+}
+
+.search:focus-within {
+  border-color: var(--color-brand);
+  box-shadow: var(--focus-ring);
+}
+
+.search input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: none;
+  color: var(--color-text);
+  font: inherit;
+  font-size: 12.5px;
+  outline: none;
+}
+
+.cats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 10px 0 4px;
+}
+
+.cats button {
+  padding: 2px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  font: inherit;
+  font-size: 11.5px;
+  cursor: pointer;
+}
+
+.cats .on {
+  border-color: var(--color-brand);
+  background: var(--color-brand);
+  color: var(--color-on-secondary);
+  font-weight: 600;
+}
+
+.qa {
+  padding: 10px 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.qa summary {
+  display: flex;
+  gap: 8px;
+  font-size: 12.5px;
+  font-weight: 600;
+  list-style: none;
+  cursor: pointer;
+}
+
+.qa summary::-webkit-details-marker {
+  display: none;
+}
+
+.qa summary::before {
+  content: "+";
+  flex: none;
+  width: 10px;
+  color: var(--color-brand);
+  font-weight: 700;
+}
+
+.qa[open] summary::before {
+  content: "–";
+}
+
+.qa p {
+  margin: 6px 0 0 18px;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.qa p a {
+  color: var(--color-brand);
+  font-weight: 600;
+}
+
+/* Gợi ý trong form gửi yêu cầu: gọn hơn, không kẻ dòng */
+.compact {
+  padding: 4px 0;
+  border-bottom: 0;
+}
+
+.compact summary {
+  font-size: 12.5px;
+}
+
+.compact p {
+  font-size: 12.5px;
+}
+
+.empty {
+  margin: var(--space-3) 0;
+  color: var(--color-text-faint);
+  font-size: 12px;
+}
+
+.foot {
+  margin: 0;
+  padding: 10px 20px;
+  border-top: 1px solid var(--color-border);
+  color: var(--color-text-faint);
+  font-size: 12px;
+}
+
+.foot button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-brand);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}

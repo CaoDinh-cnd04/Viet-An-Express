@@ -61,8 +61,14 @@ internal sealed class GeoapifyAddressProvider(
 /// <summary>Đọc JSON Geoapify (format=json) — hàm thuần, có test.</summary>
 internal static class GeoapifyParser
 {
-    /// <summary>Loại kết quả có số nhà / tên đường để điền ô Địa chỉ 1; loại khác (thành phố, mã bưu chính…) chỉ điền thành phố / tỉnh / mã.</summary>
+    /// <summary>Loại kết quả có số nhà / tên đường để điền ô Địa chỉ 1.</summary>
     private static readonly HashSet<string> StreetLevel = ["building", "street", "amenity"];
+
+    /// <summary>
+    /// Khu vực dưới cấp thành phố (UAE "Ras Al Khor Industrial 3", phường / quận): address_line1 là tên khu vực — điền ô Địa chỉ 1
+    /// nếu không trùng thành phố / tỉnh. Cấp thành phố / tỉnh / mã bưu chính / nước chỉ điền thành phố / tỉnh / mã.
+    /// </summary>
+    private static readonly HashSet<string> AreaLevel = ["suburb", "district", "unknown"];
 
     /// <summary>
     /// { results: [ { formatted, address_line1, housenumber, street, city, state, state_code, postcode, country_code, result_type } ] }.
@@ -89,7 +95,13 @@ internal static class GeoapifyParser
 
     private static string Address1(JsonElement r)
     {
-        if (!StreetLevel.Contains(Str(r, "result_type") ?? "")) return "";
+        var type = Str(r, "result_type") ?? "";
+        if (AreaLevel.Contains(type))
+        {
+            var area = Str(r, "address_line1");
+            return area is null || SameText(area, Str(r, "city")) || SameText(area, Str(r, "state")) ? "" : area;
+        }
+        if (!StreetLevel.Contains(type)) return "";
         var street = Str(r, "street");
         // Địa điểm (cửa hàng, toà nhà có tên): address_line1 là tên địa điểm — ghép số nhà + đường cho đúng địa chỉ giao hàng.
         // Không có số nhà (Nhật: address_line1 là số khối "1-1") → giữ address_line1 rồi thêm đường.
@@ -102,6 +114,8 @@ internal static class GeoapifyParser
         }
         return Str(r, "address_line1") ?? street ?? "";
     }
+
+    private static bool SameText(string a, string? b) => b is not null && string.Equals(a, b, StringComparison.OrdinalIgnoreCase);
 
     private static string? Str(JsonElement e, string name) =>
         e.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.String && v.GetString() is { Length: > 0 } s ? s.Trim() : null;

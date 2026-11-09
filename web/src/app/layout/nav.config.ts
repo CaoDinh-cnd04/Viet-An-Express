@@ -48,7 +48,8 @@ export const NAV: ReadonlyArray<NavEntry> = [
     icon: 'box',
     children: [
       { to: '/drafts', label: 'Đơn nháp & chưa in', badge: 'drafts', permission: PERMISSIONS.shipmentsView },
-      { to: '/orders', label: 'Đơn hàng của tôi', permission: PERMISSIONS.shipmentsView }
+      { to: '/orders', label: 'Đơn hàng của tôi', permission: PERMISSIONS.shipmentsView },
+      { to: '/orders/managed', label: 'Đơn khách phụ trách', permission: PERMISSIONS.managedOrders }
     ]
   },
   // Tạm ẩn nhóm "Dịch vụ & Bán hàng" khỏi menu (route /pricing, /ecommerce vẫn giữ) — bỏ comment để hiện lại.

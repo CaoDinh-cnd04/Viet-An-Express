@@ -25,7 +25,10 @@ internal sealed record SessionUserDto(
     string? TaxCode = null,
     bool IsAdmin = false,
     string? AgentUserName = null,
-    string? AgentName = null);
+    string? AgentName = null,
+    bool NewCustomer = false,
+    bool CanAssignManager = false,
+    bool ManagerPending = false);
 
 /// <summary>
 /// Loại tài khoản: "customer" = tài khoản chính của khách (admin), "staff" = tài khoản con của nhân viên,
@@ -46,4 +49,5 @@ internal sealed record AuthSession(
     DateTimeOffset AccessTokenExpiresAt,
     string RefreshToken,
     DateTimeOffset RefreshTokenExpiresAt,
-    bool IsPersistent);
+    bool IsPersistent,
+    IssuedToken? OtpDayPass = null);

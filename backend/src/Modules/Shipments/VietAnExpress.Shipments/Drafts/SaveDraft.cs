@@ -71,6 +71,7 @@ internal sealed class SaveDraftHandler(ShipmentsDbContext db, OrderAccess access
             await tx.CommitAsync(ct);
         });
         if (failure is not null) return failure;
+        await access.FillNewCustomerAsync(writer.Value, payload, ct);
 
         var (packages, items) = await DraftStore.LinesAsync(db, [saved.Id], ct);
         return DraftOrders.ToDto(saved, packages[(int)saved.Id].ToList(), items[(int)saved.Id].ToList());

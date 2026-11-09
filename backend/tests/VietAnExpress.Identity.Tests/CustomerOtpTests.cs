@@ -5,6 +5,7 @@ using Microsoft.Extensions.Options;
 using Microsoft.EntityFrameworkCore;
 using VietAnExpress.Identity.Auth;
 using VietAnExpress.Identity.CustomerOtp;
+using VietAnExpress.Identity.Shared;
 using VietAnExpress.Identity.Staff;
 using Xunit;
 
@@ -19,11 +20,13 @@ public class CustomerOtpTests
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
 
     /// <summary>Kho mã + sổ email dùng chung cho các bước của 1 test.</summary>
+    private static readonly EmailCompany TestCompany = new("Việt An Express", null, null, null, null);
+
     private sealed class Otp(IdentityFixture f, string mode = CustomerOtpOptions.On)
     {
         public CustomerOtpStore Store { get; } = new(f.Clock);
         public OtpEmailRegistry Registry { get; } = NewRegistry(f);
-        private CustomerOtpMailer Mailer => new(Store, f.Email, f.Environment.Object, NullLogger<CustomerOtpMailer>.Instance);
+        private CustomerOtpMailer Mailer => new(Store, f.Email, TestCompany, f.Environment.Object, NullLogger<CustomerOtpMailer>.Instance);
 
         public StartCustomerOtpHandler Start => new(f.Db, Store, Registry, Mailer, Options.Create(new CustomerOtpOptions { Mode = mode }));
         public SetOtpEmailHandler SetEmail => new(Store, Mailer, f.Clock);
@@ -39,7 +42,7 @@ public class CustomerOtpTests
     private static async Task<AuthSession> Password(IdentityFixture f, string userName = IdentityFixture.UserName, string password = IdentityFixture.Password) =>
         (await f.Login.Handle(new LoginCommand(userName, password, false), Ct)).Value;
 
-    private static string SentCode(IdentityFixture f) => Regex.Match(f.Email.Sent[^1].Body, @"là: (\d{6})").Groups[1].Value;
+    private static string SentCode(IdentityFixture f) => Regex.Match(f.Email.Sent[^1].Body, @"bạn: (\d{6})").Groups[1].Value;
 
     [Fact]
     public async Task Tat_OTP_thi_dang_nhap_nhu_cu()

@@ -13,6 +13,13 @@ internal sealed class LegacyOrder
 {
     /// <summary>Status = 0: đơn chưa in (nháp / chờ in) — chưa có số bill, sửa / xóa được; hệ thống cũ cũng hiện ở danh sách đơn.</summary>
     public const int DraftStatus = 0;
+
+    /// <summary>
+    /// Đơn chưa in: nháp portal (Status 0) hoặc đơn hệ thống cũ lưu mà chưa in (chưa có OrderNumber — 06/11/2026 người dùng chốt:
+    /// nằm ở "Đơn nháp & chưa in", khách sửa / in tiếp trên portal). Dùng cho query filter, danh sách nháp và khóa dòng.
+    /// </summary>
+    public static readonly System.Linq.Expressions.Expression<Func<LegacyOrder, bool>> IsUnprinted =
+        o => o.Status == DraftStatus || o.OrderNumber == null;
     /// <summary>Status = 1: đã cấp bill (đơn của hệ thống cũ và đơn portal đã in).</summary>
     public const int IssuedStatus = 1;
 
@@ -104,8 +111,9 @@ internal sealed class LegacyOrderConfiguration : IEntityTypeConfiguration<Legacy
     {
         b.ToTable("MaVanDon", "dbo", t => t.LegacyTable());
         b.HasKey(x => x.Id);
-        // Đơn chưa in (Status = 0) chỉ hiện ở "Đơn nháp & chưa in" — mọi truy vấn đơn khác bỏ qua; xử lý nháp dùng IgnoreQueryFilters.
-        b.HasQueryFilter(x => x.Status == null || x.Status != LegacyOrder.DraftStatus);
+        // Đơn chưa in (Status = 0 hoặc chưa có OrderNumber — xem IsUnprinted) chỉ hiện ở "Đơn nháp & chưa in" — mọi truy vấn đơn khác bỏ qua;
+        // xử lý nháp dùng IgnoreQueryFilters.
+        b.HasQueryFilter(x => (x.Status == null || x.Status != LegacyOrder.DraftStatus) && x.OrderNumber != null);
         b.Property(x => x.Id).HasColumnName("ID").ValueGeneratedOnAdd();
         b.Property(x => x.CustomerId).HasColumnName("CustomerID");
         b.Property(x => x.Awb).HasColumnName("AWB").HasMaxLength(20);

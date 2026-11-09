@@ -159,7 +159,7 @@ internal static class CommercialInvoice
 
     /// <summary>Kích thước đo theo mẫu PDF (A4 dọc, lề trái / phải ~19 mm).</summary>
     public const string Css = """
-        .invoice { font-family: Aptos, "Aptos Body", Arial, Helvetica, sans-serif; font-size: 9px; color: #222; padding: 14mm 19mm; }
+        .invoice { font-family: "Times New Roman", Times, serif; font-size: 9px; color: #222; padding: 14mm 19mm; }
         .inv-head { display: grid; grid-template-columns: 85mm 37mm; align-items: center; height: 12mm; margin-bottom: 4mm; }
         .inv-title { padding-left: 25mm; font-size: 21px; color: #555; letter-spacing: .3px; }
         .inv-head .barcode { display: block; width: 37mm; height: 8mm; }

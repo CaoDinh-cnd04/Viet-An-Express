@@ -60,7 +60,38 @@ internal static class OrderListFilter
         return query;
     }
 
-    private static readonly string[] SearchFields = ["all", "cnee", "bill", "ref", "ct", "svc"];
+    /// <summary>
+    /// Cùng luật với <see cref="ApplyStatus"/> nhưng tính trên 2 cờ trạng thái của đơn (đã có ở bộ nhớ):
+    /// trong 1 nhóm khớp bất kỳ, giữa 2 nhóm khớp cả hai, chọn đủ / không chọn ô nào của nhóm = nhóm đó không lọc. Hàm thuần — có test.
+    /// </summary>
+    public static bool MatchesStatus(IReadOnlyList<string> statuses, bool waiting, bool notDelivered)
+    {
+        foreach (var group in StatusGroups)
+        {
+            var picked = group.Where(statuses.Contains).ToList();
+            if (picked.Count is 0 || picked.Count == group.Length) continue;
+            var ok = picked.Any(s => s switch
+            {
+                LegacyOrderStatus.Waiting => waiting,
+                LegacyOrderStatus.InTransit => !waiting,
+                LegacyOrderStatus.NotDelivered => notDelivered,
+                LegacyOrderStatus.Delivered => !notDelivered,
+                _ => false
+            });
+            if (!ok) return false;
+        }
+        return true;
+    }
+
+    /// <summary>Có điều kiện lọc nào ngoài tab trạng thái (tìm, ngày, loại, cân) — dùng chọn cách truy vấn ở <see cref="GetOrdersHandler"/>.</summary>
+    public static bool HasFilters(GetOrdersQuery q) =>
+        SearchTags(q.Q, q.SearchField).Count > 0 || q.FromDate is not null || q.ToDate is not null
+        || q.Type?.Trim().ToUpperInvariant() is "DOC" or "PACK" || q.WeightFrom is not null || q.WeightTo is not null;
+
+    /// <summary>"kh" = khách của đơn — trang "Đơn khách phụ trách" của nhân viên Việt An.</summary>
+    private static readonly string[] SearchFields = ["all", "cnee", "bill", "ref", "ct", "svc", CustomerField];
+
+    public const string CustomerField = "kh";
 
     /// <summary>
     /// Thẻ tìm của frontend: mỗi dòng "field:giá trị" (vd "cnee:Ms Uyen", "ct:Singapore").
@@ -81,11 +112,21 @@ internal static class OrderListFilter
             .ToList();
     }
 
-    public static IQueryable<LegacyOrder> Apply(IQueryable<LegacyOrder> query, GetOrdersQuery q)
+    /// <param name="customerMatches">
+    /// Trang đơn khách phụ trách: từ khóa thẻ "kh" / "Tất cả" → CustomerID khớp mã / tên / SĐT / tên đăng nhập khách (tra ở module Customers,
+    /// <see cref="OrderAccess.CustomerMatchesAsync"/>); thiếu thì chỉ so tên khách ghi trên đơn (MaVanDon.CustomerName).
+    /// </param>
+    public static IQueryable<LegacyOrder> Apply(IQueryable<LegacyOrder> query, GetOrdersQuery q,
+        IReadOnlyDictionary<string, IReadOnlyList<long>>? customerMatches = null)
     {
         // Cùng trường: khớp bất kỳ (OR). Khác trường: phải khớp tất cả (AND) — vd người nhận "Uyen" VÀ nước đến "Singapore".
         foreach (var group in SearchTags(q.Q, q.SearchField).GroupBy(t => t.Field))
-            query = query.Where(AnyOf(group.Select(t => Match(t.Field, t.Value))));
+        {
+            var values = group.Select(t => t.Value).ToList();
+            query = group.Key == "bill" && values.Count > 1
+                ? ExactBills(query, values)
+                : query.Where(AnyOf(group.Select(t => Match(t.Field, t.Value, customerMatches?.GetValueOrDefault(t.Value) ?? [], q.Managed))));
+        }
 
         if (q.FromDate is { } from)
         {
@@ -108,34 +149,74 @@ internal static class OrderListFilter
         return query;
     }
 
-    /// <summary>Điều kiện khớp 1 giá trị tìm theo trường đang chọn.</summary>
-    private static Expression<Func<LegacyOrder, bool>> Match(string? field, string term)
+    /// <summary>
+    /// Điều kiện khớp 1 giá trị tìm theo trường đang chọn. "Tất cả" = đúng các trường của ô chọn: tên khách hàng (trang đơn khách phụ trách),
+    /// người nhận (công ty, người liên hệ), VA Bill (số bill, VA_Bill, mã hãng), số tham chiếu, nước đến, dịch vụ.
+    /// (06/11/2026: bỏ SĐT / email / địa chỉ / mã bưu chính / thành phố / bang / tên hàng khỏi "Tất cả" — 19 cột trên 300k đơn mất 12–28 giây;
+    /// các cột còn lại đều nằm trong index IX_MaVanDon_Portal_Customer.)
+    /// Không phân biệt hoa / thường và dấu tiếng Việt (kể cả đ / Đ): "xoai say" khớp "Xoài sấy" — xem <see cref="OrderTextSearch"/>.
+    /// </summary>
+    /// <param name="customerIds">Khách khớp từ khóa (chỉ trang đơn khách phụ trách) — dùng cho "kh" và "Tất cả".</param>
+    /// <param name="managed">Trang đơn khách phụ trách: "Tất cả" tìm cả khách của đơn (trang 1 khách thì tên khách trên đơn là chính mình — bỏ qua).</param>
+    private static Expression<Func<LegacyOrder, bool>> Match(string? field, string term, IReadOnlyList<long> customerIds, bool managed)
     {
-        // Không phân biệt hoa / thường ở mọi collation: so sánh UPPER(cột) với từ khóa viết hoa.
         term = VaBillCode.StripPiece(term); // máy quét nhãn kiện gõ "số bill/số kiện"
-        var like = term.ToUpperInvariant().ToLikePattern()!;
+        var t = OrderTextSearch.Term.Of(term);
+        // Dịch vụ lưu "Hãng|Tuyến", bảng hiện "Hãng - Tuyến": gõ kiểu nào cũng ra.
+        var service = OrderTextSearch.Term.Of(term.Replace(" - ", "|"));
         // Gõ 1 phần số VA (vd "6010") cũng tìm ra — so khớp chuỗi số, không cần gõ đủ.
         var digits = term.All(char.IsAsciiDigit);
+
+        Expression<Func<LegacyOrder, bool>> Cnee() => AnyOf<LegacyOrder>([
+            OrderTextSearch.Text(o => o.ConsigneeName, t), OrderTextSearch.Text(o => o.ConsigneeContactName, t)]);
+        Expression<Func<LegacyOrder, bool>> Bill() => AnyOf<LegacyOrder>([
+            .. digits ? [OrderTextSearch.Number(t)] : Array.Empty<Expression<Func<LegacyOrder, bool>>>(),
+            OrderTextSearch.Code(o => o.VaBill, t), OrderTextSearch.Code(o => o.BillConnect, t)]);
+        Expression<Func<LegacyOrder, bool>> Ref() => OrderTextSearch.Code(o => o.CustomerBill, t);
+        Expression<Func<LegacyOrder, bool>> Country() => OrderTextSearch.Text(o => o.ConsigneeCountry, t);
+        // Dịch vụ lưu dạng "Hãng|Tuyến" (vd "DHL|Singapore", "Chuyên tuyến|Taiwan") — gõ "DHL" hay "Chuyen tuyen" đều ra.
+        Expression<Func<LegacyOrder, bool>> Service() => OrderTextSearch.Text(o => o.ServiceName, service);
+        Expression<Func<LegacyOrder, bool>> Customer() => AnyOf<LegacyOrder>([
+            o => o.CustomerId != null && customerIds.Contains(o.CustomerId.Value), OrderTextSearch.Text(o => o.CustomerName, t)]);
+
         return (field ?? "all") switch
         {
-            "cnee" => o => EF.Functions.Like(o.ConsigneeName!.ToUpper(), like) || EF.Functions.Like(o.ConsigneeContactName!.ToUpper(), like),
-            "bill" => o => (digits && o.OrderNumber != null && EF.Functions.Like(o.OrderNumber.Value.ToString(), like))
-                || EF.Functions.Like(o.VaBill!.ToUpper(), like)
-                || EF.Functions.Like(o.BillConnect!.ToUpper(), like),
-            "ref" => o => EF.Functions.Like(o.CustomerBill!.ToUpper(), like),
-            "ct" => o => EF.Functions.Like(o.ConsigneeCountry!.ToUpper(), like),
-            // Dịch vụ lưu dạng "Hãng|Tuyến" (vd "DHL|Singapore", "Chuyên tuyến|Taiwan") — gõ "DHL" hay "Chuyên tuyến" đều ra.
-            "svc" => o => EF.Functions.Like(o.ServiceName!.ToUpper(), like),
-            // "Tất cả": mọi trường ở trên — số bill, mã tham chiếu, người nhận (công ty + người liên hệ), nước đến, hãng / dịch vụ.
-            _ => o => (digits && o.OrderNumber != null && EF.Functions.Like(o.OrderNumber.Value.ToString(), like))
-                || EF.Functions.Like(o.VaBill!.ToUpper(), like)
-                || EF.Functions.Like(o.BillConnect!.ToUpper(), like)
-                || EF.Functions.Like(o.CustomerBill!.ToUpper(), like)
-                || EF.Functions.Like(o.ConsigneeName!.ToUpper(), like)
-                || EF.Functions.Like(o.ConsigneeContactName!.ToUpper(), like)
-                || EF.Functions.Like(o.ConsigneeCountry!.ToUpper(), like)
-                || EF.Functions.Like(o.ServiceName!.ToUpper(), like)
+            "cnee" => Cnee(),
+            "bill" => Bill(),
+            "ref" => Ref(),
+            "ct" => Country(),
+            "svc" => Service(),
+            CustomerField => Customer(),
+            _ => AnyOf<LegacyOrder>([Bill(), Ref(), Cnee(), Country(), Service(),
+                .. managed ? [Customer()] : Array.Empty<Expression<Func<LegacyOrder, bool>>>()])
         };
+    }
+
+    /// <summary>
+    /// Dán nhiều bill (cả cột Excel, tối đa <see cref="MaxTerms"/>): so khớp ĐÚNG mã thay vì "chứa" từng mã — 200 mã × LIKE trên 300k đơn rất chậm.
+    /// Số VA (6003585, VAHCM6003585US, 6003585/2) → OrderNumber IN (...); mã hãng / mã VA_Bill → Bill_Connect / VA_Bill IN (...).
+    /// Gõ 1 giá trị vẫn tìm 1 phần như cũ (<see cref="Match"/>).
+    /// </summary>
+    internal static IQueryable<LegacyOrder> ExactBills(IQueryable<LegacyOrder> query, IReadOnlyList<string> values)
+    {
+        var (numbers, codes, others) = ExactBillKeys(values);
+        // Mỗi nhánh tra thẳng index (IX_MaVanDon_OrderNumber / IX_MaVanDon_BillConnect) rồi gộp ID — không so từng mã trên từng đơn
+        // (50 mã × 300k đơn mất ~5 giây). Mã VA (VAHCM6003585US) đã đổi ra số bill nên VA_Bill chỉ so mã không đọc được số.
+        var ids = query.Where(o => o.OrderNumber != null && numbers.Contains(o.OrderNumber.Value)).Select(o => o.Id)
+            .Union(query.Where(o => o.BillConnect != null && codes.Contains(o.BillConnect)).Select(o => o.Id));
+        if (others.Count > 0) ids = ids.Union(query.Where(o => o.VaBill != null && others.Contains(o.VaBill)).Select(o => o.Id));
+        return query.Where(o => ids.Contains(o.Id));
+    }
+
+    /// <summary>
+    /// Dán nhiều bill → (số bill VA, mọi mã để so mã hãng, mã không đọc ra số để so VA_Bill). Số VA nhận "6003585", "VAHCM6003585US",
+    /// "6003585/2" (mã vạch nhãn kiện); mã hãng toàn số (DHL) vừa so số bill vừa so mã hãng. Hàm thuần — có test.
+    /// </summary>
+    internal static (List<long> Numbers, List<string> Codes, List<string> Others) ExactBillKeys(IReadOnlyList<string> values)
+    {
+        var codes = values.Select(v => VaBillCode.StripPiece(v)).Where(v => v.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        var numbers = codes.Select(VaBillCode.Number).OfType<long>().Distinct().ToList();
+        return (numbers, codes, codes.Where(c => VaBillCode.Number(c) is null).ToList());
     }
 
     /// <summary>Ghép nhiều điều kiện bằng OR thành 1 biểu thức EF dịch được sang SQL.</summary>

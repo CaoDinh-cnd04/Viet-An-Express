@@ -12,7 +12,7 @@ namespace VietAnExpress.Identity.VietAnStaff;
 internal sealed record VerifyVietAnOtpCommand(string ChallengeId, string Code) : IRequest<Result<AuthSession>>;
 
 internal sealed class VerifyVietAnOtpHandler(
-    ICustomersApi customers, SessionService sessions, LoginAttemptGuard guard, VietAnOtpStore otps, VietAnSessionRegistry? activeSessions = null)
+    ICustomersApi customers, SessionService sessions, LoginAttemptGuard guard, VietAnOtpStore otps, VietAnOtpDayPass dayPass, VietAnSessionRegistry? activeSessions = null)
     : IRequestHandler<VerifyVietAnOtpCommand, Result<AuthSession>>
 {
     public async Task<Result<AuthSession>> Handle(VerifyVietAnOtpCommand cmd, CancellationToken ct)
@@ -33,6 +33,6 @@ internal sealed class VerifyVietAnOtpHandler(
         guard.Succeeded(VietAnOtp.GuardKey(user.UserName));
         // 1 phiên / nhân viên: mã phiên mới → máy đang đăng nhập trước đó bị đá ra.
         activeSessions?.Renew(agent.Id);
-        return sessions.Start(agent, null, user.Remember);
+        return sessions.Start(agent, null, user.Remember) with { OtpDayPass = dayPass.Issue(agent) };
     }
 }

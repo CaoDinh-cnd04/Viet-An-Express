@@ -26,6 +26,5 @@ internal static class SupportRequestErrors
     public static readonly Error Reply = Error.Validation("TROUBLE_NOTE", $"Nội dung trả lời từ 1 đến {SupportThread.ReplyMaxLength} ký tự");
     public static readonly Error NothingToSend = Error.Validation("TROUBLE_EMPTY", "Nhập nội dung trả lời hoặc đổi trạng thái");
     public static readonly Error ContactReply = Error.Validation("TROUBLE_CONTACT_NOTE", "Lời nhắn từ trang chủ chưa có tài khoản để xem trả lời — gọi hoặc email khách rồi đổi trạng thái");
-    public static readonly Error NotWaiting = Error.Validation("TROUBLE_NOT_WAITING", "Yêu cầu này không chờ bạn phản hồi");
     public static readonly Error NotFound = Error.NotFound("TROUBLE_NOT_FOUND", "Không tìm thấy yêu cầu");
 }

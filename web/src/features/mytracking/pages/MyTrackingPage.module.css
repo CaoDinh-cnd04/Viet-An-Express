@@ -64,7 +64,8 @@
 .trackingColumns { display: grid; grid-template-columns: minmax(0, 1fr) minmax(110px, .7fr); gap: 12px; align-items: start; }
 .trackingMain, .advertisingPanel { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
 .trackingSearch { display: grid; grid-auto-flow: column; grid-template-columns: minmax(0, 1fr); grid-auto-columns: auto; gap: 6px; }
-.trackingSearch input { min-width: 0; width: 100%; height: 30px; padding: 4px 6px; border: 1px solid var(--color-border-strong); border-radius: 4px; background: var(--color-surface); color: var(--color-text); font: inherit; }
+/* line-height bằng chiều cao ô: nhỏ hơn thì Chrome cắt dấu chồng chữ hoa (NGUYỄN hiện NGUYÊN). */
+.trackingSearch input { min-width: 0; width: 100%; height: 30px; line-height: 30px; padding: 0 6px; border: 1px solid var(--color-border-strong); border-radius: 4px; background: var(--color-surface); color: var(--color-text); font: inherit; }
 .trackingSearch button, .homeButton { height: 30px; padding: 4px 10px; border: 0; border-radius: 4px; color: var(--color-on-hero); background: var(--color-tracking-bar); font: inherit; }
 /* Nút Home cạnh nút Track: mở website trang home của khách (cùng màu thương hiệu với nút Track). */
 .homeButton:disabled { opacity: .55; cursor: not-allowed; }
@@ -146,6 +147,7 @@
 .standalone .brandInfo { font-size: 16px; }
 .standalone .brandInfo p { margin-top: 10px; }
 .standalone .trackingSearch input, .standalone .trackingSearch button, .standalone .homeButton { height: var(--control-h); font-size: var(--text-lg); }
+.standalone .trackingSearch input { line-height: var(--control-h); }
 .standalone .trackingSearch button, .standalone .homeButton { padding-inline: 20px; cursor: pointer; }
 .standalone .blackBar { padding: 12px; font-size: var(--text-lg); }
 .standalone .promotionTitle { font-size: var(--text-lg); }

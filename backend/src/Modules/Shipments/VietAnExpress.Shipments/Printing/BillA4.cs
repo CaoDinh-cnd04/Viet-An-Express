@@ -54,7 +54,7 @@ internal static class BillA4
         var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
             ["Vietnam"] = "VN", ["Viet Nam"] = "VN", ["USA"] = "US", ["United States of America"] = "US",
-            ["UK"] = "GB", ["England"] = "GB", ["South Korea"] = "KR", ["Korea"] = "KR", ["Taiwan"] = "TW"
+            ["UK"] = "GB", ["England"] = "GB", ["South Korea"] = "KR", ["Korea"] = "KR", ["Korea, South"] = "KR", ["Korea, North"] = "KP", ["Taiwan"] = "TW"
         };
         foreach (var culture in CultureInfo.GetCultures(CultureTypes.SpecificCultures))
         {
@@ -100,14 +100,14 @@ internal static class BillA4
               <div class="m-box">
                 <div class="s-head m-head">
                   <img class="head-img" src="{HeaderDataUri.Value}" alt="Viet An Express · Tel {H(c.Phone)} · Hotline {H(c.Hotline)}">
-                  <div class="awb">{Code128.Svg(pieceNo, 40)}<div class="awb-no">{H(m.Bill)} <small>/{index}</small></div><div class="route">{H(RouteCode(o.ServiceName))}</div></div>
+                  <div class="awb">{Code128.Svg(pieceNo, 40)}<div class="awb-no">{H(m.Bill)} <small>/{index}</small></div><div class="route">{H(m.ServiceText)}</div></div>
                 </div>
                 <div class="m-title">SHIPPING MARK</div>
                 <div class="m-hawb"><i>HAWB:</i> <b>{H(m.Bill)}</b></div>
                 <div class="bar m-bar center"><i>Ref no.:</i> {H(o.CustomerBill)}</div>
                 <div class="m-dest">
                   <div class="qr-frame">{Qr(m.Bill)}</div>
-                  <div class="m-dest-txt"><div class="m-dest-lbl">DESTINATION</div><div class="m-dest-code">{H(CountryCode(o.ConsigneeCountry))}</div></div>
+                  <div class="m-dest-txt"><div class="m-dest-lbl">DESTINATION</div><div class="m-dest-code">{H(m.Destination)}</div></div>
                 </div>
                 <div class="m-pcs"><i>Pcs no:</i> <b>{index} / {total}</b></div>
                 <div class="bar m-bar"><i>Sender</i>:</div>
@@ -132,23 +132,6 @@ internal static class BillA4
             """;
     }
 
-    /// <summary>
-    /// Mã tuyến in dưới số bill, vd "Chuyên tuyến|Singapore" → "CT-Sin", "DHL|Singapore" → "DHL-Sin".
-    /// Hãng nhiều chữ → viết tắt chữ cái đầu; tuyến → 3 ký tự đầu.
-    /// </summary>
-    public static string RouteCode(string? serviceName)
-    {
-        var parts = (serviceName ?? "").Split('|', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
-        if (parts.Length == 0) return "";
-        var words = parts[0].Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        var carrier = words.Length > 1
-            ? string.Concat(words.Select(w => char.ToUpperInvariant(w[0])))
-            : parts[0];
-        if (parts.Length == 1) return carrier;
-        var hub = parts[1].Replace(" ", "");
-        return $"{carrier}-{hub[..Math.Min(3, hub.Length)]}";
-    }
-
     /// <summary>Số điện thoại người nhận kèm mã nước, vd ("65", "65 453778") → "+65 65 453778". Số đã có "+" thì giữ nguyên.</summary>
     public static string PhoneWithCode(string? code, string? phone)
     {
@@ -171,6 +154,28 @@ internal static class BillA4
     }
 
     // ---------------- 1 liên ----------------
+
+    /// <summary>
+    /// Đơn của hệ thống cũ: CS hay ghi địa chỉ người gửi vào cột <c>SenderEmail</c> (không phải email — không có "@").
+    /// Đơn như vậy in đúng thứ tự dòng của bill cũ để cột nào ra đúng chỗ đó. Hàm thuần — có test.
+    /// </summary>
+    internal static bool LegacySenderLayout(LegacyOrder o) =>
+        !string.IsNullOrWhiteSpace(o.SenderEmail) && !o.SenderEmail.Contains('@');
+
+    /// <summary>
+    /// 6 dòng mục người gửi. Đơn hệ thống cũ (<see cref="LegacySenderLayout"/>) như bill cũ: SenderName · SenderAddress · nước + postal ·
+    /// SenderContactName · SenderPhone · SenderEmail (địa chỉ CS ghi, cho xuống 2 dòng). Đơn portal (05/11/2026 người dùng đổi chỗ):
+    /// tên tài khoản / công ty gửi · nước + postal · 2 dòng địa chỉ · điện thoại · người liên hệ · email (dòng 7, trống thì để dòng kẻ trống).
+    /// </summary>
+    internal static string SenderLines(OrderPrintModel m, string addr1, string addr2)
+    {
+        var o = m.Order;
+        var country = $"<div class=\"ln split\"><span>{m.SenderCountryText}</span><span class=\"lbl\">Postal code:</span><span class=\"ln-in\">{H(o.SenderPostalCode)}</span></div>";
+        string Ln(string? v, string cls = "ln") => $"<div class=\"{cls}\">{H(v)}</div>";
+        return LegacySenderLayout(o)
+            ? Ln(o.SenderName) + Ln(o.SenderAddress) + country + Ln(o.SenderContactName) + Ln(o.SenderPhone) + Ln(o.SenderEmail, "ln wrap")
+            : Ln(o.SenderName) + country + Ln(addr1) + Ln(addr2) + Ln(o.SenderPhone) + Ln(o.SenderContactName) + Ln(o.SenderEmail);
+    }
 
     private static string SlipHtml(OrderPrintModel m, CompanyInfo c, Slip slip, DateTime printedAt)
     {
@@ -201,7 +206,7 @@ internal static class BillA4
               <div class="box">
                 <div class="s-head">
                   <img class="head-img" src="{HeaderDataUri.Value}" alt="Viet An Express · Tel {H(c.Phone)} · Hotline {H(c.Hotline)}">
-                  <div class="awb">{Code128.Svg(m.Bill, 40)}<div class="awb-code">{H(m.Bill)}</div><div class="route">{H(RouteCode(o.ServiceName))}</div></div>
+                  <div class="awb">{Code128.Svg(m.Bill, 40)}<div class="awb-code">{H(m.Bill)}</div><div class="route">{H(m.ServiceText)}</div></div>
                 </div>
 
                 <div class="bar">1. Thông tin người gửi <i>(Sender's information)</i>:</div>
@@ -210,14 +215,7 @@ internal static class BillA4
                     <div class="qr-frame">{Qr(m.Bill)}</div>
                     <a class="qr-cap" href="{H(TrackingUrl(c, m.Bill))}" target="_blank" rel="noopener noreferrer">{bill}</a>
                   </div>
-                  <div class="lines">
-                    <div class="ln">{H(addr1)}</div>
-                    <div class="ln">{H(addr2)}</div>
-                    <div class="ln split"><span>{m.SenderCountryText}</span><span class="lbl">Postal code:</span><span class="ln-in">{H(o.SenderPostalCode)}</span></div>
-                    <div class="ln">{H(o.SenderName)}</div>
-                    <div class="ln">{H(o.SenderPhone)}</div>
-                    <div class="ln">{H(o.SenderContactName)}</div>
-                  </div>
+                  <div class="lines">{SenderLines(m, addr1, addr2)}</div>
                 </div>
 
                 <div class="bar">2. Thông tin người nhận(Consignee's information):</div>
@@ -230,7 +228,7 @@ internal static class BillA4
                   {Row2("<b>Nước <i>(Country)</i></b>:", o.ConsigneeCountry, "Postal code:", o.ConsigneePostalCode)}
                   {Row("Người liên hệ <i>(Contact name)</i>:", o.ConsigneeContactName)}
                   {Row("ĐT (Tel):", PhoneWithCode(o.ConsigneePhoneCode, o.ConsigneePhone))}
-                  {Row("Email:", o.ConsigneeEmail, underline: false)}
+                  {Row("Email:", o.ConsigneeEmail)}
                 </div>
 
                 <div class="bar">3. Thông tin Đơn Hàng <i>(Shipment information)</i>:</div>
@@ -278,19 +276,15 @@ internal static class BillA4
 
         var pieces = m.TotalPieces;
         return $"""
-            <table class="pkg">
-              <tr>
-                <th class="c-pcs">Số kiện<br><i>(PCS)</i></th>
-                <th class="c-w">TL thực<br><i>(G.W)</i></th>
-                <th class="c-w">TL Qui Đổi<br><i>(Vol.W)</i></th>
-                <th rowspan="2" class="dims"><div class="dims-title">Kích thước (Dimensions)</div><div class="dim-grid">{string.Concat(dims.Select(d => $"<div class=\"dim\">{d}</div>"))}</div></th>
-              </tr>
-              <tr>
-                <td class="pcs">{pieces}</td>
-                <td class="w">{H(gross)}</td>
-                <td class="w">{H(vol)}</td>
-              </tr>
-            </table>
+            <div class="pkg">
+              <div class="ph">Số kiện<br><i>(PCS)</i></div>
+              <div class="ph">TL thực<br><i>(G.W)</i></div>
+              <div class="ph">TL Qui Đổi<br><i>(Vol.W)</i></div>
+              <div class="dims"><div class="dims-title">Kích thước (Dimensions)</div><div class="dim-grid">{string.Concat(dims.Select(d => $"<div class=\"dim\">{d}</div>"))}</div></div>
+              <div class="pv pcs">{pieces}</div>
+              <div class="pv w">{H(gross)}</div>
+              <div class="pv w">{H(vol)}</div>
+            </div>
             """;
     }
 
@@ -406,14 +400,14 @@ internal static class BillA4
     // ---------------- CSS riêng cho bill (A4 ngang) ----------------
 
     public const string Css = """
-        /* Lề in 2,54 cm 4 cạnh như Word (tính từ viền khung tới mép giấy; lề 7 mm / 1,27 cm cũ sát mép).
-           Bố cục giữ khổ 271,6 × 184 mm, khi in thu nhỏ đều 86% cho vừa vùng 246,2 × 159,2 mm. */
-        @page { size: A4 landscape; margin: 25.4mm; }
+        /* A4 ngang, lề in 7 mm (05/11/2026 người dùng chọn phóng bill vừa tờ; lề 2,54 cm cũ làm bill nhỏ, chỉ còn 86%;
+           đã thử 109% và 100%, người dùng chốt 104%). Bố cục giữ khổ 271,6 × 184 mm, khi in phóng đều 104% cho vừa vùng in 283 × 196 mm. */
+        @page { size: A4 landscape; margin: 7mm; }
         * { box-sizing: border-box; }
-        /* Aptos (font Body của Office) cho mọi chứng từ + cỡ chữ thống nhất (chữ thường 12px, chữ nhỏ 11px); máy chưa có Aptos thì dùng Arial. */
-        body { margin: 0; font-family: Aptos, "Aptos Body", Arial, Helvetica, sans-serif; font-size: 12px; color: #000; background: #e9ece9;
+        /* Mọi chứng từ: font Times New Roman (05/11/2026 người dùng chọn: "Times New Roman", Times, serif; 12px; nội dung đậm 700). */
+        body { margin: 0; font-family: "Times New Roman", Times, serif; font-size: 12px; color: #000; background: #e9ece9;
                -webkit-print-color-adjust: exact; print-color-adjust: exact; text-rendering: geometricPrecision; }
-        .toolbar { position: sticky; top: 0; display: flex; gap: 12px; align-items: center; padding: 10px 16px; background: #1e6b2c; color: #fff; z-index: 1; font-family: Aptos, "Aptos Body", Arial, Helvetica, sans-serif; font-size: 12px; }
+        .toolbar { position: sticky; top: 0; display: flex; gap: 12px; align-items: center; padding: 10px 16px; background: #1e6b2c; color: #fff; z-index: 1; font-family: "Times New Roman", Times, serif; font-size: 12px; }
         .toolbar button { padding: 6px 18px; border: 0; border-radius: 6px; background: #fff; color: #1e6b2c; font-weight: 700; cursor: pointer; }
         .toolbar .hint { opacity: .85; }
         .sheet { width: 297mm; height: 210mm; padding: 12.7mm; margin: 16px auto; background: #fff; box-shadow: 0 2px 10px rgba(0,0,0,.15);
@@ -424,9 +418,9 @@ internal static class BillA4
         .s-head { display: grid; grid-template-columns: 28mm 1fr 42mm; gap: 2mm; align-items: center; padding: 1mm 3mm; height: 22mm; }
         /* Hình đầu chiếm 2 cột trái (logo + tên + liên hệ), canh trái, giữ tỉ lệ. */
         .head-img { grid-column: 1 / 3; width: 100%; height: 20mm; object-fit: contain; object-position: left center; }
-        .awb { text-align: center; font-family: Aptos, "Aptos Body", Arial, Helvetica, sans-serif; }
+        .awb { text-align: center; font-family: "Times New Roman", Times, serif; }
         .awb .barcode { display: block; width: 100%; height: 9mm; }
-        /* Số bill (OrderNumber) dưới mã vạch: Aptos, to, chữ thường (không đậm), căn giữa */
+        /* Số bill (OrderNumber) dưới mã vạch: to, chữ thường (không đậm), căn giữa */
         .awb-code { margin-top: .6mm; font-size: 22px; font-weight: 400; line-height: 1.05; white-space: nowrap; }
         .awb-no { margin-top: .6mm; font-size: 20px; font-weight: 400; line-height: 1.05; white-space: nowrap; }
         .awb-no small { font-size: 14px; }
@@ -442,7 +436,7 @@ internal static class BillA4
         .qr-frame svg { display: block; width: 100%; height: 100%; shape-rendering: crispEdges; }
         .qr-cap { color: #000; font-size: 14px; font-weight: 700; text-decoration: none; margin-top: .5mm; }
         .lines { display: flex; flex-direction: column; }
-        .ln { border-bottom: 1px dashed #000; min-height: 5mm; line-height: 5mm; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .ln { border-bottom: 1px dashed #000; min-height: 4.6mm; line-height: 4.6mm; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .split { display: flex; gap: 2mm; align-items: flex-end; }
         .split > span:first-child { flex: 1; }
         .split .lbl { font-weight: 400; white-space: nowrap; border: 0; }
@@ -450,9 +444,18 @@ internal static class BillA4
         .lines .split { border-bottom: 0; }
         .lines .split > span:first-child { border-bottom: 1px dashed #000; }
         .lines .split .ln-in { border-bottom: 1px dashed #000; }
-        /* Mục 1 (người gửi): kẻ dòng chấm chấm. Mục 2 (người nhận): không kẻ dòng. */
-        .lines .ln, .lines .split > span:first-child, .lines .split .ln-in { border-bottom-style: dotted; border-bottom-width: 1.5px; }
-        .cnee .ln, .cnee .split > span, .cnee .ln-in { border-bottom: 0; }
+        /* Mục 1 (người gửi) và mục 2 (người nhận, 05/11/2026): kẻ dòng chấm chấm dưới phần nội dung; chữ cùng 1 cỡ. */
+        .lines .ln, .lines .split > span:first-child, .lines .split .ln-in { border-bottom-style: dotted; border-bottom-width: .8px; }
+        .cnee .ln { border-bottom: .8px dotted #000; }
+        /* Ô nội dung như bill hệ thống cũ (người dùng đo 05/11/2026): Times New Roman 12px đậm, cao 13,6px + 2px trên dưới, lề 10px, chấm 0,8px. */
+        .lines .ln, .row .val.ln, .row .split .ln { line-height: 13.6px; min-height: 17.6px; padding: 2px 10px; }
+        .lines .split, .row .split { padding: 0; }
+        .lines .split > span:first-child, .lines .split .ln-in { padding: 2px 10px; line-height: 13.6px; }
+        .ship .row .val { padding-left: 10px; padding-right: 10px; }
+        /* Dòng cuối mục người gửi của đơn hệ thống cũ (địa chỉ CS ghi ở cột Email): cho xuống tối đa 2 dòng như bill cũ. */
+        .lines .ln.wrap { white-space: normal; text-overflow: clip; line-height: 13.6px; max-height: 32px; }
+        .cnee .split .lbl { border-bottom: 0; }
+        .cnee, .cnee .lbl, .cnee .val, .cnee .val span, .cnee i, .cnee b { font-size: 12px; }
         .rows { padding: .5mm 3mm 0 0; }
         .row { display: grid; grid-template-columns: 50mm 1fr; gap: 2mm; align-items: end; min-height: 4.6mm; }
         .row .lbl { text-align: right; white-space: nowrap; line-height: 4.6mm; }
@@ -460,36 +463,38 @@ internal static class BillA4
         .row .val:not(.ln) { border: 0; }
         .row .split { font-weight: 700; }
         .ln-main { flex: 1; }
+        /* Mục người nhận như bảng hệ thống cũ (05/11/2026): nhãn 150px · giá trị Thành phố 120px · nhãn Tỉnh 80px · giá trị Tỉnh phần còn lại;
+           chữ dài xuống dòng (vd "SPRINGVALE SOUTH") thay vì bị cắt. */
+        .cnee .row, .ship .row { grid-template-columns: 150px 1fr; gap: 0; }
+        .cnee .row > .lbl { padding: 2px 0; line-height: 13.6px; }
+        .cnee .row .split { display: grid; grid-template-columns: 120px 80px 1fr; gap: 0; align-items: end; }
+        .cnee .row .split .lbl { text-align: right; padding: 2px 6px 2px 0; line-height: 13.6px; }
+        .cnee .row .split .ln { white-space: normal; overflow-wrap: anywhere; text-overflow: clip; }
         .ship .row { min-height: 6mm; border-bottom: 1.5px solid #000; margin-right: -3mm; padding-right: 3mm; }
-        .ship .row .lbl, .ship .row .val { line-height: 6mm; }
-        .gap { height: 2mm; border-bottom: 2px solid #000; }
-        table.pkg { width: 100%; border-collapse: collapse; table-layout: fixed; }
-        .pkg th, .pkg td { border: 1.5px solid #000; padding: .5mm 1mm; text-align: center; vertical-align: top; }
-        .pkg tr:first-child > * { border-top: 0; }
-        .pkg tr > *:first-child { border-left: 0; }
-        .pkg tr > *:last-child { border-right: 0; }
-        .c-pcs { width: 16mm; }
-        .c-w { width: 19mm; }
-        .pkg .dims { font-weight: 400; text-align: left; padding: .5mm 2mm; }
+        .ship .row .lbl { line-height: 6mm; }
+        .gap { height: 1mm; border-bottom: 2px solid #000; }
+        /* Lưới 4 cột (05/11/2026): số kiện / TL thực / TL quy đổi nằm đúng giữa phần ô dưới tiêu đề (bảng cũ dồn khoảng trống vào dòng tiêu đề). */
+        .pkg { display: grid; grid-template-columns: 16mm 19mm 19mm 1fr; grid-template-rows: auto 1fr; }
+        .pkg .ph, .pkg .pv { border-right: 1.5px solid #000; text-align: center; padding: .5mm 1mm; }
+        .pkg .ph { font-weight: 700; line-height: 1.15; }
+        .pkg .pv { display: flex; align-items: center; justify-content: center; min-height: 8mm; }
+        .pkg .dims { grid-column: 4; grid-row: 1 / 3; font-weight: 400; text-align: left; padding: .5mm 2mm; }
         .dims-title { text-align: center; font-weight: 700; }
         .dim-grid { display: grid; grid-template-columns: 1fr 1fr; }
-        .dim { border-bottom: 1px dotted #000; min-height: 4.6mm; line-height: 4.6mm; padding-right: 2mm; font-size: 11px; white-space: nowrap; overflow: hidden; }
-        .pkg td { height: 10mm; border-top: 0; vertical-align: middle; }
-        .pkg .pcs { font-size: 20px; font-weight: 700; }
+        .dim { border-bottom: 1px dotted #000; min-height: 4.6mm; line-height: 4.6mm; padding-right: 2mm; font-size: 10px; white-space: nowrap; overflow: hidden; }
         /* Số kiện, TL thực, TL quy đổi cùng 1 cỡ. */
-        .pkg .w { font-size: 20px; font-weight: 700; }
-        .pkg tr:first-child th:not(.dims) { border-bottom: 0; }
+        .pkg .pcs, .pkg .w { font-size: 20px; font-weight: 700; }
         .signs { display: grid; grid-template-columns: 1fr 1fr; flex: 1; min-height: 12mm; border-top: 1.5px solid #000; }
         .sign { display: flex; flex-direction: column; justify-content: space-between; padding: 1mm 2mm; }
         .sign + .sign { border-left: 1.5px solid #000; }
-        .sign-date { font-size: 11px; line-height: 1.2; }
+        .sign-date { font-size: 10px; line-height: 1.2; }
         .s-foot { display: flex; flex: 0 0 12mm; justify-content: space-between; align-items: center; padding: .5mm 3mm 0; }
         .s-foot > div:first-child { flex: 1; min-width: 0; padding-right: 2mm; }
         .total { font-size: 16px; font-weight: 700; margin-bottom: 1.5mm; }
-        .slip-name { font-size: 11px; }
-        .foot-awb { flex: none; width: 42mm; text-align: center; font-family: Aptos, "Aptos Body", Arial, Helvetica, sans-serif; font-size: 18px; font-weight: 400; line-height: 1.1; }
+        .slip-name { font-size: 10px; }
+        .foot-awb { flex: none; width: 42mm; text-align: center; font-family: "Times New Roman", Times, serif; font-size: 18px; font-weight: 400; line-height: 1.1; }
         .foot-awb .barcode { display: block; width: 100%; height: 8mm; }
-        .terms-col { font-size: 10.5px; line-height: 1.28; text-align: justify; overflow: hidden; }
+        .terms-col { font-size: 9.5px; line-height: 1.28; text-align: justify; overflow: hidden; }
         .terms-col p { margin: 0 0 .55mm; }
         .terms-col .sub { padding-left: 3.5mm; }
         .t-title, .t-h { font-weight: 700; margin: .6mm 0 .3mm; }
@@ -518,7 +523,7 @@ internal static class BillA4
         @media print {
           body { background: #fff; }
           .toolbar { display: none; }
-          .sheet { width: 271.6mm; height: 184mm; zoom: .86; margin: 0 auto; padding: 0; box-shadow: none; }
+          .sheet { width: 271.6mm; height: 184mm; zoom: 1.04; margin: 0 auto; padding: 0; box-shadow: none; }
         }
         """;
 }

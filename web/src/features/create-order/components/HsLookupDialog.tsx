@@ -3,7 +3,7 @@ import { isNotImplemented } from '@/shared/api/http';
 import { useI18n } from '@/shared/i18n';
 import { cx } from '@/shared/lib/cx';
 import { useCopyToClipboard } from '@/shared/lib/useCopyToClipboard';
-import { Button, Icon, Modal } from '@/shared/ui';
+import { Button, Modal } from '@/shared/ui';
 import { useCategories, useHsLookup, useProductLibrary, useRecentInvoices, type HsLookupItem } from '../api';
 import { formatHs, groupByHs6, HS_COUNTRIES, hs6Of, type HsCountry } from '../lib/hs-lookup';
 import { searchHs } from '../lib/quick-lookup';
@@ -12,16 +12,17 @@ import styles from './HsLookupDialog.module.css';
 type Mode = 'verified' | 'catalog';
 
 /**
- * Popup tra mã HS theo nước nhập khẩu (mở từ khung Hỗ trợ khách hàng), dữ liệu dbo.Catalog_HsCode:
- * - "Tra danh mục mã" (mặc định): tra toàn bộ biểu thuế của nước đó theo tên / số.
- * - "Mặt hàng đã xác minh": chỉ mã Việt An đã rà soát từ hàng gửi thực tế.
+ * Popup tra mã HS theo nước nhập khẩu (mở từ khung Hỗ trợ khách hàng), dữ liệu chung với trang vietanexpress.com/tra-hs-code
+ * (backend gọi API website; hoặc dbo.Catalog_HsCode khi cấu hình HsLookup:Source = database):
+ * - "Mặt hàng đã xác minh" (mặc định, như trang tra-hs-code): mã Việt An đã rà soát từ hàng gửi thực tế.
+ * - "Tra danh mục mã": tra toàn bộ biểu thuế của nước đó theo tên / số.
  * Kết quả gom theo HS6; đường dẫn biểu thuế chung của nhóm ở tiêu đề, phần riêng ở từng dòng mã.
  * Máy chủ chưa có dữ liệu theo nước → tạm hiện HS6 từ nhóm hàng, thư viện mặt hàng, invoice gần đây (dữ liệu thật đang có).
  */
 export function HsLookupDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { t } = useI18n();
   const copy = useCopyToClipboard();
-  const [mode, setMode] = useState<Mode>('catalog');
+  const [mode, setMode] = useState<Mode>('verified');
   const [country, setCountry] = useState<HsCountry>('US');
   const [input, setInput] = useState('');
   const [query, setQuery] = useState('');
@@ -58,7 +59,7 @@ export function HsLookupDialog({ open, onClose }: { open: boolean; onClose: () =
         </div>
 
         <div className={styles.modes} role="tablist">
-          {(['catalog', 'verified'] as const).map(m => (
+          {(['verified', 'catalog'] as const).map(m => (
             <button key={m} type="button" role="tab" aria-selected={mode === m} className={cx(styles.mode, mode === m && styles.modeOn)} onClick={() => setMode(m)}>
               {t(m === 'verified' ? 'Mặt hàng đã xác minh' : 'Tra danh mục mã')}
             </button>
@@ -119,7 +120,6 @@ export function HsLookupDialog({ open, onClose }: { open: boolean; onClose: () =
                       {rest.length > 0 && <small className={styles.path}>{rest.join(' › ')}</small>}
                       <strong>{it.nameVi || it.nameEn}</strong>
                       {it.nameVi && it.nameEn && <span className={styles.sub}>{it.nameEn}</span>}
-                      {it.isVerified && <span className={styles.verified}><Icon name="check" size={12} /> {t('Việt An đã xác minh')}</span>}
                       {it.note && <p className={styles.note}>{it.note}</p>}
                     </div>
                     <div className={styles.lineCode}>

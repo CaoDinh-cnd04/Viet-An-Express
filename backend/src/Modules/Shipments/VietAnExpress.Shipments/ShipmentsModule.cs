@@ -32,6 +32,27 @@ public static class ShipmentsModule
         // Tra cứu địa lý qua API ngoài (quốc gia + mã điện thoại: world-countries; mã bưu chính: GeoNames; gợi ý địa chỉ: Geoapify)
         // — có cache, timeout ngắn.
         services.AddGeoLookup(configuration);
+        // Tra mã HS: API trang tra-hs-code của website (hoặc bảng dbo.Catalog_HsCode — HsLookup:Source).
+        services.AddOptions<Catalog.HsLookupOptions>()
+            .Bind(configuration.GetSection(Catalog.HsLookupOptions.Section))
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
+        services.AddHttpClient<Catalog.IHsWebsiteLookup, Catalog.HsWebsiteLookup>((sp, c) =>
+        {
+            var o = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<Catalog.HsLookupOptions>>().Value;
+            c.BaseAddress = new Uri(o.WebsiteApiUrl.TrimEnd('/') + "/");
+            c.Timeout = TimeSpan.FromSeconds(o.TimeoutSeconds);
+            c.DefaultRequestHeaders.UserAgent.ParseAdd("VietAnExpress-Portal/1.0");
+            c.DefaultRequestHeaders.Accept.ParseAdd("application/json");
+        });
+        // Tra danh mục mã Mỹ / Anh: biểu thuế chính thức (hts.usitc.gov, UK Trade Tariff) — URL tuyệt đối từ HsLookupOptions.
+        services.AddHttpClient<Catalog.IHsOfficialLookup, Catalog.HsOfficialLookup>((sp, c) =>
+        {
+            var o = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<Catalog.HsLookupOptions>>().Value;
+            c.Timeout = TimeSpan.FromSeconds(o.TimeoutSeconds);
+            c.DefaultRequestHeaders.UserAgent.ParseAdd("VietAnExpress-Portal/1.0");
+            c.DefaultRequestHeaders.Accept.ParseAdd("application/json");
+        });
         services.Configure<CompanyInfo>(configuration.GetSection(CompanyInfo.Section));
         services.AddSingleton<IPermissionProvider, ShipmentsPermissionProvider>();
         services.AddValidatorsFromAssembly(Assembly, includeInternalTypes: true);
@@ -95,6 +116,8 @@ internal static class GeoRegistration
         services.AddScoped<IOrderTracking, OrderTrackingReader>();
         // VSVX: bảng dbo.VungXauVungXa của hệ thống cũ (dùng DbContext → scoped).
         services.AddScoped<IRemoteAreaLookup, RemoteAreaLookup>();
+        // Danh mục dịch vụ → hub: dbo.TGroupBaseCode / dbo.TBaseCode của hệ thống cũ (chỉ đọc, cache 10 phút).
+        services.AddScoped<Services.IServiceHubCatalog, Services.ServiceHubCatalog>();
         return services;
     }
 }

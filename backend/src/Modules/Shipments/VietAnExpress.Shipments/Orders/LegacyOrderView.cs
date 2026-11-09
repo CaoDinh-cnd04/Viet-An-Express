@@ -104,15 +104,15 @@ internal static partial class LegacyOrderView
     public static OrderDto ToDetailDto(LegacyOrder o, DateTime today, IEnumerable<LegacyPackageLine> packages, IEnumerable<LegacyInvoiceLine> items) =>
         ToDetailDto(o, today) with
         {
+            // Trong_Luong là cân thực (như hệ thống cũ) → cân tính cước cộng từ dòng kiện (ChargeWeight); không có kiện thì theo đơn.
+            ChargeableWeight = packages.Count() is > 0 && packages.Sum(p => p.LineChargeableKg ?? 0) is > 0 and var cw ? cw : o.WeightKg,
             Packages = packages.Select(ToPackageDto).ToList(),
             Invoice = new OrderInvoiceDto(S(o.Currency), S(o.ExportReason), o.ShippingFee, o.GoodsValue, items.Select(ToItemDto).ToList())
         };
 
-    /// <summary>Cột TrongLuong là tổng cân của dòng → cân 1 kiện = TrongLuong / SoLuong.</summary>
+    /// <summary>Cột TrongLuong là cân 1 kiện (như hệ thống cũ); quy đổi / tính cước trả tổng cả dòng (cột × SoLuong).</summary>
     public static OrderPackageDto ToPackageDto(LegacyPackageLine p) =>
-        new(p.Quantity, S(p.PackType), p.LengthCm, p.WidthCm, p.HeightCm,
-            p.Quantity > 0 ? decimal.Round(p.WeightKg / p.Quantity, 3, MidpointRounding.AwayFromZero) : p.WeightKg,
-            p.VolumetricKg, p.ChargeableKg);
+        new(p.Quantity, S(p.PackType), p.LengthCm, p.WidthCm, p.HeightCm, p.WeightKg, p.LineVolumetricKg, p.LineChargeableKg);
 
     public static OrderItemDto ToItemDto(LegacyInvoiceLine i)
     {

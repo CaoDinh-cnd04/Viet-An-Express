@@ -5,7 +5,7 @@ import { kindOf } from '../lib/ticket';
 import type { SupportTicket } from '../types';
 import { SupportTicketDetail } from './SupportTicketDetail';
 
-/** Hộp chi tiết 1 yêu cầu (mở từ Đơn hàng của tôi) — cùng nội dung với dòng mở rộng ở trang Hỗ trợ & góp ý. */
+/** Hộp chi tiết 1 yêu cầu (mở từ Đơn hàng của tôi) — cùng nội dung với khung chi tiết ở trang Hỗ trợ & góp ý. */
 export function SupportTicketDialog({ ticket, onClose }: { ticket: SupportTicket | null; onClose: () => void }) {
   const { t } = useI18n();
   if (!ticket) return null;
@@ -18,7 +18,7 @@ export function SupportTicketDialog({ ticket, onClose }: { ticket: SupportTicket
       footerNote={<StatusPill tone={SUPPORT_STATUS[ticket.status].tone}>{SUPPORT_STATUS[ticket.status].label}</StatusPill>}
       footer={<Button onClick={onClose}>{t('Đóng')}</Button>}
     >
-      <SupportTicketDetail ticket={ticket} />
+      <SupportTicketDetail ticket={ticket} hideHeader />
     </Modal>
   );
 }

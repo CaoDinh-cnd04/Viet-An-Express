@@ -3,7 +3,7 @@ import { useFormContext, useWatch } from 'react-hook-form';
 import { SelectField, TextField } from '@/shared/ui';
 import { carriersFor, defaultHub, hubOptions } from '../constants';
 import { useFieldBinder } from '../hooks/useFieldBinder';
-import type { CreateOrderValues } from '@/features/order-form';
+import { useServiceCatalog, type CreateOrderValues } from '@/features/order-form';
 import styles from './form.module.css';
 
 /** id ô Nước đến — khung Người nhận có nút "Đổi" nhảy về ô này. */
@@ -17,6 +17,8 @@ export const COUNTRY_INPUT_ID = 'order-country';
  */
 export function ServiceSection() {
   const bind = useFieldBinder();
+  // Danh mục hãng → hub đọc từ bảng hệ thống cũ (dự phòng: danh sách chép tay khi chưa đọc được).
+  const catalog = useServiceCatalog();
   const { control, setValue, getValues } = useFormContext<CreateOrderValues>();
   const [carrier, hub, countryText, countryCode] = useWatch({
     control,
@@ -25,22 +27,22 @@ export function ServiceSection() {
   const noCountry = !countryText?.trim();
   const code = countryCode && countryCode.length === 2 ? countryCode : undefined;
   // Chưa chọn nước: danh sách trống (không dùng disabled — react-hook-form bỏ giá trị ô bị khóa khi kiểm tra).
-  const available = noCountry ? [] : carriersFor(code);
+  const available = noCountry ? [] : carriersFor(code, catalog);
   // Đơn copy / nháp cũ giữ dịch vụ đã lưu dù không còn trong danh sách (khách tự đổi nếu muốn).
   const carriers = available.includes(carrier) || !carrier ? available : [...available, carrier];
-  const hubs = noCountry ? [] : hubOptions(carrier, code);
+  const hubs = noCountry ? [] : hubOptions(carrier, code, catalog);
   if (hub && !hubs.some(o => o.value === hub)) hubs.push({ value: hub, label: hub });
 
   useEffect(() => {
     if (!code) return;
     const current = getValues('service.carrier');
-    if (current && !carriersFor(code).includes(current)) {
+    if (current && !carriersFor(code, catalog).includes(current)) {
       setValue('service.carrier', '', { shouldDirty: true });
       setValue('service.hub', '', { shouldDirty: true });
-    } else if (current && !hubOptions(current, code).some(o => o.value === getValues('service.hub'))) {
-      setValue('service.hub', defaultHub(current, code), { shouldDirty: true });
+    } else if (current && !hubOptions(current, code, catalog).some(o => o.value === getValues('service.hub'))) {
+      setValue('service.hub', defaultHub(current, code, catalog), { shouldDirty: true });
     }
-  }, [code, getValues, setValue]);
+  }, [code, catalog, getValues, setValue]);
 
   return (
     <div className={styles.serviceGrid}>
@@ -58,7 +60,7 @@ export function ServiceSection() {
         required
         placeholder={noCountry ? 'Chọn nước trước' : 'Chọn dịch vụ'}
         options={carriers}
-        {...bind('service.carrier', { onChange: () => setValue('service.hub', defaultHub(getValues('service.carrier'), code), { shouldDirty: true }) })}
+        {...bind('service.carrier', { onChange: () => setValue('service.hub', defaultHub(getValues('service.carrier'), code, catalog), { shouldDirty: true }) })}
       />
       <SelectField label="Hub" required placeholder="Chọn hub" options={hubs} {...bind('service.hub')} />
       <TextField className={styles.serviceRef} label="Số tham chiếu" placeholder="Mã đơn hàng của bạn" {...bind('service.reference')} />

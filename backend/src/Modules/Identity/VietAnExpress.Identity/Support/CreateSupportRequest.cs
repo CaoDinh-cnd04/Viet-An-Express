@@ -9,7 +9,7 @@ namespace VietAnExpress.Identity.Support;
 
 internal sealed record CreateSupportRequestCommand(NewSupportRequest Request, SupportRequestFile? File = null) : IRequest<Result<SupportRequestDto>>;
 
-internal sealed class CreateSupportRequestHandler(IdentityDbContext db, ICurrentUser user, ICustomersApi customers, IShipmentsApi shipments, IBackgroundJobQueue jobs, EmailCompany company, TimeProvider clock)
+internal sealed class CreateSupportRequestHandler(IdentityDbContext db, ICurrentUser user, ICustomersApi customers, IShipmentsApi shipments, IBackgroundJobQueue jobs, EmailCompany company, TimeProvider clock, SupportLive live)
     : IRequestHandler<CreateSupportRequestCommand, Result<SupportRequestDto>>
 {
     public async Task<Result<SupportRequestDto>> Handle(CreateSupportRequestCommand c, CancellationToken ct)
@@ -45,6 +45,7 @@ internal sealed class CreateSupportRequestHandler(IdentityDbContext db, ICurrent
         if (file is not null) ticket.NoteAttachment(file.Name);
         db.SupportRequests.Add(ticket);
         await db.SaveChangesAsync(ct);
+        await live.ChangedAsync(ticket, ct);
         // Báo nhân viên phụ trách khách ở nền (kèm tệp; chưa có người phụ trách thì hộp thư Việt An) — yêu cầu đã lưu ở dbo.TContact.
         var cs = SupportRequestRules.CsRecipients(await customers.GetAccountManagerAsync(customerId, ct));
         jobs.EnqueueEmail($"email {ticket.Code}", SupportRequestRules.InboxEmail(ticket, customer, userName, file, company) with { To = cs });

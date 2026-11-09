@@ -3,7 +3,7 @@ import { ApiError, getErrorMessage, http, isNotImplemented, waitForPendingRefres
 import { markLogin } from '@/shared/lib/login-mark';
 import { useToast } from '@/shared/ui';
 import { can } from './lib/permissions';
-import type { ActableCustomer, LoginRequest, OtpChallenge, OtpKind, Session, SessionUser } from './types';
+import type { ActableCustomer, LoginRequest, OtpChallenge, OtpKind, Session, SessionUser, SupportStaff } from './types';
 
 export const sessionKey = ['session'] as const;
 
@@ -52,14 +52,24 @@ export function useLogin() {
   });
 }
 
-/** Nhân viên Việt An đăng nhập bằng tài khoản dbo.USERS — bước 1: đúng mật khẩu thì backend gửi mã OTP tới email, chưa cấp phiên. */
+/**
+ * Nhân viên Việt An đăng nhập bằng tài khoản dbo.USERS — bước 1: đúng mật khẩu thì backend gửi mã OTP tới email, chưa cấp phiên.
+ * Hôm nay đã nhập OTP trên trình duyệt này thì backend cấp phiên luôn, trả SessionUser.
+ */
 export function useVietAnLogin() {
+  const qc = useQueryClient();
   const toast = useToast();
   return useMutation({
     mutationFn: (body: LoginRequest) =>
       http
-        .post<{ data: OtpChallenge }>('/auth/vietan/login', { userName: body.username, password: body.password, remember: body.remember })
+        .post<{ data: SessionUser | OtpChallenge }>('/auth/vietan/login', { userName: body.username, password: body.password, remember: body.remember })
         .then(r => r.data),
+    onSuccess: data => {
+      if (isOtpChallenge(data)) return;
+      markLogin();
+      const session: Session = { status: 'authenticated', user: data };
+      qc.setQueryData(sessionKey, session);
+    },
     onError: e => toast.show(getErrorMessage(e, 'Đăng nhập không thành công'), 'error')
   });
 }
@@ -114,6 +124,51 @@ export function useActAsCustomer() {
       qc.setQueryData(sessionKey, session);
     },
     onError: e => toast.show(getErrorMessage(e, 'Không chọn được khách'), 'error')
+  });
+}
+
+/**
+ * Tạo khách mới (khách lần đầu gửi): backend tạo dòng TCustomer tạm và cấp phiên làm thay khách đó — như chọn khách,
+ * xóa dữ liệu đã tải của khách trước.
+ */
+export function useCreateNewCustomer() {
+  const qc = useQueryClient();
+  const toast = useToast();
+  return useMutation({
+    mutationFn: () => http.post<{ data: SessionUser }>('/auth/vietan/customers/new'),
+    onSuccess: res => {
+      qc.clear();
+      const session: Session = { status: 'authenticated', user: res.data };
+      qc.setQueryData(sessionKey, session);
+    },
+    onError: e => toast.show(getErrorMessage(e, 'Không tạo được khách mới'), 'error')
+  });
+}
+
+/** Nhân viên sales / CS để gán phụ trách khách mới — chỉ quản trị / CS gọi (`enabled`). */
+export function useSupportStaff(enabled: boolean) {
+  return useQuery({
+    queryKey: ['vietan-support-staff'],
+    queryFn: () => http.get<{ data: SupportStaff[] }>('/auth/vietan/support-staff').then(r => r.data),
+    enabled,
+    staleTime: 5 * 60_000
+  });
+}
+
+/** Gán nhân viên phụ trách cho khách mới (TCustomer.Staff_ID) rồi tải lại danh sách khách và phiên. */
+export function useAssignManager() {
+  const qc = useQueryClient();
+  const toast = useToast();
+  return useMutation({
+    mutationFn: (body: { customerId: number; staffId: number }) =>
+      http.put<{ message?: string }>(`/auth/vietan/customers/${body.customerId}/manager`, { staffId: body.staffId }),
+    onSuccess: () => {
+      toast.show('Đã gán nhân viên phụ trách', 'success');
+      void qc.invalidateQueries({ queryKey: ['vietan-customers'] });
+      // Thanh "đang làm thay" đọc cờ chưa gán từ phiên.
+      void qc.invalidateQueries({ queryKey: sessionKey });
+    },
+    onError: e => toast.show(getErrorMessage(e, 'Không gán được nhân viên'), 'error')
   });
 }
 

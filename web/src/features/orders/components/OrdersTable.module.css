@@ -99,6 +99,15 @@
   width: 64px;
 }
 
+/* Người gửi (khách của đơn) — cột đầu ở trang "Đơn khách phụ trách" */
+.colSender {
+  width: 120px;
+}
+
+.sender {
+  overflow-wrap: anywhere;
+}
+
 .colBill {
   width: 104px;
 }
@@ -206,6 +215,16 @@
 .colLabel {
   width: 62px;
   text-align: center;
+}
+
+/* Người tạo đơn (tên đăng nhập) — chỉ trang Đơn khách phụ trách của nhân viên Việt An. */
+.colCreator {
+  width: 104px;
+}
+
+.creator {
+  font-size: 11px;
+  overflow-wrap: anywhere;
 }
 
 .colMore {

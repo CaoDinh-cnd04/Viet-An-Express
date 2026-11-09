@@ -15,6 +15,7 @@ public static class CustomersModule
     public static IServiceCollection AddCustomersModule(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddLegacyDbContext<CustomersDbContext>(configuration, "customers");
+        services.AddScoped<NewCustomers.NewCustomerStore>();
         services.AddScoped<ICustomersApi, CustomersApi>();
         return services;
     }

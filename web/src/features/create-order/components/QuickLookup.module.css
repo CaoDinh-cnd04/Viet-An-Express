@@ -292,19 +292,23 @@
 }
 
 /* Invoice riêng từng kiện: chọn kiện nhận mặt hàng thêm vào */
+/* Cột Tiện ích hẹp: nhãn trên, ô chọn kiện rộng hết cột để không cắt chữ "Invoice kiện 1/2" */
 .target {
   display: flex;
-  align-items: center;
-  gap: var(--space-2);
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
   margin-bottom: var(--space-2);
   font-size: var(--text-sm);
   color: var(--color-text-muted);
 }
 
 .target select {
-  flex: 1;
+  width: 100%;
   min-width: 0;
-  padding: 4px var(--space-2);
+  height: 32px;
+  line-height: 30px;
+  padding: 0 var(--space-2);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   background: var(--color-surface);

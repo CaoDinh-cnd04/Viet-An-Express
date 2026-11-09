@@ -18,7 +18,7 @@ public class PublicContactTests
     public async Task Loi_nhan_ghi_TContact_khong_gan_khach_va_gui_email_ve_hop_thu()
     {
         await using var f = new IdentityFixture();
-        var handler = new PublicContactHandler(f.Db, f.Jobs, f.Company, f.Clock);
+        var handler = new PublicContactHandler(f.Db, f.Jobs, f.Company, f.Clock, f.Hub.Live);
 
         var result = await handler.Handle(Valid(), Ct);
 
@@ -39,10 +39,10 @@ public class PublicContactTests
     public async Task Loi_nhan_trang_chu_quan_tri_doi_trang_thai_duoc()
     {
         await using var f = new IdentityFixture();
-        await new PublicContactHandler(f.Db, f.Jobs, f.Company, f.Clock).Handle(Valid(email: ""), Ct);
+        await new PublicContactHandler(f.Db, f.Jobs, f.Company, f.Clock, f.Hub.Live).Handle(Valid(email: ""), Ct);
         var id = (await f.Db.SupportRequests.SingleAsync(Ct)).Code;
         var list = new GetAdminSupportRequestsHandler(f.Db, f.Customers.Object);
-        var reply = new ReplySupportRequestHandler(f.Db, f.Customers.Object, f.Clock);
+        var reply = new ReplySupportRequestHandler(f.Db, f.Customers.Object, f.Clock, f.Hub.Live);
         f.Customers.Setup(c => c.GetByIdsAsync(It.IsAny<IReadOnlyCollection<long>>(), It.IsAny<CancellationToken>())).ReturnsAsync([]);
 
         Assert.Equal("lien_he", Assert.Single(await list.Handle(new GetAdminSupportRequestsQuery(), Ct)).Ticket.Kind);

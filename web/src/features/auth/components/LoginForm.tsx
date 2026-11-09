@@ -35,7 +35,7 @@ export function LoginForm({ autoFocus, next: nextPath }: { autoFocus?: boolean; 
   const customerLogin = useLogin();
   const vietAnLogin = useVietAnLogin();
   const login = mode === 'vietan' ? vietAnLogin : customerLogin;
-  /** Đúng mật khẩu → bước nhập mã OTP (nhân viên Việt An luôn có; khách khi bật OTP khách). */
+  /** Đúng mật khẩu → bước nhập mã OTP (nhân viên Việt An lần đầu trong ngày trên trình duyệt này; khách khi bật OTP khách). */
   const [otp, setOtp] = useState<{ challenge: OtpChallenge; values: FormValues; email?: string } | null>(null);
   /** Gửi lại mã xác nhận email lần đầu (cùng email, cùng đồng ý). */
   const resendEmail = useSetOtpEmail();
@@ -53,8 +53,11 @@ export function LoginForm({ autoFocus, next: nextPath }: { autoFocus?: boolean; 
     customerLogin.mutate(values, {
       onSuccess: data => (isOtpChallenge(data) ? setOtp({ challenge: data, values }) : void navigate(next, { replace: true }))
     });
+  const afterVietAnLogin = () => void navigate(`${CHOOSE_CUSTOMER_PATH}?next=${encodeURIComponent(next)}`, { replace: true });
   const requestOtp = (values: FormValues) =>
-    mode === 'vietan' ? vietAnLogin.mutate(values, { onSuccess: challenge => setOtp({ challenge, values }) }) : loginCustomer(values);
+    mode === 'vietan'
+      ? vietAnLogin.mutate(values, { onSuccess: data => (isOtpChallenge(data) ? setOtp({ challenge: data, values }) : afterVietAnLogin()) })
+      : loginCustomer(values);
   const submit = handleSubmit(requestOtp);
 
   const status = session.data?.status;
@@ -103,8 +106,7 @@ export function LoginForm({ autoFocus, next: nextPath }: { autoFocus?: boolean; 
               )
             : requestOtp(current.values)}
         onBack={() => setOtp(null)}
-        onVerified={() =>
-          void navigate(mode === 'vietan' ? `${CHOOSE_CUSTOMER_PATH}?next=${encodeURIComponent(next)}` : next, { replace: true })}
+        onVerified={() => (mode === 'vietan' ? afterVietAnLogin() : void navigate(next, { replace: true }))}
       />
     );
   }

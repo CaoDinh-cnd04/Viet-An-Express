@@ -446,6 +446,26 @@ public class GeoapifyParserTests
         Assert.Equal(("2-1-1, Atago Hitoikizaka", "Tama", "Tokyo", "206-0014"), (jp.Address1, jp.City, jp.State, jp.PostalCode));
     }
 
+    [Fact]
+    public void Goi_y_cap_khu_vuc_dien_ten_khu_vuc_vao_dia_chi_1()
+    {
+        // UAE: Geoapify trả khu vực (suburb) — tên khu vực chính là phần địa chỉ khách cần.
+        const string json = """
+            { "results": [
+              { "country_code": "ae", "suburb": "Ras Al Khor Industrial 3", "city": "Dubai", "state": "Dubai Emirate",
+                "address_line1": "Ras Al Khor Industrial 3", "formatted": "Ras Al Khor Industrial 3, Dubai, Dubai Emirate, United Arab Emirates",
+                "result_type": "suburb" },
+              { "country_code": "ae", "city": "Dubai", "state": "Dubai Emirate", "address_line1": "Dubai",
+                "formatted": "Dubai, Dubai Emirate, United Arab Emirates", "result_type": "district" }
+            ] }
+            """;
+
+        var ae = GeoapifyParser.Suggestions(JsonDocument.Parse(json), "AE");
+
+        Assert.Equal(("Ras Al Khor Industrial 3", "Dubai", "Dubai Emirate"), (ae[0].Address1, ae[0].City, ae[0].State));
+        Assert.Equal("", ae[1].Address1); // tên khu vực trùng thành phố thì không điền lại
+    }
+
     [Theory]
     [InlineData("{}")]
     [InlineData("""{ "results": {} }""")]

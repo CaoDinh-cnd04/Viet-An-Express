@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CARRIER_HUBS, CARRIERS, carriersFor, defaultHub, hubLabel, hubOptions, hubsFor, stateRequired } from './domain';
+import { CARRIER_HUBS, CARRIERS, carriersFor, defaultHub, hubLabel, hubOptions, hubsFor, stateRequired, toServiceCatalog } from './domain';
 
 describe('hãng / hub', () => {
   it('đủ 8 hãng theo hệ thống cũ, giá trị hub dạng "Hãng - Hub"', () => {
@@ -60,5 +60,24 @@ describe('Tỉnh / bang bắt buộc', () => {
     expect(stateRequired('Australia')).toBe(true);
     expect(stateRequired('Singapore', 'SG')).toBe(false);
     expect(stateRequired('Germany')).toBe(false);
+  });
+});
+
+describe('danh mục dịch vụ từ bảng hệ thống cũ (GET /services/hubs)', () => {
+  const catalog = toServiceCatalog([
+    { carrier: 'DHL', hubs: [{ name: 'SIN VIP' }, { name: 'Singapore' }] },
+    { carrier: 'Chuyên tuyến', hubs: [{ name: 'USA - Sea' }] }
+  ]);
+
+  it('đổi sang "Hãng - Hub", giữ thứ tự hãng của danh mục', () => {
+    expect(catalog).toEqual({ DHL: ['DHL - SIN VIP', 'DHL - Singapore'], 'Chuyên tuyến': ['Chuyên tuyến - USA - Sea'] });
+    expect(carriersFor(undefined, catalog)).toEqual(['DHL', 'Chuyên tuyến']);
+    expect(hubOptions('Chuyên tuyến', undefined, catalog)).toEqual([{ value: 'Chuyên tuyến - USA - Sea', label: 'USA - Sea' }]);
+    expect(defaultHub('Chuyên tuyến', undefined, catalog)).toBe('Chuyên tuyến - USA - Sea');
+  });
+
+  it('chưa đọc được danh mục (rỗng / lỗi) thì dùng danh sách dự phòng', () => {
+    expect(toServiceCatalog([])).toBe(CARRIER_HUBS);
+    expect(toServiceCatalog(undefined)).toBe(CARRIER_HUBS);
   });
 });

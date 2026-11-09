@@ -1,7 +1,9 @@
 using System.Reflection;
 using FluentValidation;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -13,6 +15,7 @@ using VietAnExpress.Identity.Contracts;
 using VietAnExpress.Identity.MyTracking;
 using VietAnExpress.Identity.Notifications;
 using VietAnExpress.Identity.Shared;
+using VietAnExpress.Identity.Support;
 using VietAnExpress.Identity.VietAnStaff;
 using VietAnExpress.SharedKernel.Authorization;
 using VietAnExpress.SharedKernel.Persistence;
@@ -27,6 +30,13 @@ namespace VietAnExpress.Identity;
 public static class IdentityModule
 {
     public static Assembly Assembly => typeof(IdentityModule).Assembly;
+
+    /// <summary>Map hub SignalR của module (gọi sau MapControllers): tín hiệu Hỗ trợ &amp; góp ý thời gian thực.</summary>
+    public static IEndpointRouteBuilder MapIdentityHubs(this IEndpointRouteBuilder app)
+    {
+        app.MapHub<SupportLiveHub>(SupportLiveHub.Path);
+        return app;
+    }
 
     public static IServiceCollection AddIdentityModule(this IServiceCollection services, IConfiguration configuration)
     {
@@ -51,6 +61,7 @@ public static class IdentityModule
         services.AddSingleton<OtpEmailRegistry>();
         services.AddScoped<CustomerOtpMailer>();
         services.AddScoped<SessionService>();
+        services.AddSingleton<VietAnOtpDayPass>();
         services.AddHttpContextAccessor();
         services.AddSingleton<MyTrackingImageStore>();
         // Ảnh tin trong thông báo (Upload/ThongBao) và việc gửi email thông báo hẹn giờ khi tới giờ đăng.
@@ -58,6 +69,9 @@ public static class IdentityModule
         services.AddHostedService<NotificationEmailScheduler>();
         // Chân email (tên, địa chỉ, hotline công ty) + link portal — mục cấu hình Company.
         services.AddSingleton(sp => EmailCompany.From(sp.GetRequiredService<IConfiguration>()));
+        // Hỗ trợ & góp ý thời gian thực: SignalR chỉ phát tín hiệu "yêu cầu vừa đổi" (Support/SupportLive.cs), map ở MapIdentityHubs.
+        services.AddSignalR();
+        services.AddSingleton<SupportLive>();
         services.AddSingleton<IPermissionProvider, IdentityPermissionProvider>();
         services.AddValidatorsFromAssembly(Assembly, includeInternalTypes: true);
 

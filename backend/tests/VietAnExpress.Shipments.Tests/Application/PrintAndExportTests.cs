@@ -50,6 +50,17 @@ public class OrderDocumentRendererTests
     }
 
     [Fact]
+    public void Ten_file_luu_PDF_la_Viet_An_Express_bill_online_ma_bill()
+    {
+        static OrderPrintModel M(long n) { var o = Order(); o.OrderNumber = n; return new OrderPrintModel(o, []); }
+        Assert.Equal("Việt An Express - bill online - 6010860", OrderDocumentRenderer.FileTitle([M(6010860)]));
+        Assert.Equal("Việt An Express - bill online - 1, 2, 3 +2", OrderDocumentRenderer.FileTitle([M(1), M(2), M(3), M(4), M(5)]));
+        // Mọi trang in (1 loại, gộp nhiều loại, trang báo không có gì để in) dùng tiêu đề này — Chrome lấy làm tên file.
+        Assert.Contains("<title>Việt An Express - bill online - 6010860</title>", OrderDocumentRenderer.RenderMany([PrintDocs.BillA4], [M(6010860)], Company, Now));
+        Assert.Contains("<title>Việt An Express - bill online - 6010860</title>", OrderDocumentRenderer.RenderMany([PrintDocs.BillA4, PrintDocs.LabelA6], [M(6010860)], Company, Now));
+    }
+
+    [Fact]
     public void Don_chung_tu_khong_in_invoice()
     {
         var docOrder = Order();
@@ -72,7 +83,7 @@ public class OrderDocumentRendererTests
     [Fact]
     public void Trang_in_chi_co_script_da_khai_ma_bam_trong_CSP()
     {
-        Assert.Equal(["'sha256-mrzOaQ9oR0hzQLxt4c7Gjkxo+WGetV688tOKG1n7puA='", "'sha256-k7B/z5XAYSiNSfnY4+WYjLr7LjzXjvr+6Uj7PYpDgQ4='"],
+        Assert.Equal(["'sha256-P+PkMCj9YrYz4SSYPwUDVu0fJRUHkzWhoHOEOudtgiQ='", "'sha256-igr2OQfYpSUjl6vW2aMFG5EBfRex5Bxti8oMuNMzPUQ='"],
             OrderDocumentRenderer.ScriptHashes);
 
         var model = new OrderPrintModel(Order(), []);
@@ -86,6 +97,16 @@ public class OrderDocumentRendererTests
             foreach (System.Text.RegularExpressions.Match m in System.Text.RegularExpressions.Regex.Matches(html, "<script>(.*?)</script>", System.Text.RegularExpressions.RegexOptions.Singleline))
                 Assert.Contains(OrderDocumentRenderer.CspHash(m.Groups[1].Value), OrderDocumentRenderer.ScriptHashes);
         }
+    }
+
+    [Fact]
+    public void Bill_A4_va_nhan_A6_co_nut_copy_anh_invoice_thi_khong()
+    {
+        var model = new OrderPrintModel(Order(), []);
+        var script = $"<script src=\"{OrderDocumentRenderer.CopyImageScript}\"></script>";
+        Assert.Contains(script, OrderDocumentRenderer.RenderMany([PrintDocs.BillA4], [model], Company, Now));
+        Assert.Contains(script, OrderDocumentRenderer.RenderMany([PrintDocs.LabelA6], [model], Company, Now));
+        Assert.DoesNotContain(script, OrderDocumentRenderer.RenderMany([PrintDocs.Invoice], [model], Company, Now));
     }
 
     private static readonly CompanyInfo Company = new();
@@ -142,7 +163,7 @@ public class OrderDocumentRendererTests
         o.ConsigneePhoneCode = "44";
         o.ConsigneePhone = "20 7946 0000";
         var packages = new[] { new PrintPackage(2, 50, 40, 30, 5) };
-        var html = Render(PrintDocs.BillA4, new OrderPrintModel(o, [], packages));
+        var html = Render(PrintDocs.BillA4, new OrderPrintModel(o, [], packages) { ServiceCode = "DHL-SIN" });
 
         Assert.Contains("size: A4 landscape", html);
         Assert.Equal(2, html.Split("class=\"page sheet\"").Length - 1);
@@ -155,7 +176,7 @@ public class OrderDocumentRendererTests
         Assert.Contains("Liên 2: lưu bưu cục gốc", html);
         Assert.Contains("Liên 3: lưu bưu cục Phát", html);
         Assert.Contains("ĐIỀU KHOẢN DỊCH VỤ", html);
-        Assert.Contains("DHL-Sin", html);
+        Assert.Contains("DHL-SIN", html); // mã dịch vụ TBaseCode.Option2 dưới số bill như bill cũ
         Assert.Contains("+44 20 7946 0000", html);
         Assert.Contains("40.00 USD", html);
         Assert.Contains("10.0 | 2*(50*40*30)=<b>24.0</b>", html); // TL thực | SL*(D*R*C)=TL quy đổi như hệ thống cũ
@@ -185,9 +206,21 @@ public class OrderDocumentRendererTests
     [InlineData("United Kingdom", "GB")]
     [InlineData("Vietnam", "VN")]
     [InlineData("us", "US")]
+    [InlineData("Korea, South", "KR")]
     [InlineData("Atlantis", "ATLANTIS")]
     public void Ma_nuoc_den_tren_shipping_mark(string country, string expected) =>
         Assert.Equal(expected, BillA4.CountryCode(country));
+
+    [Fact]
+    public void Ma_nuoc_den_tra_bang_Countries_theo_ID_roi_theo_ten()
+    {
+        IReadOnlyList<VietAnExpress.Shipments.OrderData.LegacyCountryRow> countries =
+            [new(197, "KR", "Korea, South"), new(99, "IN", "India"), new(5, null, "Unknown")];
+        Assert.Equal("KR", VietAnExpress.Shipments.OrderData.LegacyCountryLookup.CodeOf(countries, 197, "bất kỳ"));
+        Assert.Equal("IN", VietAnExpress.Shipments.OrderData.LegacyCountryLookup.CodeOf(countries, null, " india "));
+        Assert.Equal("KR", VietAnExpress.Shipments.OrderData.LegacyCountryLookup.CodeOf(countries, 5, "Korea, South"));
+        Assert.Null(VietAnExpress.Shipments.OrderData.LegacyCountryLookup.CodeOf(countries, null, "Atlantis"));
+    }
 
     [Fact]
     public void Moi_kien_mot_shipping_mark()
@@ -199,13 +232,22 @@ public class OrderDocumentRendererTests
         Assert.Equal(3, BillA4.PieceList([], 3).Count(p => p is null));
     }
 
+    private static readonly IReadOnlyList<VietAnExpress.Shipments.Services.ServiceCarrierDto> Catalog =
+    [
+        new("DHL", [new("Singapore", "DHL-SIN"), new("UK", null)]),
+        new("Chuyên tuyến", [new("AU_Toll (T.Phẩm/M.Phẩm)", "CT-Au_Toll (Tp/Mp)"), new("Singapore", "CT-Sin")])
+    ];
+
     [Theory]
-    [InlineData("Chuyên tuyến|Singapore", "CT-Sin")]
-    [InlineData("DHL|Singapore", "DHL-Sin")]
+    [InlineData("Chuyên tuyến|AU_Toll (T.Phẩm/M.Phẩm)", "CT-Au_Toll (Tp/Mp)")] // trước in "CT-AU_" (cắt 3 ký tự)
+    [InlineData("chuyên tuyến|singapore", "CT-Sin")]                         // khớp không phân biệt hoa thường
+    [InlineData("DHL|Singapore", "DHL-SIN")]
+    [InlineData("DHL|UK", "DHL - UK")]                                      // hub không có mã → "Hãng - Hub" như proc cũ
+    [InlineData("Fedex|SIN 1", "Fedex - SIN 1")]                            // không có trong danh mục
     [InlineData("UPS", "UPS")]
     [InlineData(null, "")]
-    public void Ma_tuyen_in_duoi_so_bill(string? service, string expected) =>
-        Assert.Equal(expected, BillA4.RouteCode(service));
+    public void Ma_dich_vu_in_duoi_so_bill_lay_Option2_nhu_bill_cu(string? service, string expected) =>
+        Assert.Equal(expected, VietAnExpress.Shipments.Services.ServiceHubRules.PrintCode(Catalog, service));
 
     [Theory]
     [InlineData("65", "65 453778", "+65 65 453778")]
@@ -224,17 +266,20 @@ public class OrderDocumentRendererTests
     }
 
     [Fact]
-    public void Nhan_A6_chi_in_shipping_mark_moi_kien_mot_nhan()
+    public void Nhan_A6_in_1_trang_van_don_lien_1_roi_shipping_mark_moi_kien_mot_nhan()
     {
         var html = System.Net.WebUtility.HtmlDecode(Render(PrintDocs.LabelA6, new OrderPrintModel(Order(pieces: 3), [])));
 
+        Assert.Equal(1, html.Split("class=\"page a6 slip\"").Length - 1); // 1 trang vận đơn A6 / đơn (05/11/2026)
         Assert.Equal(3, html.Split("class=\"page a6 mark\"").Length - 1); // 1 shipping mark / kiện
-        Assert.DoesNotContain("Liên 1", html);
+        Assert.True(html.IndexOf("page a6 slip", StringComparison.Ordinal) < html.IndexOf("page a6 mark", StringComparison.Ordinal));
+        Assert.Contains("Liên 1: người gửi lưu", html);
+        Assert.DoesNotContain("Liên 2", html);
         Assert.DoesNotContain("Liên 3", html);
         Assert.Contains("1 / 3", html);
         Assert.Contains("3 / 3", html);
         Assert.Contains("90000001/3", html);
-        Assert.Contains("DHL-Singapore", html);
+        Assert.Contains("DHL - Singapore", html); // chưa tra danh mục → "Hãng - Hub" như proc in bill cũ
         Assert.Contains("size: 105mm 148mm", html);
     }
 

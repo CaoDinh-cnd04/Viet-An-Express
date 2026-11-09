@@ -1,9 +1,13 @@
 /** Kilograms / centimetres. Keep in sync with backend Domain/ShippingRules.cs. */
 export const VOLUME_DIVISOR = 5000;
+/** Cân quy đổi mỗi kiện làm tròn LÊN bậc 0,5 kg như hệ thống cũ (05/11/2026): 1,1 / 1,2 → 1,5; 1,6 → 2. */
+export const VOLUME_STEP = 0.5;
 export type WeightService = string | { carrier?: string; hub?: string };
 export interface WeightRule {
   dimension: 'none' | 'nearest' | 'up';
   pieceStep: number;
+  /** Làm tròn lên cân tính cước của cả dòng kiện (SL × cân 1 kiện); không có = không làm tròn. */
+  lineStep?: number;
   shipmentStep: number;
   threshold?: number;
   aboveStep?: number;
@@ -14,7 +18,8 @@ export function weightRule(service: WeightService = ''): WeightRule {
   if (/^ups\b/.test(name)) return { dimension: 'nearest', pieceStep: name.includes('expedited') ? 1 : 0.5, shipmentStep: 0, label: name.includes('expedited') ? 'UPS Expedited: từng kiện làm tròn lên 1 kg' : 'UPS Express: từng kiện làm tròn lên 0,5 kg' };
   if (/^dhl\b/.test(name)) return { dimension: 'none', pieceStep: 0.5, shipmentStep: 0.5, threshold: 30, aboveStep: 1, label: 'DHL: từng kiện lên 0,5 kg; tổng trên 30 kg lên 1 kg' };
   if (/^fedex\b/.test(name)) return { dimension: 'up', pieceStep: 0, shipmentStep: 0.5, threshold: name.includes('ficp') ? 32.5 : 20.5, aboveStep: 1, label: name.includes('ficp') ? 'FedEx FICP: tổng đến 32,5 kg lên 0,5 kg; trên mức này lên 1 kg' : 'FedEx: tổng đến 20,5 kg lên 0,5 kg; trên mức này lên 1 kg' };
-  return { dimension: 'none', pieceStep: 0, shipmentStep: 0, label: 'Cân tính cước = tổng cân lớn hơn của từng kiện' };
+  // Mặc định (Chuyên tuyến, Aramex, SEA, chưa chọn hãng — 05/11/2026): mỗi dòng kiện lấy cân lớn hơn, làm tròn lên 0,5 kg; tổng cũng lên 0,5 kg.
+  return { dimension: 'none', pieceStep: 0, lineStep: 0.5, shipmentStep: 0.5, label: 'Cân tính cước = cân lớn hơn của từng kiện, làm tròn lên 0,5 kg' };
 }
 export const roundWeight = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
 const positive = (n: number) => Number.isFinite(n) && n > 0 ? n : 0;
@@ -30,8 +35,9 @@ export interface WeightPiece { qty: number; length: number; width: number; heigh
 export function packageWeights(p: WeightPiece, rule: WeightRule) {
   const qty = Math.max(0, Math.trunc(positive(p.qty)));
   const volumePerPiece = weightDimension(p.length, rule) * weightDimension(p.width, rule) * weightDimension(p.height, rule) / VOLUME_DIVISOR;
-  return { gross: positive(p.weightKg) * qty, volume: volumePerPiece * qty,
-    chargeable: roundUpWeight(Math.max(positive(p.weightKg), volumePerPiece), rule.pieceStep) * qty };
+  // Quy đổi của dòng = SL × D×R×C/5000 làm tròn lên 0,5 (như bill A4 hệ thống cũ) — làm tròn cả dòng, không từng kiện, để nhiều kiện nhỏ không bị đội cân.
+  return { gross: positive(p.weightKg) * qty, volume: roundUpWeight(volumePerPiece * qty, VOLUME_STEP),
+    chargeable: roundUpWeight(roundUpWeight(Math.max(positive(p.weightKg), volumePerPiece), rule.pieceStep) * qty, rule.lineStep ?? 0) };
 }
 export function shipmentWeight(kg: number, rule: WeightRule): number {
   const step = rule.threshold !== undefined && kg > rule.threshold ? rule.aboveStep ?? rule.shipmentStep : rule.shipmentStep;

@@ -25,7 +25,8 @@ internal sealed class SessionService(
     private static readonly string[] StaffRoles = [SystemRoles.CustomerStaff];
     private static readonly string[] VietAnRoles = [SystemRoles.VietAnStaff];
     /// <summary>Quyền riêng của nhân viên Việt An, có cả khi chưa chọn khách.</summary>
-    private static readonly string[] VietAnOwnPermissions = [IdentityPermissions.ActForCustomer, IdentityPermissions.ManageSupportRequests];
+    private static readonly string[] VietAnOwnPermissions =
+        [IdentityPermissions.ActForCustomer, IdentityPermissions.ManageSupportRequests, Shipments.Contracts.ShipmentsPermissions.ManagedOrders];
 
     private readonly IReadOnlyList<PermissionDefinition> _customerPermissions = permissionProviders
         .SelectMany(p => p.GetPermissions())
@@ -101,12 +102,13 @@ internal sealed class SessionService(
         customer is null
             ? new SessionUserDto(0, agent.UserName, agent.FullName, AccountTypes.VietAn, "", "", null, null,
                 AvatarUrl: null, DefaultBranch: null, VietAnRoles, VietAnPermissions(null),
-                IsAdmin: false, AgentUserName: agent.UserName, AgentName: agent.FullName)
+                IsAdmin: false, AgentUserName: agent.UserName, AgentName: agent.FullName, CanAssignManager: agent.CanAssignManager)
             : new SessionUserDto(customer.Id, agent.UserName, agent.FullName, AccountTypes.VietAn,
                 customer.Code, customer.CompanyName, customer.ContactName, customer.Email,
                 AvatarUrl: null, DefaultBranch: null, VietAnRoles, VietAnPermissions(customer),
                 Phone: customer.Phone, Address: customer.Address, TaxCode: customer.TaxCode, IsAdmin: true,
-                AgentUserName: agent.UserName, AgentName: agent.FullName);
+                AgentUserName: agent.UserName, AgentName: agent.FullName, NewCustomer: customer.IsNew, CanAssignManager: agent.CanAssignManager,
+                ManagerPending: customer.ManagerPending);
 
     public async Task<SessionUserDto?> BuildUserAsync(CustomerLogin login, CancellationToken ct)
     {

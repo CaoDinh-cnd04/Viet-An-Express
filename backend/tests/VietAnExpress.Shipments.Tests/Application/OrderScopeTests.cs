@@ -90,4 +90,62 @@ public class OrderScopeTests
         new OrderAccess(User(StaffId), Mock.Of<ICustomersApi>()).StampCreator(byCustomer);
         Assert.Equal((StaffId, 0, 0), (byCustomer.CustomerStaffId!.Value, byCustomer.CreateUser!.Value, byCustomer.ModifyUser!.Value));
     }
+
+    // ---------- Nhân viên Việt An: đơn mọi khách mình phụ trách (/vietan/orders) ----------
+
+    private static async Task<(OrderScope Scope, string Sql)> ManagedSqlAsync(int? agentId, bool viewAll)
+    {
+        var customers = new Mock<ICustomersApi>();
+        customers.Setup(c => c.GetVietAnUserAsync(55, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new VietAnUserLogin(55, "nv", "Nhân viên", viewAll, "x"));
+        customers.Setup(c => c.GetCustomerIdsOfManagerAsync(55, It.IsAny<CancellationToken>())).ReturnsAsync([201008L, 200877L]);
+        using var db = CreateDb();
+        var access = new OrderAccess(User(null, agentId), customers.Object);
+        var scope = await access.ScopeAsync(managed: true, Ct);
+        return (scope, access.Apply(db.LegacyOrders, scope).ToQueryString());
+    }
+
+    [Fact]
+    public async Task Nhan_vien_Viet_An_thay_don_cua_khach_minh_phu_trach_khong_chi_khach_dang_chon()
+    {
+        var (scope, sql) = await ManagedSqlAsync(55, viewAll: false);
+        Assert.True(scope.IsManaged);
+        Assert.Equal([201008L, 200877L], scope.CustomerIds);
+        Assert.Contains("[CustomerID]", sql);
+        Assert.Contains("200877", sql.Replace("@ids", "200877")); // danh sách khách đi vào câu lệnh (tham số / OPENJSON)
+        Assert.DoesNotContain("[Customer_Staff_ID] =", sql);
+    }
+
+    [Fact]
+    public async Task Nhan_vien_xem_moi_khach_thay_moi_don()
+    {
+        var (scope, _) = await ManagedSqlAsync(55, viewAll: true);
+        Assert.True(scope.AllCustomers);
+        Assert.Null(scope.CustomerIds);
+    }
+
+    [Fact]
+    public async Task Khach_goi_trang_don_khach_phu_trach_khong_thay_don_nao()
+    {
+        var (scope, _) = await ManagedSqlAsync(null, viewAll: true);
+        Assert.False(scope.IsManaged);
+        Assert.Equal(-1, scope.CustomerId);
+    }
+
+    [Fact]
+    public async Task Dong_don_kem_ma_va_ten_khach_khi_xem_nhieu_khach()
+    {
+        var customers = new Mock<ICustomersApi>();
+        customers.Setup(c => c.GetByIdsAsync(It.IsAny<IReadOnlyCollection<long>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([new CustomerSummary(201008, "KH01", "Công ty A", null, null, null, null, null)]);
+        var access = new OrderAccess(User(null, 55), customers.Object);
+        var dto = new OrderDto("1", 1, "1", "", null, "", "", "", "", "", null, "PACK", "wait", "", "", null, 0, null);
+        var rows = await access.WithCustomersAsync(new OrderScope(-1, null, [201008L, 200877L]),
+            [(new LegacyOrder { CustomerId = 201008 }, dto), (new LegacyOrder { CustomerId = 200877, CustomerName = "Tên trên đơn" }, dto)], Ct);
+
+        Assert.Equal(new OrderCustomerDto("201008", "KH01", "Công ty A"), rows[0].Customer);
+        Assert.Equal(new OrderCustomerDto("200877", "", "Tên trên đơn"), rows[1].Customer);
+        // Phạm vi 1 khách ("Đơn hàng của tôi") → không gắn.
+        Assert.Null((await access.WithCustomersAsync(new OrderScope(201008, null), [(new LegacyOrder { CustomerId = 201008 }, dto)], Ct))[0].Customer);
+    }
 }

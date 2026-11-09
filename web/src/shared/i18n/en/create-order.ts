@@ -113,7 +113,7 @@ export const createOrder: Record<string, string> = {
   'Quy đổi và tính cước ở mỗi dòng là tổng theo SL.': 'Volumetric and billable weights in each row include the quantity.',
   'Kích thước tính quy đổi làm tròn lên cm.': 'Dimensions used for volumetric weight are rounded up to whole cm.',
   'Kích thước tính quy đổi làm tròn đến cm gần nhất.': 'Dimensions used for volumetric weight are rounded to the nearest whole cm.',
-  'Cân tính cước = tổng cân lớn hơn của từng kiện': 'Billable weight = sum of the greater actual or volumetric weight of each piece',
+  'Cân tính cước = cân lớn hơn của từng kiện, làm tròn lên 0,5 kg': 'Billable weight = greater of actual or volumetric weight per piece, rounded up to 0.5 kg',
   'UPS Expedited: từng kiện làm tròn lên 1 kg': 'UPS Expedited: each piece rounded up to 1 kg',
   'UPS Express: từng kiện làm tròn lên 0,5 kg': 'UPS Express: each piece rounded up to 0.5 kg',
   'DHL: từng kiện lên 0,5 kg; tổng trên 30 kg lên 1 kg': 'DHL: each piece rounded up to 0.5 kg; totals over 30 kg rounded up to 1 kg',
@@ -273,7 +273,6 @@ export const createOrder: Record<string, string> = {
   'Chưa có mặt hàng đã xác minh phù hợp.': 'No verified goods match yet.',
   'Tra trong toàn bộ biểu thuế': 'Search the full tariff',
   '{n} mã trong {g} nhóm HS6': '{n} codes in {g} HS6 groups',
-  'Việt An đã xác minh': 'Verified by Viet An',
   'Đơn vị tính: {unit}': 'Unit: {unit}',
   'Mặt hàng đã xác minh': 'Verified goods',
   'Tra danh mục mã': 'Browse tariff codes',
@@ -350,5 +349,13 @@ export const createOrder: Record<string, string> = {
   'tên hàng (VN)': 'item name (VN)',
   'đơn vị tính': 'unit',
   'đơn giá': 'unit price',
-  'Phân loại nhóm hàng': 'Goods group breakdown'
+  'Phân loại nhóm hàng': 'Goods group breakdown',
+  'Dán từ Excel': 'Paste from Excel',
+  'Copy các ô trong Excel rồi dán vào để thêm nhiều mặt hàng': 'Copy cells in Excel and paste them here to add several items',
+  'Dán dữ liệu Excel': 'Paste Excel data',
+  'Bôi chọn các ô trong Excel theo thứ tự cột: {cols} — Ctrl+C rồi Ctrl+V vào ô dưới. Copy kèm dòng tiêu đề cũng được.': 'Select the cells in Excel in this column order: {cols} — press Ctrl+C, then Ctrl+V in the box below. Copying the header row is fine too.',
+  'Dán dữ liệu Excel vào đây…': 'Paste Excel data here…',
+  'Thêm vào invoice': 'Add to invoice',
+  'Vào kiện': 'Into package',
+  'Chưa có dữ liệu — copy các ô trong Excel rồi dán vào đây': 'No data yet — copy cells in Excel and paste them here'
 };

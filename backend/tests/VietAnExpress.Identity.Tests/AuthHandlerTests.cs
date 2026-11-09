@@ -34,6 +34,8 @@ internal sealed class IdentityFixture : IAsyncDisposable
     public Mock<ICurrentUser> CurrentUser { get; } = new();
     public RecordingJobQueue Jobs { get; } = new();
     public FakeEmailSender Email { get; } = new();
+    /// <summary>Tín hiệu SignalR Hỗ trợ &amp; góp ý đã phát (thay hub thật).</summary>
+    public RecordingHub Hub { get; } = new();
     private readonly string imageDirectory = Path.Combine(Path.GetTempPath(), "vietan_mytracking_" + Guid.NewGuid().ToString("N"));
     public MyTrackingImageStore Images { get; }
     public NotificationImageStore NotificationImages { get; }

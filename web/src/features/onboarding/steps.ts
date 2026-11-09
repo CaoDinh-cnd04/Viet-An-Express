@@ -220,22 +220,22 @@ const ORDERS: readonly TourStep[] = [
 
 const SUPPORT: readonly TourStep[] = [
   {
-    target: 'support-form',
+    target: 'support-new',
     placement: 'bottom',
-    title: 'Gửi yêu cầu mới',
+    title: 'Tạo yêu cầu',
     body: 'Chọn "Hỗ trợ & sự cố" (sự cố đơn hàng, tracking, cước, sửa thông tin…) hoặc "Góp ý". Nhập mã vận đơn nếu có, nội dung, đính kèm tệp nếu cần; tick "Cần xử lý gấp" khi cần CS ưu tiên.'
   },
   {
-    target: 'support-contacts',
+    target: 'support-faq',
     placement: 'bottom',
-    title: 'Liên hệ nhanh',
-    body: 'Hotline, email, Zalo của CS Việt An khi cần trao đổi ngay.'
+    title: 'Câu hỏi thường gặp',
+    body: 'Xem nhanh câu trả lời cho các thắc mắc hay gặp về tạo đơn, cước, giao hàng, tài khoản trước khi gửi yêu cầu.'
   },
   {
     target: 'support-tickets',
     placement: 'bottom',
-    title: 'Yêu cầu đã gửi',
-    body: 'Lọc yêu cầu chưa xong / đã xử lý, tìm theo mã, vận đơn, nội dung. Bấm 1 dòng để xem chi tiết; khi CS chuyển "Chờ khách phản hồi" bạn trả lời ngay trong yêu cầu đó.'
+    title: 'Yêu cầu của bạn',
+    body: 'Bấm 1 yêu cầu để xem chi tiết và lịch sử trao đổi. Khi CS chờ bạn phản hồi, yêu cầu nằm ở ô "Cần bạn trả lời" — bạn trả lời ngay ở khung bên phải.'
   }
 ];
 

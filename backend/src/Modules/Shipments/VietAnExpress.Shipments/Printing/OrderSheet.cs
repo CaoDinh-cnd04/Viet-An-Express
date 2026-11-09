@@ -16,6 +16,8 @@ internal sealed record ExportedFile(byte[] Content, string FileName);
 /// <summary>Dựng file Excel bảng kê — tách riêng để test.</summary>
 internal static class OrderSheet
 {
+    private const int MeasureRows = 300;
+
     private static readonly string[] Headers =
     [
         "STT", "Số vận đơn", "Mã hãng", "Số tham chiếu", "Ngày tạo", "Ngày gửi", "Người nhận", "Người liên hệ", "Điện thoại",
@@ -23,10 +25,15 @@ internal static class OrderSheet
         "Trạng thái", "Ngày giao", "Người ký nhận"
     ];
 
+    /// <param name="customerLabels">
+    /// Bảng kê nhiều khách (trang "Đơn khách phụ trách" của nhân viên Việt An): CustomerID → "mã — tên", thêm cột "Khách hàng" ở cuối
+    /// (cuối để không xô lệch các cột tổng). Null = bảng kê của 1 khách.
+    /// </param>
     public static byte[] Build(
         IReadOnlyList<LegacyOrder> orders, DateTime today, string? customerName, DateOnly? from, DateOnly? to,
-        DateTime exportedAt, IReadOnlyDictionary<string, string> statusLabels)
+        DateTime exportedAt, IReadOnlyDictionary<string, string> statusLabels, IReadOnlyDictionary<long, string>? customerLabels = null)
     {
+        string[] headers = customerLabels is null ? Headers : [.. Headers, "Khách hàng"];
         using var book = new XLWorkbook();
         var ws = book.Worksheets.Add("Bảng kê");
 
@@ -41,8 +48,8 @@ internal static class OrderSheet
         ws.Cell(2, 1).Style.Font.SetFontColor(XLColor.FromHtml("#4D6456"));
 
         const int headerRow = 4;
-        for (var c = 0; c < Headers.Length; c++) ws.Cell(headerRow, c + 1).Value = Headers[c];
-        var header = ws.Range(headerRow, 1, headerRow, Headers.Length);
+        for (var c = 0; c < headers.Length; c++) ws.Cell(headerRow, c + 1).Value = headers[c];
+        var header = ws.Range(headerRow, 1, headerRow, headers.Length);
         header.Style.Font.SetBold().Font.SetFontColor(XLColor.White)
             .Fill.SetBackgroundColor(XLColor.FromHtml("#2E8B3E"))
             .Alignment.SetVertical(XLAlignmentVerticalValues.Center)
@@ -63,9 +70,10 @@ internal static class OrderSheet
                 string.Join(", ", new[] { o.ConsigneeAddress1, o.ConsigneeAddress2, o.ConsigneeAddress3 }.Where(s => !string.IsNullOrWhiteSpace(s))),
                 o.ConsigneeCity, o.ConsigneeCountry, o.ServiceName?.Replace("|", " - "),
                 o.Pieces ?? 1, o.WeightKg ?? 0, o.GoodsName, o.GoodsValue, o.Currency,
-                statusLabels.GetValueOrDefault(LegacyOrderStatus.Of(o, today)), pod is null ? null : $"{pod.Date} {pod.Time}".Trim(), pod?.Signer
+                statusLabels.GetValueOrDefault(LegacyOrderStatus.Of(o, today)), pod is null ? null : $"{pod.Date} {pod.Time}".Trim(), pod?.Signer,
+                customerLabels is null ? null : CustomerLabel(o, customerLabels)
             ];
-            for (var c = 0; c < values.Length; c++)
+            for (var c = 0; c < headers.Length; c++)
             {
                 var cell = ws.Cell(r, c + 1);
                 cell.Value = values[c] switch
@@ -77,10 +85,9 @@ internal static class OrderSheet
                     var v => v.ToString()?.Trim()
                 };
             }
-            // Số vận đơn / mã hãng để dạng chữ — Excel không tự đổi thành số khoa học.
-            ws.Cell(r, 2).Style.NumberFormat.Format = "@";
-            ws.Cell(r, 3).Style.NumberFormat.Format = "@";
         }
+        // Số vận đơn / mã hãng để dạng chữ — Excel không tự đổi thành số khoa học (đặt 1 lần cho cả cột, không từng ô).
+        ws.Range(headerRow + 1, 2, Math.Max(r, headerRow + 1), 3).Style.NumberFormat.Format = "@";
 
         // Dòng tổng
         var total = r + 1;
@@ -90,18 +97,19 @@ internal static class OrderSheet
             ws.Cell(total, 14).FormulaA1 = $"SUM(N{headerRow + 1}:N{r})";
             ws.Cell(total, 15).FormulaA1 = $"SUM(O{headerRow + 1}:O{r})";
         }
-        ws.Range(total, 1, total, Headers.Length).Style.Font.SetBold().Fill.SetBackgroundColor(XLColor.FromHtml("#E6F4EA"));
+        ws.Range(total, 1, total, headers.Length).Style.Font.SetBold().Fill.SetBackgroundColor(XLColor.FromHtml("#E6F4EA"));
 
         ws.Columns(5, 6).Style.NumberFormat.Format = "dd/mm/yyyy";
         ws.Column(15).Style.NumberFormat.Format = "#,##0.00";
         ws.Column(17).Style.NumberFormat.Format = "#,##0.00";
-        ws.Range(headerRow, 1, total, Headers.Length).Style.Border.SetOutsideBorder(XLBorderStyleValues.Thin)
+        ws.Range(headerRow, 1, total, headers.Length).Style.Border.SetOutsideBorder(XLBorderStyleValues.Thin)
             .Border.SetInsideBorder(XLBorderStyleValues.Thin).Border.SetInsideBorderColor(XLColor.FromHtml("#CCDDD3"));
-        if (orders.Count > 0) ws.Range(headerRow, 1, r, Headers.Length).SetAutoFilter();
+        if (orders.Count > 0) ws.Range(headerRow, 1, r, headers.Length).SetAutoFilter();
         ws.SheetView.FreezeRows(headerRow);
         try
         {
-            ws.Columns().AdjustToContents(headerRow, total, 8, 45);
+            // Đo độ rộng chữ trên tiêu đề + tối đa 300 dòng đầu: đo cả 10.000 dòng mất vài giây mà độ rộng gần như không đổi.
+            ws.Columns().AdjustToContents(headerRow, Math.Min(total, headerRow + MeasureRows), 8, 45);
         }
         catch (Exception)
         {
@@ -113,4 +121,8 @@ internal static class OrderSheet
         book.SaveAs(stream);
         return stream.ToArray();
     }
+
+    /// <summary>Khách của đơn trên bảng kê nhiều khách: "mã — tên" từ hồ sơ khách, không còn hồ sơ thì tên ghi trên đơn.</summary>
+    private static string? CustomerLabel(LegacyOrder o, IReadOnlyDictionary<long, string> labels) =>
+        o.CustomerId is { } id && labels.TryGetValue(id, out var label) ? label : o.CustomerName?.Trim();
 }

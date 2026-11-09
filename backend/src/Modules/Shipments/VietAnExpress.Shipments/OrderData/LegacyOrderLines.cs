@@ -6,7 +6,9 @@ namespace VietAnExpress.Shipments.OrderData;
 
 /// <summary>
 /// 1 dòng kiện của vận đơn — bảng <c>dbo.MaVanDon_PCS_DIM</c> (dùng chung với hệ thống cũ, không nằm trong migration).
-/// <see cref="WeightKg"/>, <see cref="VolumetricKg"/>, <see cref="ChargeableKg"/> là tổng của cả dòng (giống cột GW_n trong file Excel mẫu).
+/// <see cref="WeightKg"/>, <see cref="VolumetricKg"/>, <see cref="ChargeableKg"/> là số của 1 KIỆN như hệ thống cũ (proc in bill / hành trình
+/// tính tổng = cột × SoLuong; p_MaVanDon_Get_DIM tách dòng thành từng kiện mang nguyên số của dòng). Trước 06/11/2026 portal ghi tổng cả dòng —
+/// dòng nhiều kiện bị hệ thống cũ nhân thêm lần nữa. Tổng của dòng: <see cref="LineWeightKg"/>, <see cref="LineVolumetricKg"/>, <see cref="LineChargeableKg"/>.
 /// </summary>
 internal sealed class LegacyPackageLine
 {
@@ -22,6 +24,10 @@ internal sealed class LegacyPackageLine
     public decimal WeightKg { get; set; }
     public decimal? VolumetricKg { get; set; }
     public decimal? ChargeableKg { get; set; }
+
+    public decimal LineWeightKg => WeightKg * Math.Max(1, Quantity);
+    public decimal? LineVolumetricKg => VolumetricKg * Math.Max(1, Quantity);
+    public decimal? LineChargeableKg => ChargeableKg * Math.Max(1, Quantity);
 }
 
 /// <summary>1 dòng hàng trên invoice của vận đơn — bảng <c>dbo.MaVanDon_ChiTietHang</c> (không nằm trong migration).</summary>

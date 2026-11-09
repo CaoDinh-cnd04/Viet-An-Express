@@ -1,18 +1,32 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { getErrorMessage, http, type ListResponse } from '@/shared/api/http';
+import { useLiveEvent } from '@/shared/api/live';
 import { useToast } from '@/shared/ui';
 import type { NewSupportRequest, SupportTicket } from './types';
+
+/** Tên tín hiệu SignalR backend phát khi 1 yêu cầu đổi (Support/SupportLive.cs — SupportLiveHub.Event), tham số = mã yêu cầu. */
+export const SUPPORT_LIVE_EVENT = 'support';
 
 export const supportKeys = {
   all: ['troubles'] as const,
   detail: (id: string) => ['troubles', 'detail', id] as const
 };
 
-export function useSupportTickets() {
+/** `enabled` false: không tải (vd trang đơn khách phụ trách của nhân viên Việt An — không có yêu cầu hỗ trợ của khách đang chọn). */
+export function useSupportTickets(enabled = true) {
   return useQuery({
+    enabled,
     queryKey: supportKeys.all,
-    queryFn: () => http.get<ListResponse<SupportTicket>>('/troubles').then(r => r.data)
+    queryFn: () => http.get<ListResponse<SupportTicket>>('/troubles').then(r => r.data),
+    // Dự phòng khi không có tín hiệu thời gian thực (CS sửa ở phần mềm cũ / mất kết nối).
+    refetchInterval: 60_000
   });
+}
+
+/** Thời gian thực: CS trả lời / đổi trạng thái → máy chủ báo qua SignalR, tải lại danh sách yêu cầu (không cần tải lại trang). */
+export function useSupportLive() {
+  const qc = useQueryClient();
+  useLiveEvent(SUPPORT_LIVE_EVENT, () => void qc.invalidateQueries({ queryKey: supportKeys.all }));
 }
 
 /** Gửi yêu cầu mới (hỗ trợ & sự cố / góp ý) — multipart/form-data để kèm tệp. */

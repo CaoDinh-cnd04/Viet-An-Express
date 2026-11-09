@@ -10,6 +10,7 @@ import { ORDER_STATUS, PRINT_DOCUMENTS } from '../constants';
 import { invoiceTotal, lineVolume, receiverAddress, summarizePackages } from '../lib/order-detail';
 import { estimatePodDate } from '../lib/order-utils';
 import { usePrintDocuments } from '../mutations';
+import { useOrdersSource } from '../source';
 import type { Order, OrderActions, OrderDetail } from '../types';
 import { TrackingLinks } from './TrackingLinks';
 import styles from './OrderDrawer.module.css';
@@ -34,7 +35,8 @@ export function OrderDrawer({ order, onClose, actions }: OrderDrawerProps) {
   const print = usePrintDocuments();
   const events = useOrderEvents(order?.bill ?? null);
   const detail = useOrder(order?.bill ?? null);
-  const ticketList = useSupportTickets();
+  const managed = useOrdersSource() === 'managed';
+  const ticketList = useSupportTickets(!managed);
   const [openTicketId, setOpenTicketId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -79,6 +81,7 @@ export function OrderDrawer({ order, onClose, actions }: OrderDrawerProps) {
             <p className={styles.headMeta}>
               {t('Trạng thái')}: <strong>{t(status.label)}</strong>
               {o.ref && <> · Ref: {o.ref}</>}
+              {o.customer && <> · {t('Khách')}: {o.customer.code} — {o.customer.name}</>}
             </p>
           </div>
           <button type="button" className={styles.close} onClick={onClose} aria-label={t('Đóng')}>
@@ -95,9 +98,9 @@ export function OrderDrawer({ order, onClose, actions }: OrderDrawerProps) {
               </Button>
             )}
           />
-          <Button size="sm" onClick={() => navigate(`/orders/new?from=${encodeURIComponent(o.bill)}`)}>{t('Copy đơn')}</Button>
+          {!managed && <Button size="sm" onClick={() => navigate(`/orders/new?from=${encodeURIComponent(o.bill)}`)}>{t('Copy đơn')}</Button>}
           <Button size="sm" onClick={() => actions.onPhotos(o)}>{o.photos ? t('Ảnh kiện ({n})', { n: o.photos }) : t('Ảnh kiện')}</Button>
-          <Button size="sm" onClick={() => actions.onReportIssue(o)}>{t('Báo sự cố')}</Button>
+          {!managed && <Button size="sm" onClick={() => actions.onReportIssue(o)}>{t('Báo sự cố')}</Button>}
         </div>
 
         <div className={styles.body}>

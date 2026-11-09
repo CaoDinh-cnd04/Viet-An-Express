@@ -63,6 +63,7 @@ export const start: Record<string, string> = {
   'Nhân viên {agent} đang làm cho khách {code} — {name}': 'Staff {agent} is working for customer {code} — {name}',
   'Nhân viên {agent} — chưa chọn khách': 'Staff {agent} — no customer selected',
   'Đổi khách': 'Switch customer',
+  'Về trang quản trị': 'Back to staff view',
   'Không chọn được khách': 'Could not choose this customer',
   'Vào portal': 'Go to portal',
   'Vào portal dùng thử': 'Try the portal',
@@ -122,7 +123,6 @@ export const start: Record<string, string> = {
   'Cổng liên lạc & mạng xã hội': 'Contact channels & social media',
   'Gõ tên công ty để chọn lại người nhận đã gửi trước đây. Nhập mã bưu chính thì thành phố, tỉnh / bang tự điền. Địa chỉ thuộc vùng sâu vùng xa sẽ có cảnh báo phụ phí.': 'Type the company name to reuse a previous receiver. Enter the postal code and the city and state are filled in. Remote-area addresses show a surcharge warning.',
   'Gửi yêu cầu hỗ trợ, báo sự cố đơn hàng, góp ý và xem thông báo từ Việt An. CS trả lời ngay trong từng yêu cầu.': 'Send support requests, report order issues, give feedback and read notices from Viet An. CS replies within each request.',
-  'Hotline, email, Zalo của CS Việt An khi cần trao đổi ngay.': 'Viet An CS hotline, email and Zalo when you need to talk right away.',
   'Hỗ trợ khai hàng': 'Declaration helpers',
   'In nhanh Bill A4, Invoice, CVCK của từng đơn ngay trên dòng.': 'Quickly print the A4 bill, invoice and CVCK of each order right on its row.',
   'In nhãn shipping mark khổ A6, mỗi kiện 1 nhãn để dán lên thùng.': 'Print A6 shipping-mark labels, one per piece, to stick on the boxes.',
@@ -159,5 +159,20 @@ export const start: Record<string, string> = {
   'Xem điều khoản dịch vụ của Việt An Express bất cứ lúc nào. Khi tạo đơn & in bill, bạn cần đồng ý điều khoản này.': 'Read the Viet An Express terms of service at any time. You need to accept them when you create & print a bill.',
   '"Lưu nháp" giữ đơn để làm tiếp. "Tạo đơn & in bill" hiện điều khoản dịch vụ: đồng ý thì cấp số vận đơn và in ngay; không đồng ý thì đơn nằm ở Đơn nháp & chưa in.': '"Save draft" keeps the order to finish later. "Create & print bill" shows the terms of service: accept to get a bill number and print right away; otherwise the order stays in Drafts & unprinted.',
   '"Sổ địa chỉ" chọn người nhận từ các đơn đã gửi. "Làm mới" xóa toàn bộ thông tin người nhận để nhập lại.': '"Address book" picks a receiver from past orders. "Reset" clears all receiver details to start again.',
-  'Điền sẵn theo hồ sơ tài khoản. Chọn chi nhánh gửi hàng; bấm mũi tên hoặc vào khung thông tin để sửa người liên hệ, điện thoại cho đơn này. Đổi tên công ty / địa chỉ: bấm "Sửa hồ sơ người gửi" để gửi yêu cầu cho CS.': 'Pre-filled from your account profile. Choose the sending branch; click the arrow or the info box to edit the contact or phone for this order. To change the company name / address, click "Update sender profile" to send a request to CS.'
+  'Điền sẵn theo hồ sơ tài khoản. Chọn chi nhánh gửi hàng; bấm mũi tên hoặc vào khung thông tin để sửa người liên hệ, điện thoại cho đơn này. Đổi tên công ty / địa chỉ: bấm "Sửa hồ sơ người gửi" để gửi yêu cầu cho CS.': 'Pre-filled from your account profile. Choose the sending branch; click the arrow or the info box to edit the contact or phone for this order. To change the company name / address, click "Update sender profile" to send a request to CS.',
+  // Nhân viên Việt An — khách mới, gán người phụ trách
+  'Tạo khách mới': 'New customer',
+  'Khách lần đầu gửi, chưa có hồ sơ — mở trang đánh bill với người gửi trống': 'First-time customer without a profile — opens the bill form with an empty sender',
+  'Không tạo được khách mới': 'Could not create the new customer',
+  'Khách mới': 'New customer',
+  '(chưa có tên)': '(no name yet)',
+  'Phụ trách': 'Account manager',
+  'Gán nhân viên': 'Assign staff',
+  'Đổi nhân viên': 'Change staff',
+  'Chưa gán': 'Not assigned',
+  'Nhân viên {agent} đang làm cho khách mới — {name}': 'Staff {agent} is working for new customer — {name}',
+  'Gán nhân viên phụ trách': 'Assign account manager',
+  'Đã gán nhân viên phụ trách': 'Account manager assigned',
+  'Không gán được nhân viên': 'Could not assign the staff member',
+  'Khách mới: thông tin người gửi sẽ lưu vào hồ sơ khách khi lưu nháp / in, CS hoàn thiện sau ở CMS.': 'New customer: the sender details are saved to the customer profile when you save the draft / print; CS completes the profile later in the CMS.'
 };

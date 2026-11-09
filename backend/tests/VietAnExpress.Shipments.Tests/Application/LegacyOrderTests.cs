@@ -36,7 +36,9 @@ public class LegacyOrderFactoryTests
         Assert.Equal(191, o.ConsigneeCountryId);
         Assert.Equal("Singapore", o.ConsigneeCountry);
         Assert.Equal("", o.ConsigneeEmail); // cột NOT NULL
-        Assert.Equal(24m, o.WeightKg);      // max(2×3 = 6, 2×50×40×30/5000 = 24)
+        // Mã hãng / POD chuỗi rỗng như Bill Online cũ — proc CMS p_Orders_GET_POD so "<>" nên NULL không bao giờ được đồng bộ.
+        Assert.Equal(("", ""), (o.BillConnect, o.Pod));
+        Assert.Equal(6m, o.WeightKg);       // Trong_Luong = cân thực tổng 2×3 như hệ thống cũ (GrossWeight), không phải cân tính cước 24
         Assert.Equal(10m, o.GoodsValue);    // 2 × 5
         Assert.Equal("SGD", o.Currency);
         Assert.Equal("PO-1001", o.CustomerBill);
@@ -45,6 +47,14 @@ public class LegacyOrderFactoryTests
         Assert.Equal(1, o.Status);
         Assert.Equal(Today, o.CreateDate);
         Assert.Null(o.SentDate);
+    }
+
+    [Fact]
+    public void Kien_chi_khai_kich_thuoc_khong_khai_can_thi_ghi_can_tinh_cuoc_de_don_van_co_can()
+    {
+        var o = LegacyOrderFactory.FromPayload(Payload("PACK", new OrderPayload.PackagePart { Qty = "2", Weight = "", Length = "50", Width = "40", Height = "30" }),
+            Customer, 90000003, Today);
+        Assert.Equal(24m, o.WeightKg);
     }
 
     [Fact]
@@ -118,7 +128,7 @@ public class LegacyOrderFactoryTests
         Assert.Equal(expected, LegacyOrderFactory.ServiceName(hub, carrier));
 
     [Fact]
-    public void Dong_kien_ghi_MaVanDon_PCS_DIM_can_la_tong_cua_dong()
+    public void Dong_kien_ghi_MaVanDon_PCS_DIM_theo_1_kien_nhu_he_thong_cu()
     {
         var p = Payload("PACK",
             new OrderPayload.PackagePart { Type = "bag", Qty = "2", Weight = "5", Length = "40", Width = "30", Height = "20.5" },
@@ -130,9 +140,11 @@ public class LegacyOrderFactoryTests
         Assert.Equal(2, lines.Count);
         var a = lines[0];
         Assert.Equal((850976, 2, "BAG", 40, 30, 21), (a.OrderId, a.Quantity, a.PackType, a.LengthCm, a.WidthCm, a.HeightCm));
-        Assert.Equal(10m, a.WeightKg);          // 2 × 5
-        Assert.Equal(9.84m, a.VolumetricKg);    // 2 × 40×30×20.5 / 5000
-        Assert.Equal(10m, a.ChargeableKg);
+        // Ghi theo 1 kiện như hệ thống cũ (hệ thống cũ nhân SoLuong khi in / xem hành trình):
+        Assert.Equal(5m, a.WeightKg);           // cân 1 kiện
+        Assert.Equal(5m, a.VolumetricKg);       // cả dòng 2 × 40×30×20.5 / 5000 = 9,84 → làm tròn lên 10 kg, chia 2 kiện
+        Assert.Equal(5m, a.ChargeableKg);
+        Assert.Equal((10m, 10m, 10m), (a.LineWeightKg, a.LineVolumetricKg, a.LineChargeableKg));
         Assert.Equal(LegacyOrderFactory.DefaultPackType, lines[1].PackType);
     }
 
@@ -173,7 +185,7 @@ public class LegacyOrderFactoryTests
     [Fact]
     public void Doc_lai_2_bang_de_in_can_1_kien_va_ten_hang()
     {
-        var pkg = LegacyOrderLinesReader.ToPrint(new LegacyPackageLine { Quantity = 2, LengthCm = 40, WidthCm = 30, HeightCm = 21, WeightKg = 10 });
+        var pkg = LegacyOrderLinesReader.ToPrint(new LegacyPackageLine { Quantity = 2, LengthCm = 40, WidthCm = 30, HeightCm = 21, WeightKg = 5 });
         Assert.Equal(new PrintPackage(2, 40, 30, 21, 5), pkg);
 
         var item = LegacyOrderLinesReader.ToPrint(new LegacyInvoiceLine { DescriptionEn = "Dress", DescriptionVi = "Đầm", Quantity = 3, UnitPrice = 12.5m });
@@ -275,13 +287,13 @@ public class LegacyOrderDetailTests
     public void Chi_tiet_don_kem_kien_va_invoice()
     {
         var o = new LegacyOrder { Id = 7, OrderNumber = 90000006, Currency = "USD", ExportReason = "GIFT", ShippingFee = 5, GoodsValue = 40 };
-        var packages = new[] { new LegacyPackageLine { OrderId = 7, Quantity = 2, PackType = "CARTON", LengthCm = 40, WidthCm = 30, HeightCm = 20, WeightKg = 9 } };
+        var packages = new[] { new LegacyPackageLine { OrderId = 7, Quantity = 2, PackType = "CARTON", LengthCm = 40, WidthCm = 30, HeightCm = 20, WeightKg = 4.5m } };
         var items = new[] { new LegacyInvoiceLine { OrderId = 7, DescriptionEn = "Dress", DescriptionVi = "Váy", Quantity = 5, Unit = null, UnitPrice = 8 } };
 
         var dto = LegacyOrderView.ToDetailDto(o, new DateTime(2026, 9, 30), packages, items);
 
         var p = Assert.Single(dto.Packages!);
-        Assert.Equal((2, 40, 4.5m), (p.Qty, p.Length, p.WeightKg)); // cân 1 kiện = tổng / số kiện
+        Assert.Equal((2, 40, 4.5m), (p.Qty, p.Length, p.WeightKg)); // TrongLuong là cân 1 kiện (như hệ thống cũ)
         var i = Assert.Single(dto.Invoice!.Items);
         Assert.Equal(("PCS", 40m), (i.Unit, i.Amount));                 // thiếu ĐVT → PCS, thành tiền = SL × giá
         Assert.Equal(("USD", "GIFT", 5m), (dto.Invoice.Currency, dto.Invoice.ExportType, dto.Invoice.ShippingFee));

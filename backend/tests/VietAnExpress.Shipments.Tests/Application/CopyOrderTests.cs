@@ -59,7 +59,7 @@ public class CopyOrderTests
             ConsigneeName = "Receiver", ConsigneeAddress3 = "Address 3", ConsigneePhoneCode = "+1", ServiceName = "UPS|Original hub",
             CustomerBill = "REF", Pieces = 2, WeightKg = 9, GoodsName = "Dresses", Currency = "CAD", ShippingFee = 12.5m, ExportReason = "SAMPLE"
         });
-        db.LegacyPackageLines.Add(new LegacyPackageLine { Id = 1, OrderId = 100, Quantity = 2, PackType = "BAG", LengthCm = 20, WidthCm = 30, HeightCm = 40, WeightKg = 6 });
+        db.LegacyPackageLines.Add(new LegacyPackageLine { Id = 1, OrderId = 100, Quantity = 2, PackType = "BAG", LengthCm = 20, WidthCm = 30, HeightCm = 40, WeightKg = 3 }); // cân 1 kiện như hệ thống cũ
         db.LegacyInvoiceLines.Add(new LegacyInvoiceLine { Id = 1, OrderId = 100, DescriptionEn = "Dress", DescriptionVi = "Váy", Manufacturer = "Maker", Quantity = 2, UnitPrice = 1.2345m, Unit = "PCS", HsCode = "610910", Origin = "CN" });
         await db.SaveChangesAsync(Ct);
         var result = (await new CopyOrderHandler(db, Access(db)).Handle(new("90000001"), Ct)).Value;

@@ -37,7 +37,7 @@ internal sealed class ReplyManagedSupportRequestHandler(IdentityDbContext db, IC
         if (SupportRequest.ParseCode(c.Id) is not { } id) return SupportRequestErrors.NotFound;
         var customerId = await db.SupportRequests.AsNoTracking().Where(t => t.Id == id).Select(t => (long?)t.CustomerId).FirstOrDefaultAsync(ct);
         if (customerId is null) return SupportRequestErrors.NotFound;
-        if (!agent.ViewAllCustomers && (await customers.GetAccountManagerAsync(customerId.Value, ct))?.Id != agent.Id)
+        if (!agent.ViewAllCustomers && !await customers.IsCustomerOfStaffAsync(customerId.Value, agent.Id, ct))
             return SupportRequestErrors.NotFound;
         return await sender.Send(new ReplySupportRequestCommand(c.Id, c.Reply, c.Status), ct);
     }

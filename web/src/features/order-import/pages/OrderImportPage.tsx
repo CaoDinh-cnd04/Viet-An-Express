@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { getErrorMessage } from '@/shared/api/http';
 import { useI18n } from '@/shared/i18n';
-import { BRANCHES, CARRIERS, defaultHub, hubOptions } from '@/shared/config/domain';
+import { BRANCHES, defaultHub, hubOptions } from '@/shared/config/domain';
+import { useServiceCatalog } from '@/features/order-form';
 import { Button, Card, DataTable, FileDrop, FormGrid, LinkButton, Notice, PageHeader, SelectField, StatusPill, type Column } from '@/shared/ui';
 import { useCommitImport, usePreviewImport } from '../api';
 import { IMPORT_GUIDE, IMPORT_LIMITS, IMPORT_STEPS, IMPORT_TEMPLATE_URL } from '../constants';
@@ -21,6 +22,8 @@ export default function OrderImportPage() {
 
   const preview = usePreviewImport();
   const commit = useCommitImport();
+  // Danh mục hãng → hub đọc từ bảng hệ thống cũ (dự phòng: danh sách chép tay khi chưa đọc được).
+  const catalog = useServiceCatalog();
   const hubError = serviceHubError(defaults);
   const created = (result?.created ?? 0) > 0;
 
@@ -45,7 +48,7 @@ export default function OrderImportPage() {
     commit.mutate({ file, defaults }, { onSuccess: res => setResult(res.data) });
   };
 
-  const setService = (service: string) => setDefaults(d => ({ ...d, service, hub: defaultHub(service) }));
+  const setService = (service: string) => setDefaults(d => ({ ...d, service, hub: defaultHub(service, undefined, catalog) }));
 
   const columns: ReadonlyArray<Column<ImportRow>> = [
     { key: 'line', header: 'Dòng', width: 56, align: 'center', render: r => r.line },
@@ -86,7 +89,7 @@ export default function OrderImportPage() {
             <SelectField
               label="Dịch vụ"
               placeholder="Không chọn — theo file"
-              options={CARRIERS}
+              options={Object.keys(catalog)}
               value={defaults.service}
               onChange={e => setService(e.target.value)}
             />
@@ -95,7 +98,7 @@ export default function OrderImportPage() {
               placeholder="Chọn hub"
               required={!!defaults.service}
               disabled={!defaults.service}
-              options={hubOptions(defaults.service)}
+              options={hubOptions(defaults.service, undefined, catalog)}
               value={defaults.hub}
               error={hubError ?? undefined}
               onChange={e => setDefaults(d => ({ ...d, hub: e.target.value }))}

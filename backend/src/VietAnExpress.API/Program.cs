@@ -45,6 +45,7 @@ try
     app.UseAuthorization();
 
     app.MapControllers();
+    app.MapModuleEndpoints();
     if (webUi is not null) app.MapWebUiFallback(webUi);
     app.MapHealthChecks("/health").AllowAnonymous();
 

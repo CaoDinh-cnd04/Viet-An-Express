@@ -7,8 +7,9 @@
 /**
  * Đơn cần in + loại chứng từ (vd "bill-a4,invoice,label-a6"); `cancel` = hủy (cấp bill lỗi), tab in tự đóng.
  * `duty` (DDU / DDP): hình thức chịu thuế khách chọn lúc tạo đơn — chỉ in lên invoice, không lưu database.
+ * `managed`: in từ trang "Đơn khách phụ trách" của nhân viên Việt An → gọi /vietan/orders/print.
  */
-export type PrintJob = { bills: string[]; doc: string; duty?: string } | { cancel: true };
+export type PrintJob = { bills: string[]; doc: string; duty?: string; managed?: true } | { cancel: true };
 
 const PREFIX = 'va-print:';
 /** Lệnh in còn nằm lại trong storage quá lâu (tab bị chặn pop-up, chưa kịp đọc) thì dọn. */
@@ -20,10 +21,15 @@ export const printJobKey = (id: string) => PREFIX + id;
 export function parsePrintJob(raw: string | null): PrintJob | null {
   if (!raw) return null;
   try {
-    const v = JSON.parse(raw) as { bills?: unknown; doc?: unknown; duty?: unknown; cancel?: unknown };
+    const v = JSON.parse(raw) as { bills?: unknown; doc?: unknown; duty?: unknown; managed?: unknown; cancel?: unknown };
     if (v.cancel === true) return { cancel: true };
     if (Array.isArray(v.bills) && v.bills.every(b => typeof b === 'string') && typeof v.doc === 'string')
-      return { bills: v.bills as string[], doc: v.doc, ...(typeof v.duty === 'string' && v.duty ? { duty: v.duty } : {}) };
+      return {
+        bills: v.bills as string[],
+        doc: v.doc,
+        ...(typeof v.duty === 'string' && v.duty ? { duty: v.duty } : {}),
+        ...(v.managed === true ? { managed: true as const } : {})
+      };
   } catch {
     /* dữ liệu hỏng */
   }

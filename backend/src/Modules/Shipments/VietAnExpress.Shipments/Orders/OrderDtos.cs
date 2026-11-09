@@ -35,7 +35,17 @@ internal sealed record OrderDto(
     string? RemoteArea = null,
     decimal? ChargeableWeight = null,
     /// <summary>Nhân viên Việt An tạo giúp khách (MaVanDon.CreateUser &gt; 0).</summary>
-    bool CreatedByVietAn = false);
+    bool CreatedByVietAn = false,
+    /// <summary>Khách của đơn — chỉ có ở /vietan/orders (đơn của nhiều khách nhân viên Việt An phụ trách).</summary>
+    OrderCustomerDto? Customer = null);
+
+/// <summary>Khách của đơn (dbo.TCustomer): <c>Id</c> = CustomerID (để chọn làm thay), <c>Code</c> = mã khách, <c>Name</c> = tên công ty.</summary>
+/// <param name="CreatedBy">
+/// Tên đăng nhập tài khoản đã tạo đơn — chỉ nhân viên Việt An thấy (05/11/2026): nhân viên Việt An tạo giúp (MaVanDon.CreateUser → USERS.USER_NAME),
+/// tài khoản con (Customer_Staff_ID → TCustomer_NguoiLienLac.TinhCach), còn lại tài khoản chính (TCustomer.Login_UserName); không rõ → null.
+/// </param>
+/// <param name="SenderName">Tên người gửi ghi trên vận đơn (MaVanDon.SenderName) — cột "Người gửi" của trang Đơn khách phụ trách (06/11/2026).</param>
+internal sealed record OrderCustomerDto(string Id, string Code, string Name, string? CreatedBy = null, string? SenderName = null);
 
 /// <summary>1 dòng kiện (dbo.MaVanDon_PCS_DIM) — chỉ trả ở GET /orders/{bill}. <c>WeightKg</c> là cân 1 kiện.</summary>
 internal sealed record OrderPackageDto(int Qty, string PackType, int Length, int Width, int Height, decimal WeightKg,

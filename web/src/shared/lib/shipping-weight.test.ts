@@ -10,9 +10,10 @@ describe('carrier billable weights', () => {
     expect(shipmentWeight(total, weightRule(service))).toBe(expected);
   });
   it('rounds dimensions by carrier, including halfway values', () => {
-    const p = { qty: 2, length: 20.1, width: 20.5, height: 20.9, weightKg: 1 };
-    expect(packageWeights(p, weightRule('UPS')).volume).toBe(2 * 20 * 21 * 21 / 5000);
-    expect(packageWeights(p, weightRule('Fedex')).volume).toBe(2 * 21 * 21 * 21 / 5000);
-    expect(packageWeights(p, weightRule('DHL')).volume).toBeCloseTo(2 * 20.1 * 20.5 * 20.9 / 5000);
+    // Quy đổi cả dòng làm tròn lên 0,5 kg.
+    const p = { qty: 10, length: 20.1, width: 20.5, height: 20.9, weightKg: 1 };
+    expect(packageWeights(p, weightRule('UPS')).volume).toBe(18); // 10 × 20 × 21 × 21 / 5000 = 17,64
+    expect(packageWeights(p, weightRule('Fedex')).volume).toBe(19); // 10 × 21³ / 5000 = 18,52
+    expect(packageWeights(p, weightRule('DHL')).volume).toBe(17.5); // 10 × 20,1 × 20,5 × 20,9 / 5000 = 17,22
   });
 });

@@ -4,6 +4,7 @@ import { cx } from '@/shared/lib/cx';
 import { useCellSelection } from '@/shared/lib/useCellSelection';
 import { Button, Icon, StatusPill, useToast } from '@/shared/ui';
 import { useOrder } from '../api';
+import { useOrdersSource } from '../source';
 import { ORDER_STATUS } from '../constants';
 import { vaTrackingLink } from '@/shared/config/domain';
 import { datePart } from '../lib/order-utils';
@@ -39,6 +40,15 @@ const COPY_VALUES: ReadonlyArray<CopyValue> = [
   o => vaTrackingLink(o.bill),
   (o, t) => `${datePart(o.created)} (${t(o.pcs)}) ${o.content}`.trim()
 ];
+/** Tên người gửi trên vận đơn; đơn cũ để trống thì lấy tên khách. */
+const senderOf = (o: Order) => o.customer?.senderName || o.customer?.name || '';
+
+/** Trang Đơn khách phụ trách: cột "Người gửi" (khách của đơn) đứng đầu, cột "Người tạo" sau cột Nhãn. */
+const MANAGED_COPY_VALUES: ReadonlyArray<CopyValue> = [
+  o => senderOf(o),
+  ...COPY_VALUES,
+  o => o.customer?.createdBy ?? ''
+];
 
 /**
  * Bảng "Đơn hàng của tôi" theo bố cục hệ thống cũ (chữ / khoảng cách gọn để vừa màn hình laptop):
@@ -46,7 +56,8 @@ const COPY_VALUES: ReadonlyArray<CopyValue> = [
  * Cột "POD dự kiến" và "Nước đến" tạm ẩn.
  * Mũi tên ↓ ở ô Người nhận xổ người liên hệ, SĐT và địa chỉ đầy đủ (mỗi dòng xổ riêng).
  */
-const COLUMNS: ReadonlyArray<{ label: string; sort?: OrderSortField; className?: string }> = [
+type Column = { label: string; sort?: OrderSortField; className?: string };
+const COLUMNS: ReadonlyArray<Column> = [
   { label: 'Ref No.', sort: 'ref', className: styles.colRef },
   { label: 'VA Bill', sort: 'bill', className: styles.colBill },
   { label: 'Mã hãng', className: styles.colCarrier },
@@ -60,13 +71,24 @@ const COLUMNS: ReadonlyArray<{ label: string; sort?: OrderSortField; className?:
   { label: '', className: styles.colMore }
 ];
 
+/**
+ * Trang Đơn khách phụ trách (chỉ nhân viên Việt An): cột "Người gửi" (tên người gửi trên vận đơn, 1 dòng) ngoài cùng trước Ref No.,
+ * cột "Người tạo" (tên đăng nhập tài khoản tạo đơn) sau cột Nhãn.
+ */
+const SENDER_COLUMN: Column = { label: 'Người gửi', className: styles.colSender };
+const CREATOR_COLUMN: Column = { label: 'Người tạo', className: styles.colCreator };
+const MANAGED_COLUMNS: ReadonlyArray<Column> = [SENDER_COLUMN, ...COLUMNS.slice(0, -1), CREATOR_COLUMN, COLUMNS.at(-1)!];
+
 export function OrdersTable(props: OrdersTableProps) {
   const { orders, offset, sortBy, sortDir, onSort, selected, onToggle, onToggleAll, actions, loading } = props;
   const allChecked = orders.length > 0 && orders.every(o => selected.has(o.bill));
   const { t } = useI18n();
   const toast = useToast();
-  const value = useCallback((row: number, col: number) => (orders[row] ? (COPY_VALUES[col]?.(orders[row], t) ?? '') : ''), [orders, t]);
+  const managed = useOrdersSource() === 'managed';
+  const copyValues = managed ? MANAGED_COPY_VALUES : COPY_VALUES;
+  const value = useCallback((row: number, col: number) => (orders[row] ? (copyValues[col]?.(orders[row], t) ?? '') : ''), [orders, t, copyValues]);
   const cells = useCellSelection(value, n => toast.show(t('Đã sao chép {n} ô — dán được vào Excel', { n }), 'success'));
+  const columns = managed ? MANAGED_COLUMNS : COLUMNS;
 
   return (
     <div className={styles.scroll}>
@@ -85,7 +107,7 @@ export function OrdersTable(props: OrdersTableProps) {
             <th className={styles.colCheck}>
               <input type="checkbox" aria-label={t('Chọn tất cả đơn trên trang')} checked={allChecked} onChange={e => onToggleAll(e.target.checked)} />
             </th>
-            {COLUMNS.map((col, ci) => (
+            {columns.map((col, ci) => (
               <th key={ci} className={col.className} aria-sort={col.sort && col.sort === sortBy ? (sortDir === 'asc' ? 'ascending' : 'descending') : undefined}>
                 {col.sort ? (
                   <button type="button" className={styles.sortBtn} onClick={() => onSort(col.sort!)}>
@@ -113,7 +135,7 @@ export function OrdersTable(props: OrdersTableProps) {
           ))}
           {!orders.length && (
             <tr>
-              <td colSpan={COLUMNS.length + 1} className={styles.empty}>{t(loading ? 'Đang tải…' : 'Không có đơn nào khớp bộ lọc.')}</td>
+              <td colSpan={columns.length + 1} className={styles.empty}>{t(loading ? 'Đang tải…' : 'Không có đơn nào khớp bộ lọc.')}</td>
             </tr>
           )}
         </tbody>
@@ -128,7 +150,7 @@ interface OrderRowProps {
   checked: boolean;
   onToggle: (bill: string) => void;
   actions: OrderActions;
-  /** Thuộc tính chọn ô cho cột dữ liệu thứ `col` (0 = Ref No.). */
+  /** Thuộc tính chọn ô cho cột dữ liệu thứ `col` (0 = cột dữ liệu đầu tiên: Ref No., hoặc Người gửi ở trang phụ trách). */
   cell: (col: number) => ReturnType<ReturnType<typeof useCellSelection>['cellProps']>;
 }
 
@@ -146,7 +168,7 @@ function Nil({ children = '—' }: { children?: string }) {
   return <span className={styles.nil}>{t(children)}</span>;
 }
 
-function OrderRow({ order: o, index, checked, onToggle, actions, cell }: OrderRowProps) {
+function OrderRow({ order: o, index, checked, onToggle, actions, cell: cellAt }: OrderRowProps) {
   const { t } = useI18n();
   const status = ORDER_STATUS[o.st];
   const [showDetail, setShowDetail] = useState(false);
@@ -157,8 +179,11 @@ function OrderRow({ order: o, index, checked, onToggle, actions, cell }: OrderRo
   const loadingDetail = needDetail && detail.isLoading;
   const addressLines = r ? [r.addr1, r.addr2, r.addr3].filter(Boolean) : [];
   // Sự cố chưa xong của đơn (danh sách sự cố tải 1 lần, dùng chung mọi dòng).
-  const tickets = useSupportTickets();
+  const managed = useOrdersSource() === 'managed';
+  const tickets = useSupportTickets(!managed);
   const ticket = openTicketOf(tickets.data ?? [], o.bill);
+  // Trang phụ trách có thêm cột Người gửi đứng đầu → các cột dữ liệu sau lùi 1.
+  const cell = (col: number) => cellAt(managed ? col + 1 : col);
 
   return (
     // Bấm dòng không mở đơn nữa (dễ mở nhầm khi bôi chọn ô) — xem chi tiết bằng nút con mắt cuối dòng.
@@ -167,6 +192,11 @@ function OrderRow({ order: o, index, checked, onToggle, actions, cell }: OrderRo
         <div className={styles.no}>{index}</div>
         <input type="checkbox" aria-label={t('Chọn đơn {bill}', { bill: o.bill })} checked={checked} onChange={() => onToggle(o.bill)} />
       </td>
+      {managed && (
+        <td className={styles.colSender} {...cellAt(0)}>
+          {senderOf(o) ? <span className={styles.sender} title={o.customer ? `${o.customer.code} — ${o.customer.name}` : undefined}>{senderOf(o)}</span> : <Nil />}
+        </td>
+      )}
       <td className={styles.colRef} {...cell(0)}>{o.ref ? <span className="tabular">{o.ref}</span> : null}</td>
       <td className={styles.colBill} {...cell(1)}>
         <div className={styles.bill}>{o.bill}</div>
@@ -229,6 +259,11 @@ function OrderRow({ order: o, index, checked, onToggle, actions, cell }: OrderRo
       {/* Mốc hướng dẫn trùng ở mọi dòng — hướng dẫn chỉ vào dòng đầu tiên */}
       <td className={styles.colPrint} data-tour="orders-print"><PrintButtons order={o} /></td>
       <td className={styles.colLabel} data-tour="orders-label"><LabelButton order={o} /></td>
+      {managed && (
+        <td className={styles.colCreator} {...cell(8)}>
+          {o.customer?.createdBy ? <span className={styles.creator}>{o.customer.createdBy}</span> : <Nil />}
+        </td>
+      )}
       <td className={styles.colMore} data-tour="orders-tools"><RowTools order={o} actions={actions} /></td>
     </tr>
   );

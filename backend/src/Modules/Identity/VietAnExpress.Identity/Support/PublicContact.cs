@@ -12,7 +12,7 @@ internal sealed record PublicContactCommand(string? Name, string? Phone, string?
 /// Ghi lời nhắn vào dbo.TContact (KeyWord "ContactHome" như form website cũ, FormType "Portal - Liên hệ", CustID = 0) để phần mềm cũ / trang /admin xử lý,
 /// rồi gửi email về hộp thư Việt An (bấm Trả lời là phản hồi khách nếu khách để lại email).
 /// </summary>
-internal sealed class PublicContactHandler(IdentityDbContext db, IBackgroundJobQueue jobs, EmailCompany company, TimeProvider clock)
+internal sealed class PublicContactHandler(IdentityDbContext db, IBackgroundJobQueue jobs, EmailCompany company, TimeProvider clock, SupportLive live)
     : IRequestHandler<PublicContactCommand, Result<string>>
 {
     public async Task<Result<string>> Handle(PublicContactCommand c, CancellationToken ct)
@@ -24,6 +24,7 @@ internal sealed class PublicContactHandler(IdentityDbContext db, IBackgroundJobQ
             description: c.Message!.Trim(), requester: c.Name!.Trim(), contact: c.Phone!.Trim(), email: email, now: VietnamTime.Now(clock));
         db.SupportRequests.Add(contact);
         await db.SaveChangesAsync(ct);
+        await live.ChangedAsync(contact, ct);
         jobs.EnqueueEmail($"email {contact.Code}", ContactEmail(contact, company));
         return "Đã nhận lời nhắn — Việt An sẽ liên hệ lại với bạn sớm";
     }

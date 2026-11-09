@@ -28,10 +28,10 @@ public class SupportRequestTests
         }
 
         public GetSupportRequestsHandler GetSupportRequests => new(F.Db, F.CurrentUser.Object);
-        public CreateSupportRequestHandler CreateSupportRequest => new(F.Db, F.CurrentUser.Object, F.Customers.Object, Shipments.Object, F.Jobs, F.Company, F.Clock);
+        public CreateSupportRequestHandler CreateSupportRequest => new(F.Db, F.CurrentUser.Object, F.Customers.Object, Shipments.Object, F.Jobs, F.Company, F.Clock, F.Hub.Live);
         public GetAdminSupportRequestsHandler GetAdminSupportRequests => new(F.Db, F.Customers.Object);
-        public ReplySupportRequestHandler Reply => new(F.Db, F.Customers.Object, F.Clock);
-        public AnswerSupportRequestHandler Answer => new(F.Db, F.CurrentUser.Object, F.Customers.Object, F.Jobs, F.Company, F.Clock);
+        public ReplySupportRequestHandler Reply => new(F.Db, F.Customers.Object, F.Clock, F.Hub.Live);
+        public AnswerSupportRequestHandler Answer => new(F.Db, F.CurrentUser.Object, F.Customers.Object, F.Jobs, F.Company, F.Clock, F.Hub.Live);
 
         public async Task<SupportRequestDto> CreateAsync(NewSupportRequest? request = null, SupportRequestFile? file = null)
         {
@@ -85,8 +85,29 @@ public class SupportRequestTests
         Assert.Equal("doing", answered.Value.Status); // khách trả lời → Đang xử lý (vẫn ở Chưa xong)
         Assert.Equal(["cs", "customer"], answered.Value.Thread.Select(m => m.From));
         Assert.Equal(jobs + 1, c.F.Jobs.Jobs.Count); // báo email cho CS
-        Assert.Equal(SupportRequestErrors.NotWaiting, (await c.Answer.Handle(new AnswerSupportRequestCommand(t.Id, "Thêm nữa"), Ct)).Error);
+        // Khách nhắn tiếp bất cứ lúc nào (không cần CS chuyển "Chờ khách"), kể cả khi đã xử lý → mở lại "Đang xử lý".
+        await c.Reply.Handle(new ReplySupportRequestCommand(t.Id, null, SupportRequestStatus.Done), Ct);
+        var again = await c.Answer.Handle(new AnswerSupportRequestCommand(t.Id, "Thêm nữa"), Ct);
+        Assert.True(again.IsSuccess, again.Error.Message);
+        Assert.Equal(("doing", 3), (again.Value.Status, again.Value.Thread.Count));
         Assert.Empty(await c.F.Db.Notifications.ToListAsync(Ct));
+    }
+
+    [Fact]
+    public async Task Tao_tra_loi_doi_trang_thai_deu_phat_tin_hieu_thoi_gian_thuc_cho_khach_va_nhan_vien_Viet_An()
+    {
+        await using var c = new Ctx();
+        var t = await c.CreateAsync();
+        await c.Reply.Handle(new ReplySupportRequestCommand(t.Id, "Nhờ chị gửi ảnh kiện.", SupportRequestStatus.WaitCustomer), Ct);
+        await c.Answer.Handle(new AnswerSupportRequestCommand(t.Id, "Em gửi rồi ạ."), Ct);
+
+        Assert.Equal(3, c.F.Hub.Sent.Count);
+        Assert.All(c.F.Hub.Sent, s =>
+        {
+            Assert.Equal([SupportLiveHub.CustomerGroup(IdentityFixture.CustomerId), SupportLiveHub.VietAnGroup], s.Groups);
+            Assert.Equal(SupportLiveHub.Event, s.Event);
+            Assert.Equal(t.Id, Assert.Single(s.Args)); // chỉ gửi mã, không gửi nội dung
+        });
     }
 
     [Fact]

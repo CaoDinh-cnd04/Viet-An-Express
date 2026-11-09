@@ -9,8 +9,10 @@ export const ORDER_STATUS: Record<OrderStatus, { label: string; tone: Tone }> = 
   ok: { label: 'Đã phát', tone: 'brand' }
 };
 
-export const SEARCH_FIELDS: ReadonlyArray<{ value: OrderSearchField; label: string }> = [
+/** `managedOnly`: chỉ hiện ở trang "Đơn khách phụ trách" (nhân viên Việt An xem đơn nhiều khách). */
+export const SEARCH_FIELDS: ReadonlyArray<{ value: OrderSearchField; label: string; managedOnly?: boolean }> = [
   { value: 'all', label: 'Tất cả' },
+  { value: 'kh', label: 'Tên khách hàng', managedOnly: true },
   { value: 'cnee', label: 'Tên người nhận' },
   { value: 'bill', label: 'VA Bill' },
   { value: 'ref', label: 'Số tham chiếu' },

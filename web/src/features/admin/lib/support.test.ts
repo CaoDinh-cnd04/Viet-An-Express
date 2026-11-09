@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { SupportTicket } from '@/features/support';
 import type { AdminSupportTicket } from '../api';
-import { adminKindLabel, filterSupportTickets, isContactMessage, matchesStaff, staffOptions, ticketActions, UNASSIGNED } from './support';
+import { adminKindLabel, filterSupportTickets, isContactMessage, matchesCustomer, matchesStaff, staffOptions, ticketActions, UNASSIGNED } from './support';
 
 const item = (over: Partial<SupportTicket>, customer = 'KH01'): AdminSupportTicket => ({
   ticket: {
@@ -53,6 +53,17 @@ describe('lọc theo nhân viên phụ trách', () => {
   });
 });
 
+describe('lọc theo khách nhân viên Việt An đang chọn', () => {
+  const items = [item({ id: 'TRB-1' }, 'KH01'), item({ id: 'TRB-2' }, 'KH02'), item({ id: 'TRB-3' }, ' kh01 ')];
+  const ids = (code: string) => items.filter(x => matchesCustomer(x, code)).map(x => x.ticket.id);
+
+  it('chưa chọn khách thấy hết, chọn khách chỉ còn yêu cầu của khách đó', () => {
+    expect(ids('')).toHaveLength(3);
+    expect(ids('KH01')).toEqual(['TRB-1', 'TRB-3']);
+    expect(ids('KH03')).toEqual([]);
+  });
+});
+
 describe('ticketActions', () => {
   it('mỗi trạng thái có đúng 1 nút chính, không có nút giữ nguyên trạng thái', () => {
     for (const s of ['new', 'doing', 'waitc', 'done'] as const) {
@@ -62,8 +73,9 @@ describe('ticketActions', () => {
     }
   });
 
-  it('lời nhắn trang chủ không có nút "Chờ khách"', () => {
-    expect(ticketActions('new', false).map(a => a.status)).toEqual(['done', 'doing']);
+  it('không còn nút "Chờ khách" — khách nhắn lúc nào cũng được', () => {
+    for (const s of ['new', 'doing', 'waitc', 'done'] as const) expect(ticketActions(s).some(a => a.status === 'waitc')).toBe(false);
+    expect(ticketActions('new').map(a => a.status)).toEqual(['done', 'doing']);
     expect(ticketActions('waitc', false).map(a => a.status)).toEqual(['doing', 'done']);
   });
 });

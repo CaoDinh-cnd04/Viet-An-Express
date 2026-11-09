@@ -1,0 +1,669 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hướng dẫn sử dụng Portal Việt An Express</title>
+<style>
+  :root {
+    --brand: #0b6b4a; --brand-ink: #0a5a3f; --brand-soft: #eaf5ef; --brand-line: #b9dcc9;
+    --text: #14181f; --body: #2f3742; --muted: #667085; --faint: #98a2b3;
+    --line: #e4e7ec; --line-soft: #eef0f3; --panel: #f8f9fb;
+    --warn-bg: #fff8eb; --warn-line: #f2c57c; --warn-ink: #7a4b00;
+    --font: "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; scroll-behavior: smooth; scroll-padding-top: 80px; }
+  body { margin: 0; background: #fff; color: var(--body); font: 15.5px/1.7 var(--font); -webkit-font-smoothing: antialiased; }
+  a { color: var(--brand); }
+  b, strong { color: var(--text); font-weight: 600; }
+
+  /* ---------- Thanh đầu trang ---------- */
+  .topbar { position: sticky; top: 0; z-index: 20; display: flex; align-items: center; gap: 14px; height: 60px; padding: 0 28px;
+            background: rgba(255, 255, 255, .92); backdrop-filter: saturate(180%) blur(8px); border-bottom: 1px solid var(--line); }
+  .brand { display: flex; align-items: center; gap: 10px; color: var(--text); font-weight: 650; font-size: 15px; text-decoration: none; white-space: nowrap; }
+  .brand .mark { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 6px; background: var(--brand); color: #fff; font-size: 11px; font-weight: 700; letter-spacing: .02em; }
+  .topbar .sep { width: 1px; height: 18px; background: var(--line); }
+  .topbar .doc-name { color: var(--muted); font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .topbar .links { margin-left: auto; display: flex; align-items: center; gap: 4px; font-size: 14px; }
+  .topbar .links a { padding: 6px 12px; border-radius: 6px; color: var(--body); text-decoration: none; }
+  .topbar .links a:hover { background: var(--panel); color: var(--text); }
+  .topbar .links a:first-child { border: 1px solid var(--line); }
+
+  /* ---------- Bố cục ---------- */
+  .layout { display: grid; grid-template-columns: 288px minmax(0, 1fr); }
+  .side { position: sticky; top: 60px; align-self: start; height: calc(100vh - 60px); overflow-y: auto; padding: 28px 16px 40px 24px;
+          border-right: 1px solid var(--line); scrollbar-width: thin; }
+  .side-title { margin: 0 0 8px 10px; color: var(--faint); font-size: 11.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; }
+  .side ol { list-style: none; margin: 0; padding: 0; }
+  .side a { display: block; padding: 4px 10px; border-radius: 6px; color: var(--muted); font-size: 13.5px; line-height: 1.45; text-decoration: none; }
+  .side a:hover { color: var(--text); background: var(--panel); }
+  .side a.lvl1 { display: flex; gap: 10px; margin-top: 14px; padding: 5px 10px; color: var(--text); font-weight: 600; font-size: 14px; }
+  .side > ol > li:first-child > a.lvl1 { margin-top: 0; }
+  .side .num { flex: none; width: 16px; color: var(--faint); font-weight: 500; font-variant-numeric: tabular-nums; }
+  .side li ol { margin: 2px 0 0 18px; padding-left: 8px; border-left: 1px solid var(--line-soft); }
+  .side li ol a { padding: 3px 10px; font-size: 13.25px; }
+  .mnav { display: none; }
+
+  main { width: 100%; max-width: 820px; margin: 0 auto; padding: 48px 56px 96px; }
+
+  /* ---------- Đầu tài liệu ---------- */
+  .cover { padding: 0 0 36px; margin-bottom: 8px; border-bottom: 1px solid var(--line); }
+  .cover .org { color: var(--brand); font-size: 12.5px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
+  h1 { margin: 10px 0 12px; color: var(--text); font-size: 38px; font-weight: 700; line-height: 1.18; letter-spacing: -.022em; }
+  .lead { margin: 0; color: var(--muted); font-size: 18px; line-height: 1.6; }
+  .cover .meta { display: flex; flex-wrap: wrap; gap: 4px 28px; margin-top: 22px; color: var(--muted); font-size: 13.5px; line-height: 1.6; }
+  
+  .cover h3, .cover .toc { display: none; }
+
+  /* ---------- Nội dung ---------- */
+  h2 { margin: 64px 0 14px; color: var(--text); font-size: 27px; font-weight: 700; line-height: 1.25; letter-spacing: -.015em; scroll-margin-top: 80px; }
+  h3 { margin: 36px 0 10px; color: var(--text); font-size: 18px; font-weight: 650; line-height: 1.35; scroll-margin-top: 80px; }
+  h2 + p { color: var(--muted); font-size: 16.5px; }
+  p { margin: 0 0 14px; }
+  ul, ol { margin: 0 0 16px; padding-left: 22px; }
+  li { margin: 6px 0; padding-left: 4px; }
+  li::marker { color: var(--faint); }
+  ol > li::marker { color: var(--brand); font-weight: 600; font-variant-numeric: tabular-nums; }
+  li > ul, li > ol { margin: 6px 0 4px; }
+
+  table { width: 100%; margin: 14px 0 22px; border: 1px solid var(--line); border-radius: 10px; border-collapse: separate; border-spacing: 0; overflow: hidden; font-size: 14px; line-height: 1.55; }
+  th, td { padding: 10px 14px; text-align: left; vertical-align: top; border-bottom: 1px solid var(--line-soft); }
+  th { background: var(--panel); color: var(--text); font-size: 13px; font-weight: 600; border-bottom: 1px solid var(--line); }
+  tr:last-child td { border-bottom: 0; }
+  td:first-child { color: var(--text); font-weight: 500; }
+
+  .note { margin: 16px 0 20px; padding: 12px 16px; border: 1px solid var(--warn-line); border-left-width: 3px; border-radius: 8px; background: var(--warn-bg); color: var(--warn-ink); font-size: 14.5px; }
+  .note b { color: var(--warn-ink); }
+  kbd { display: inline-block; min-width: 22px; padding: 0 6px; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 5px; background: #fff;
+        color: var(--text); font: 12.5px/20px ui-monospace, Consolas, monospace; text-align: center; }
+
+  .pager { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 48px 0 0; padding-top: 24px; border-top: 1px solid var(--line); }
+  .pager a { display: flex; flex-direction: column; gap: 2px; padding: 14px 18px; border: 1px solid var(--line); border-radius: 10px; color: var(--text); text-decoration: none; transition: border-color .15s; }
+  .pager a:hover { border-color: var(--brand); }
+  .pager a small { color: var(--muted); font-size: 12.5px; }
+  .pager a span { color: var(--text); font-weight: 600; font-size: 15px; }
+  .pager .prev small::before { content: "← "; }
+  .pager .next small::after { content: " →"; }
+  .pager .next { grid-column: 2; text-align: right; }
+  .footer { margin-top: 56px; color: var(--faint); font-size: 13px; }
+
+  /* Mục đang xem (sau khi bấm vào mục lục) */
+  .side a.is-active { color: var(--brand-ink); background: var(--brand-soft); }
+
+  @media (max-width: 1000px) {
+    .layout { display: block; }
+    .layout > .side { display: none; }
+    .mnav { display: block; position: sticky; top: 60px; z-index: 19; background: #fff; border-bottom: 1px solid var(--line); }
+    .mnav summary { padding: 12px 20px; color: var(--text); font-weight: 600; font-size: 14px; cursor: pointer; list-style: none; }
+    .mnav summary::-webkit-details-marker { display: none; }
+    .mnav summary::after { content: "▾"; float: right; color: var(--faint); }
+    .mnav[open] summary::after { content: "▴"; }
+    .mnav .side { display: block; position: static; height: auto; max-height: 70vh; padding: 4px 16px 20px; border: 0; }
+    main { padding: 28px 20px 64px; }
+    h1 { font-size: 30px; }
+    h2 { font-size: 23px; margin-top: 48px; }
+    .topbar { padding: 0 16px; }
+    .topbar .links, .topbar .sep { display: none; }
+    .pager { grid-template-columns: 1fr; }
+    .pager .next { grid-column: 1; }
+  }
+  @media (max-width: 640px) { table { display: block; overflow-x: auto; } }
+
+  /* ---------- Bản in / PDF ---------- */
+  @page { size: A4; margin: 18mm 16mm 20mm; }
+  @media print {
+    body { font-size: 10.5pt; line-height: 1.6; }
+    .topbar, .side, .mnav, .pager { display: none !important; }
+    .layout { display: block; }
+    main { max-width: none; padding: 0; }
+    .cover { min-height: 240mm; padding-top: 70mm; border-bottom: 0; break-after: page; }
+    .cover h3 { display: block; margin-top: 40px; }
+    .cover .toc { display: block; columns: 2; column-gap: 28px; padding-left: 20px; }
+    .cover .toc a { color: var(--text); text-decoration: none; }
+    .cover .meta { display: block; }
+    .cover .meta span { display: block; } .cover .meta span + span::before { display: none; }
+    h1 { font-size: 28pt; }
+    h2 { font-size: 17pt; margin-top: 0; }
+    h2.section { break-before: page; }
+    h2, h3 { break-after: avoid; }
+    table, tr, .note { break-inside: avoid; }
+    a { color: inherit; text-decoration: none; }
+  }
+
+  body:has(#s1:target) .side a[href="#s1"],
+  body:has(#s1-1:target) .side a[href="#s1-1"],
+  body:has(#s1-2:target) .side a[href="#s1-2"],
+  body:has(#s1-3:target) .side a[href="#s1-3"],
+  body:has(#s1-4:target) .side a[href="#s1-4"],
+  body:has(#s2:target) .side a[href="#s2"],
+  body:has(#s2-1:target) .side a[href="#s2-1"],
+  body:has(#s2-2:target) .side a[href="#s2-2"],
+  body:has(#s2-3:target) .side a[href="#s2-3"],
+  body:has(#s2-4:target) .side a[href="#s2-4"],
+  body:has(#s3:target) .side a[href="#s3"],
+  body:has(#s3-1:target) .side a[href="#s3-1"],
+  body:has(#s3-2:target) .side a[href="#s3-2"],
+  body:has(#s3-3:target) .side a[href="#s3-3"],
+  body:has(#s3-4:target) .side a[href="#s3-4"],
+  body:has(#s3-5:target) .side a[href="#s3-5"],
+  body:has(#s3-6:target) .side a[href="#s3-6"],
+  body:has(#s3-7:target) .side a[href="#s3-7"],
+  body:has(#s4:target) .side a[href="#s4"],
+  body:has(#s4-1:target) .side a[href="#s4-1"],
+  body:has(#s4-2:target) .side a[href="#s4-2"],
+  body:has(#s4-3:target) .side a[href="#s4-3"],
+  body:has(#s4-4:target) .side a[href="#s4-4"],
+  body:has(#s4-5:target) .side a[href="#s4-5"],
+  body:has(#s5:target) .side a[href="#s5"],
+  body:has(#s5-1:target) .side a[href="#s5-1"],
+  body:has(#s5-2:target) .side a[href="#s5-2"],
+  body:has(#s6:target) .side a[href="#s6"],
+  body:has(#s6-1:target) .side a[href="#s6-1"],
+  body:has(#s6-2:target) .side a[href="#s6-2"],
+  body:has(#s6-3:target) .side a[href="#s6-3"],
+  body:has(#s6-4:target) .side a[href="#s6-4"],
+  body:has(#s7:target) .side a[href="#s7"],
+  body:has(#s7-1:target) .side a[href="#s7-1"],
+  body:has(#s7-2:target) .side a[href="#s7-2"],
+  body:has(#s7-3:target) .side a[href="#s7-3"],
+  body:has(#s7-4:target) .side a[href="#s7-4"],
+  body:has(#s8:target) .side a[href="#s8"],
+  body:has(#s9:target) .side a[href="#s9"],
+  body:has(#s9-1:target) .side a[href="#s9-1"],
+  body:has(#s9-2:target) .side a[href="#s9-2"],
+  body:has(#s9-3:target) .side a[href="#s9-3"],
+  body:has(#s9-4:target) .side a[href="#s9-4"],
+  body:has(#s9-5:target) .side a[href="#s9-5"],
+  body:has(#s10:target) .side a[href="#s10"],
+  body:has(#s10-1:target) .side a[href="#s10-1"],
+  body:has(#s10-2:target) .side a[href="#s10-2"],
+  body:has(#s10-3:target) .side a[href="#s10-3"],
+  body:has(#s11:target) .side a[href="#s11"],
+  body:has(#s11-1:target) .side a[href="#s11-1"],
+  body:has(#s11-2:target) .side a[href="#s11-2"],
+  body:has(#s11-3:target) .side a[href="#s11-3"],
+  body:has(#s11-4:target) .side a[href="#s11-4"],
+  body:has(#s11-5:target) .side a[href="#s11-5"],
+  body:has(#s12:target) .side a[href="#s12"]
+  { color: var(--brand-ink); background: var(--brand-soft); }
+</style>
+</head>
+<body>
+<header class="topbar" id="top"><a class="brand" href="#top"><span class="mark">VA</span>Việt An Express</a><span class="sep"></span><span class="doc-name">Hướng dẫn sử dụng Portal</span><nav class="links"><a href="huong-dan.pdf">Tải bản PDF</a><a href="#s12">Câu hỏi thường gặp</a><a href="#s9">Liên hệ hỗ trợ</a></nav></header>
+<details class="mnav"><summary>Mục lục</summary><nav class="side" aria-label="Mục lục"><div class="side-title">Mục lục</div><ol class="nav"><li><a class="lvl1" href="#top">Tổng quan</a></li><li><a class="lvl1" href="#s1"><span class="num">1</span>Giới thiệu</a><ol><li><a href="#s1-1">Ai dùng portal</a></li><li><a href="#s1-2">Các chức năng chính</a></li><li><a href="#s1-3">Yêu cầu sử dụng</a></li><li><a href="#s1-4">Quy ước trong tài liệu</a></li></ol></li><li><a class="lvl1" href="#s2"><span class="num">2</span>Đăng nhập và phiên làm việc</a><ol><li><a href="#s2-1">Đăng nhập</a></li><li><a href="#s2-2">Mã xác thực qua email (OTP)</a></li><li><a href="#s2-3">Phiên làm việc và tự đăng xuất</a></li><li><a href="#s2-4">Đổi mật khẩu, đăng xuất</a></li></ol></li><li><a class="lvl1" href="#s3"><span class="num">3</span>Tạo đơn hàng</a><ol><li><a href="#s3-1">Chọn cách tạo</a></li><li><a href="#s3-2">Bước 1 — Người gửi</a></li><li><a href="#s3-3">Bước 2 — Hàng &amp; dịch vụ</a></li><li><a href="#s3-4">Bước 3 — Người nhận</a></li><li><a href="#s3-5">Bước 4 — Kiện hàng và cân tính cước</a></li><li><a href="#s3-6">Bước 5 — Invoice &amp; phí</a></li><li><a href="#s3-7">Kết thúc</a></li></ol></li><li><a class="lvl1" href="#s4"><span class="num">4</span>Khai invoice</a><ol><li><a href="#s4-1">Các cột cần khai</a></li><li><a href="#s4-2">Thêm mặt hàng nhanh (cột Tiện ích bên phải form)</a></li><li><a href="#s4-3">Dán từ Excel</a></li><li><a href="#s4-4">Invoice từng kiện</a></li><li><a href="#s4-5">Tra mã HS</a></li></ol></li><li><a class="lvl1" href="#s5"><span class="num">5</span>Đơn nháp và cấp bill</a><ol><li><a href="#s5-1">Làm việc với đơn nháp</a></li><li><a href="#s5-2">In &amp; cấp bill</a></li></ol></li><li><a class="lvl1" href="#s6"><span class="num">6</span>Đơn hàng của tôi</a><ol><li><a href="#s6-1">Tìm kiếm</a></li><li><a href="#s6-2">Lọc</a></li><li><a href="#s6-3">Xem chi tiết đơn</a></li><li><a href="#s6-4">In hàng loạt và xuất bảng kê</a></li></ol></li><li><a class="lvl1" href="#s7"><span class="num">7</span>In chứng từ</a><ol><li><a href="#s7-1">Các loại chứng từ</a></li><li><a href="#s7-2">In nhãn A6</a></li><li><a href="#s7-3">Cài đặt hộp thoại in (Chrome / Edge)</a></li><li><a href="#s7-4">Nội dung in theo đơn</a></li></ol></li><li><a class="lvl1" href="#s8"><span class="num">8</span>Tạo đơn hàng loạt từ Excel</a></li><li><a class="lvl1" href="#s9"><span class="num">9</span>Hỗ trợ, góp ý và thông báo</a><ol><li><a href="#s9-1">Gửi yêu cầu</a></li><li><a href="#s9-2">Trạng thái yêu cầu</a></li><li><a href="#s9-3">Đọc lịch sử trao đổi</a></li><li><a href="#s9-4">Thông báo</a></li><li><a href="#s9-5">Liên hệ trực tiếp</a></li></ol></li><li><a class="lvl1" href="#s10"><span class="num">10</span>Tài khoản (tài khoản chính)</a><ol><li><a href="#s10-1">Tài khoản nhân viên</a></li><li><a href="#s10-2">MyTracking cá nhân</a></li><li><a href="#s10-3">Sổ địa chỉ</a></li></ol></li><li><a class="lvl1" href="#s11"><span class="num">11</span>Dành cho nhân viên Việt An</a><ol><li><a href="#s11-1">Đăng nhập</a></li><li><a href="#s11-2">Phạm vi khách</a></li><li><a href="#s11-3">Chọn khách để tạo đơn giúp</a></li><li><a href="#s11-4">Đơn khách phụ trách</a></li><li><a href="#s11-5">Quản lý hỗ trợ &amp; góp ý</a></li></ol></li><li><a class="lvl1" href="#s12"><span class="num">12</span>Câu hỏi thường gặp và xử lý sự cố</a></li></ol></nav></details>
+<div class="layout"><nav class="side" aria-label="Mục lục"><div class="side-title">Mục lục</div><ol class="nav"><li><a class="lvl1" href="#top">Tổng quan</a></li><li><a class="lvl1" href="#s1"><span class="num">1</span>Giới thiệu</a><ol><li><a href="#s1-1">Ai dùng portal</a></li><li><a href="#s1-2">Các chức năng chính</a></li><li><a href="#s1-3">Yêu cầu sử dụng</a></li><li><a href="#s1-4">Quy ước trong tài liệu</a></li></ol></li><li><a class="lvl1" href="#s2"><span class="num">2</span>Đăng nhập và phiên làm việc</a><ol><li><a href="#s2-1">Đăng nhập</a></li><li><a href="#s2-2">Mã xác thực qua email (OTP)</a></li><li><a href="#s2-3">Phiên làm việc và tự đăng xuất</a></li><li><a href="#s2-4">Đổi mật khẩu, đăng xuất</a></li></ol></li><li><a class="lvl1" href="#s3"><span class="num">3</span>Tạo đơn hàng</a><ol><li><a href="#s3-1">Chọn cách tạo</a></li><li><a href="#s3-2">Bước 1 — Người gửi</a></li><li><a href="#s3-3">Bước 2 — Hàng &amp; dịch vụ</a></li><li><a href="#s3-4">Bước 3 — Người nhận</a></li><li><a href="#s3-5">Bước 4 — Kiện hàng và cân tính cước</a></li><li><a href="#s3-6">Bước 5 — Invoice &amp; phí</a></li><li><a href="#s3-7">Kết thúc</a></li></ol></li><li><a class="lvl1" href="#s4"><span class="num">4</span>Khai invoice</a><ol><li><a href="#s4-1">Các cột cần khai</a></li><li><a href="#s4-2">Thêm mặt hàng nhanh (cột Tiện ích bên phải form)</a></li><li><a href="#s4-3">Dán từ Excel</a></li><li><a href="#s4-4">Invoice từng kiện</a></li><li><a href="#s4-5">Tra mã HS</a></li></ol></li><li><a class="lvl1" href="#s5"><span class="num">5</span>Đơn nháp và cấp bill</a><ol><li><a href="#s5-1">Làm việc với đơn nháp</a></li><li><a href="#s5-2">In &amp; cấp bill</a></li></ol></li><li><a class="lvl1" href="#s6"><span class="num">6</span>Đơn hàng của tôi</a><ol><li><a href="#s6-1">Tìm kiếm</a></li><li><a href="#s6-2">Lọc</a></li><li><a href="#s6-3">Xem chi tiết đơn</a></li><li><a href="#s6-4">In hàng loạt và xuất bảng kê</a></li></ol></li><li><a class="lvl1" href="#s7"><span class="num">7</span>In chứng từ</a><ol><li><a href="#s7-1">Các loại chứng từ</a></li><li><a href="#s7-2">In nhãn A6</a></li><li><a href="#s7-3">Cài đặt hộp thoại in (Chrome / Edge)</a></li><li><a href="#s7-4">Nội dung in theo đơn</a></li></ol></li><li><a class="lvl1" href="#s8"><span class="num">8</span>Tạo đơn hàng loạt từ Excel</a></li><li><a class="lvl1" href="#s9"><span class="num">9</span>Hỗ trợ, góp ý và thông báo</a><ol><li><a href="#s9-1">Gửi yêu cầu</a></li><li><a href="#s9-2">Trạng thái yêu cầu</a></li><li><a href="#s9-3">Đọc lịch sử trao đổi</a></li><li><a href="#s9-4">Thông báo</a></li><li><a href="#s9-5">Liên hệ trực tiếp</a></li></ol></li><li><a class="lvl1" href="#s10"><span class="num">10</span>Tài khoản (tài khoản chính)</a><ol><li><a href="#s10-1">Tài khoản nhân viên</a></li><li><a href="#s10-2">MyTracking cá nhân</a></li><li><a href="#s10-3">Sổ địa chỉ</a></li></ol></li><li><a class="lvl1" href="#s11"><span class="num">11</span>Dành cho nhân viên Việt An</a><ol><li><a href="#s11-1">Đăng nhập</a></li><li><a href="#s11-2">Phạm vi khách</a></li><li><a href="#s11-3">Chọn khách để tạo đơn giúp</a></li><li><a href="#s11-4">Đơn khách phụ trách</a></li><li><a href="#s11-5">Quản lý hỗ trợ &amp; góp ý</a></li></ol></li><li><a class="lvl1" href="#s12"><span class="num">12</span>Câu hỏi thường gặp và xử lý sự cố</a></li></ol></nav>
+<main>
+
+<section class="cover">
+  <div class="org">VIỆT AN EXPRESS — HỆ THỐNG ĐÁNH BILL ONLINE</div>
+  <h1>Hướng dẫn sử dụng Portal Việt An Express</h1>
+  <p class="lead">Dành cho khách hàng gửi hàng, tài khoản nhân viên của khách và nhân viên Việt An (CS, sale).</p>
+  <div class="meta"><span>Phiên bản <b>1.0</b></span><span>Cập nhật <b>05/11/2026</b></span><span>Hotline CS <b>0909 805 845</b> (Zalo cùng số)</span><span>Email <b>cskh@vietanexpress.com.vn</b></span><span>Thứ 2 – Thứ 7, 08:00 – 18:00</span></div>
+  <h3 style="margin-top:32px">Mục lục</h3>
+  <ol class="toc">
+    <li><a href="#s1">Giới thiệu</a></li>
+    <li><a href="#s2">Đăng nhập và phiên làm việc</a></li>
+    <li><a href="#s3">Tạo đơn hàng</a></li>
+    <li><a href="#s4">Khai invoice</a></li>
+    <li><a href="#s5">Đơn nháp và cấp bill</a></li>
+    <li><a href="#s6">Đơn hàng của tôi</a></li>
+    <li><a href="#s7">In chứng từ</a></li>
+    <li><a href="#s8">Tạo đơn hàng loạt từ Excel</a></li>
+    <li><a href="#s9">Hỗ trợ, góp ý và thông báo</a></li>
+    <li><a href="#s10">Tài khoản (tài khoản chính)</a></li>
+    <li><a href="#s11">Dành cho nhân viên Việt An</a></li>
+    <li><a href="#s12">Câu hỏi thường gặp và xử lý sự cố</a></li>
+  </ol>
+</section>
+
+<h2 id="s1">1. Giới thiệu</h2>
+<p>Portal Việt An Express là hệ thống đánh bill online: khách tự tạo vận đơn chuyển phát quốc tế, khai invoice, in bill và theo dõi đơn ngay trên trình duyệt, không cần cài phần mềm. Mọi đơn tạo trên portal nằm chung dữ liệu với hệ thống quản lý của Việt An, nên CS và kho thấy ngay đơn khách vừa tạo.</p>
+
+<h3 id="s1-1">Ai dùng portal</h3>
+<table>
+  <tr><th>Người dùng</th><th>Đăng nhập bằng</th><th>Làm được gì</th></tr>
+  <tr><td>Tài khoản chính của khách</td><td>Tên đăng nhập + mật khẩu do Việt An cấp</td><td>Mọi chức năng; thấy toàn bộ đơn của công ty; quản lý tài khoản nhân viên, MyTracking, đổi mật khẩu</td></tr>
+  <tr><td>Tài khoản nhân viên của khách (tài khoản con)</td><td>Tên đăng nhập do tài khoản chính tạo</td><td>Tạo đơn, in, tra cứu, hỗ trợ; chỉ thấy đơn, nháp do chính mình tạo; không vào nhóm Tài khoản</td></tr>
+  <tr><td>Nhân viên Việt An (CS, sale)</td><td>Tab "Nhân viên Việt An" + mã OTP gửi email</td><td>Chọn khách để tạo đơn giúp, xem đơn các khách mình phụ trách, quản lý yêu cầu hỗ trợ</td></tr>
+</table>
+
+<h3 id="s1-2">Các chức năng chính</h3>
+<ul>
+  <li><b>Tạo đơn</b>: tạo từng bước, tạo nhanh trên 1 trang, hoặc tạo hàng loạt từ file Excel.</li>
+  <li><b>Quản lý đơn hàng</b>: đơn nháp &amp; chưa in, đơn hàng của tôi (tìm kiếm, lọc, xem hành trình, xuất bảng kê).</li>
+  <li><b>In chứng từ</b>: bill A4, nhãn A6 (máy in A6 hoặc giấy A4 ngang), commercial invoice, công văn cam kết.</li>
+  <li><b>Tiện ích khai hàng</b>: tra mã HS theo nước nhập khẩu (Mỹ, Anh, Úc), thư viện mặt hàng, dán invoice từ Excel.</li>
+  <li><b>Hỗ trợ</b>: gửi yêu cầu hỗ trợ / góp ý và trao đổi trực tiếp với CS; nhận thông báo từ Việt An.</li>
+  <li><b>Tài khoản</b>: tài khoản nhân viên, trang tra cứu MyTracking mang thương hiệu riêng của khách.</li>
+</ul>
+
+<h3 id="s1-3">Yêu cầu sử dụng</h3>
+<ul>
+  <li>Máy tính có trình duyệt Chrome hoặc Edge bản mới (khuyên dùng để in đúng khổ giấy); điện thoại xem và tra cứu được.</li>
+  <li>Email đang dùng được để nhận mã đăng nhập (OTP) khi Việt An bật tính năng này.</li>
+  <li>Máy in A4 cho bill, invoice; máy in A6 / máy in nhiệt nếu in nhãn dán thùng.</li>
+</ul>
+
+<h3 id="s1-4">Quy ước trong tài liệu</h3>
+<ul>
+  <li><b>Chữ đậm</b> là tên nút, menu hoặc ô trên màn hình. Ví dụ <b>Tạo đơn → Tạo đơn từng bước</b> là mở nhóm Tạo đơn rồi chọn mục Tạo đơn từng bước.</li>
+  <li>Mục có ghi "(tài khoản chính)" hoặc "(nhân viên Việt An)" chỉ hiện với loại tài khoản đó.</li>
+</ul>
+
+<nav class="pager"><span></span><a class="next" href="#s2"><small>Phần tiếp</small><span>Đăng nhập và phiên làm việc</span></a></nav>
+
+<h2 id="s2" class="section">2. Đăng nhập và phiên làm việc</h2>
+<p>Khách đăng nhập bằng tên đăng nhập và mật khẩu Việt An cấp; khi Việt An bật xác thực 2 lớp, nhập thêm mã 6 số gửi về email.</p>
+
+<h3 id="s2-1">Đăng nhập</h3>
+<ol>
+  <li>Mở trang portal, bấm <b>Đăng nhập</b>.</li>
+  <li>Chọn tab <b>Khách hàng</b> (nhân viên Việt An chọn tab <b>Nhân viên Việt An</b>, xem mục 11).</li>
+  <li>Nhập tên đăng nhập và mật khẩu. Tài khoản con dùng tên đăng nhập do tài khoản chính tạo.</li>
+  <li>Tick <b>Ghi nhớ đăng nhập trên thiết bị này</b> nếu là máy riêng; máy dùng chung thì bỏ tick.</li>
+  <li>Bấm <b>Đăng nhập</b>.</li>
+</ol>
+
+<h3 id="s2-2">Mã xác thực qua email (OTP)</h3>
+<p>Khi tính năng này được bật, sau bước mật khẩu portal yêu cầu mã 6 số:</p>
+<ol>
+  <li><b>Lần đầu</b>: nhập email sẽ nhận mã, tick ô đồng ý cho Việt An xử lý email (theo Luật Bảo vệ dữ liệu cá nhân 2025, Điều khoản dịch vụ mục 15), rồi bấm <b>Tiếp tục</b>.</li>
+  <li>Mở email, lấy mã 6 số và nhập vào ô <b>Mã OTP</b>. Mã có hiệu lực 5 phút.</li>
+  <li>Không thấy email: xem thư mục Spam, hoặc bấm <b>gửi lại mã</b>.</li>
+</ol>
+<p>Email xác nhận lần đầu được lưu vào hồ sơ tài khoản; các lần sau mã gửi thẳng về email đó.</p>
+
+<h3 id="s2-3">Phiên làm việc và tự đăng xuất</h3>
+<ul>
+  <li>Không thao tác (chuột, bàn phím, chạm, cuộn) <b>30 phút</b> trên mọi tab → portal tự đăng xuất, không hỏi trước.</li>
+  <li>Đang tạo / sửa đơn dở: đơn được lưu vào <b>Đơn nháp &amp; chưa in</b> trước khi đăng xuất; đăng nhập lại sẽ mở đúng trang nháp đó.</li>
+  <li>Đang ở trang khác: đăng nhập lại quay về đúng trang đang xem.</li>
+  <li>Dù có thao tác, sau tối đa 14 ngày kể từ lần nhập mật khẩu, portal yêu cầu đăng nhập lại.</li>
+</ul>
+
+<h3 id="s2-4">Đổi mật khẩu, đăng xuất</h3>
+<ul>
+  <li><b>Đổi mật khẩu</b> (tài khoản chính): bấm tên tài khoản ở góc trên bên phải → <b>Đổi mật khẩu</b>. Đổi xong, các thiết bị khác phải đăng nhập lại.</li>
+  <li>Tài khoản con không tự đổi mật khẩu: tài khoản chính đặt lại ở <b>Tài khoản → Tài khoản nhân viên</b>.</li>
+  <li>Quên mật khẩu tài khoản chính: liên hệ CS Việt An để được cấp lại.</li>
+  <li><b>Đăng xuất</b>: bấm tên tài khoản → <b>Đăng xuất</b>. Máy dùng chung nên đăng xuất mỗi khi xong việc.</li>
+  <li>Nút <b>Hướng dẫn trang này</b> trên thanh trên cùng chạy hướng dẫn nhanh cho trang đang mở.</li>
+</ul>
+
+<nav class="pager"><a class="prev" href="#s1"><small>Phần trước</small><span>Giới thiệu</span></a><a class="next" href="#s3"><small>Phần tiếp</small><span>Tạo đơn hàng</span></a></nav>
+
+<h2 id="s3" class="section">3. Tạo đơn hàng</h2>
+<p>Mỗi đơn gồm 5 phần: người gửi, hàng &amp; dịch vụ, người nhận, kiện hàng, invoice. Nhập xong, lưu nháp hoặc in &amp; cấp bill ngay.</p>
+
+<h3 id="s3-1">Chọn cách tạo</h3>
+<table>
+  <tr><th>Cách</th><th>Mở từ</th><th>Phù hợp</th></tr>
+  <tr><td>Từng bước</td><td><b>Tạo đơn → Tạo đơn từng bước</b></td><td>Người mới; portal dẫn qua từng phần, bấm <b>Tiếp tục</b> để sang phần sau</td></tr>
+  <tr><td>1 trang</td><td><b>Tạo đơn → Tạo đơn 1 trang</b></td><td>Người quen; mọi phần trên cùng một trang</td></tr>
+  <tr><td>Từ Excel</td><td><b>Tạo đơn → Tạo đơn từ Excel</b></td><td>Nhiều đơn cùng lúc (mục 8)</td></tr>
+</table>
+
+<h3 id="s3-2">Bước 1 — Người gửi</h3>
+<ul>
+  <li>Thông tin người gửi lấy từ hồ sơ tài khoản. Muốn sửa hồ sơ lâu dài, bấm <b>Sửa hồ sơ người gửi</b> để gửi yêu cầu cho CS.</li>
+  <li><b>Chi nhánh gửi</b>: bắt buộc chọn (portal không tự điền sẵn).</li>
+  <li><b>Địa chỉ lấy hàng</b>: sửa trực tiếp được cho từng đơn.</li>
+</ul>
+
+<h3 id="s3-3">Bước 2 — Hàng &amp; dịch vụ</h3>
+<ol>
+  <li>Chọn <b>Nước đến</b> trước. Danh sách dịch vụ và hub tự lọc theo nước; hãng không phục vụ nước đó sẽ bị ẩn.</li>
+  <li>Chọn <b>Dịch vụ</b> (DHL, Fedex, UPS, Chuyên tuyến…) và <b>Hub</b>.</li>
+  <li>Chọn loại hàng: <b>Chứng từ (DOC)</b> hoặc <b>Hàng hóa (PACK)</b>, nhóm hàng hóa và mô tả hàng.</li>
+  <li>Nếu cần: chọn điều kiện thuế <b>DDU</b> (người nhận chịu thuế) / <b>DDP</b> (người gửi chịu thuế) và <b>Dịch vụ thêm (có tính phí)</b>.</li>
+</ol>
+<div class="note">Chứng từ nặng hơn 2 kg tự chuyển thành hàng hóa, vì hãng không nhận chứng từ quá 2 kg.</div>
+
+<h3 id="s3-4">Bước 3 — Người nhận</h3>
+<ul>
+  <li>Nhập công ty / tên, địa chỉ (tối đa 3 dòng), thành phố, bang / tỉnh, mã bưu chính, người liên hệ, điện thoại, email.</li>
+  <li>Bấm <b>Sổ địa chỉ</b> để chọn người nhận đã gửi trước đây, portal tự điền.</li>
+  <li>Hàng vào châu Âu có thể cần mã IOSS / EORI của người nhận.</li>
+  <li>Nhập địa chỉ bằng tiếng Anh không dấu để hãng đọc được.</li>
+</ul>
+
+<h3 id="s3-5">Bước 4 — Kiện hàng và cân tính cước</h3>
+<ul>
+  <li>Mỗi dòng kiện: số lượng, loại bao bì, Dài × Rộng × Cao (cm), cân mỗi kiện (kg). Bấm <b>Thêm kiện</b> để thêm dòng, <b>Chép từ kiện trước</b> để lặp kích thước.</li>
+  <li>Portal tự tính và hiện ở cuối bảng: Tổng kiện, Cân thực, Quy đổi, Tính cước.</li>
+  <li>Kiện vượt giới hạn kích thước / cân nặng của hãng: portal cảnh báo quá khổ, quá tải; kiện hãng không nhận sẽ bị chặn.</li>
+</ul>
+<table>
+  <tr><th>Cách tính</th><th>Quy tắc</th><th>Ví dụ</th></tr>
+  <tr><td>Cân quy đổi</td><td>Số kiện × D × R × C / 5000, làm tròn <b>lên</b> bậc 0,5 kg cho cả dòng kiện</td><td>31 × 27 × 22 / 5000 = 3,68 → 4,0 kg; 1,1 hoặc 1,2 → 1,5 kg; 1,6 → 2,0 kg</td></tr>
+  <tr><td>Cân tính cước</td><td>Chọn số lớn hơn giữa cân thực và cân quy đổi</td><td>Cân thực 2,5 kg, quy đổi 4,0 kg → tính cước 4,0 kg</td></tr>
+  <tr><td>Chuyên tuyến, Aramex, SEA</td><td>Mỗi dòng kiện và tổng đơn làm tròn lên 0,5 kg</td><td>3 kiện × 1,1 kg = 3,3 → 3,5 kg</td></tr>
+  <tr><td>DHL, Fedex, UPS</td><td>Theo quy tắc riêng của từng hãng (bậc 0,5 kg hoặc 1 kg tuỳ mức cân)</td><td>Portal tự áp, ghi chú cạnh ô Tính cước</td></tr>
+</table>
+
+<h3 id="s3-6">Bước 5 — Invoice &amp; phí</h3>
+<p>Khai từng mặt hàng trong kiện (xem mục 4). Đơn chứng từ (DOC) không cần invoice.</p>
+
+<h3 id="s3-7">Kết thúc</h3>
+<ul>
+  <li><b>Lưu nháp</b>: giữ đơn ở <b>Đơn nháp &amp; chưa in</b> để sửa tiếp, chưa có mã bill.</li>
+  <li><b>In &amp; cấp bill</b>: portal cấp mã bill, khóa đơn và mở trang in (mục 5, 7).</li>
+</ul>
+
+<nav class="pager"><a class="prev" href="#s2"><small>Phần trước</small><span>Đăng nhập và phiên làm việc</span></a><a class="next" href="#s4"><small>Phần tiếp</small><span>Khai invoice</span></a></nav>
+
+<h2 id="s4" class="section">4. Khai invoice</h2>
+<p>Invoice liệt kê từng mặt hàng trong kiện để hải quan nước đến thông quan; khai đúng và đủ giúp hàng không bị giữ.</p>
+
+<h3 id="s4-1">Các cột cần khai</h3>
+<table>
+  <tr><th>Cột</th><th>Nội dung</th><th>Lưu ý</th></tr>
+  <tr><td>Mô tả tiếng Anh</td><td>Tên hàng, chất liệu, công dụng</td><td>Bắt buộc, ví dụ Women cotton dress</td></tr>
+  <tr><td>Mô tả tiếng Việt</td><td>Tên hàng tiếng Việt</td><td>Dùng cho công văn cam kết</td></tr>
+  <tr><td>Nhà sản xuất</td><td>Tên, địa chỉ nơi sản xuất</td><td>Không bắt buộc</td></tr>
+  <tr><td>Xuất xứ</td><td>Mã nước</td><td>Mặc định VN</td></tr>
+  <tr><td>Mã HS</td><td>Mã hàng hóa theo biểu thuế</td><td>Tra bằng <b>Tra mã HS</b></td></tr>
+  <tr><td>Số lượng, ĐVT</td><td>Ví dụ 5 PCS</td><td>ĐVT đếm (PCS, SET) phải là số nguyên</td></tr>
+  <tr><td>Đơn giá</td><td>Giá 1 đơn vị</td><td>Tối đa 2 số lẻ</td></tr>
+</table>
+
+<h3 id="s4-2">Thêm mặt hàng nhanh (cột Tiện ích bên phải form)</h3>
+<ul>
+  <li><b>Thư viện mặt hàng</b>: chọn hàng đã lưu hoặc đã đánh dấu yêu thích.</li>
+  <li><b>Invoice cũ</b>: chép toàn bộ dòng hàng của một đơn gửi gần đây.</li>
+  <li><b>Nhập từ Excel</b>: tải file mẫu, điền theo cột mẫu rồi chọn file để nhập. Dòng sai (thiếu tên tiếng Anh, số lượng hoặc đơn giá không hợp lệ) bị bỏ qua kèm lý do.</li>
+</ul>
+
+<h3 id="s4-3">Dán từ Excel</h3>
+<ol>
+  <li>Trong Excel / Google Sheets, bôi chọn các ô cần lấy rồi bấm <kbd>Ctrl</kbd> + <kbd>C</kbd>.</li>
+  <li>Trong phần Invoice, bấm <b>Dán từ Excel</b> và bấm <kbd>Ctrl</kbd> + <kbd>V</kbd> vào ô dán.</li>
+  <li>Kiểm tra danh sách xem trước rồi bấm thêm vào invoice.</li>
+</ol>
+<p>Cột theo đúng thứ tự file mẫu: DescriptionEN, DescriptionVN, Manufacturer, Origin, HSCode, Qty, Unit, UnitPrice. Nếu chép kèm dòng tiêu đề, portal đọc theo tên cột, nhận cả tên tiếng Việt (Mô tả tiếng Anh, Xuất xứ, Mã HS, SL, ĐVT, Đơn giá). Số kiểu Việt (8,5) và kiểu Mỹ (1,234.50) đều đọc đúng.</p>
+
+<h3 id="s4-4">Invoice từng kiện</h3>
+<p>Một số tuyến (Chuyên tuyến Úc, EU, Canada) yêu cầu invoice riêng cho từng kiện. Khi đó cột Tiện ích có ô <b>Thêm vào · Invoice kiện n/tổng</b>: chọn kiện trước rồi thêm mặt hàng; mỗi kiện phải có ít nhất 1 dòng hàng.</p>
+
+<h3 id="s4-5">Tra mã HS</h3>
+<ol>
+  <li>Bấm <b>Tra mã HS</b> ở cột Tiện ích.</li>
+  <li>Chọn <b>Nước nhập khẩu</b>: Hoa Kỳ (mã 10 số HTSUS), Anh (mã 10 số UK Tariff), Úc (mã 8 / 10 số).</li>
+  <li>Chọn chế độ tra:
+    <ul>
+      <li><b>Mặt hàng đã xác minh</b>: mã Việt An đã rà soát từ hàng gửi thực tế (nên dùng trước).</li>
+      <li><b>Tra danh mục mã</b>: tra toàn bộ biểu thuế; Mỹ và Anh lấy trực tiếp từ biểu thuế chính thức của nước đó.</li>
+    </ul>
+  </li>
+  <li>Gõ tên hàng tiếng Anh (ví dụ dried mango, t-shirt) hoặc vài số đầu của mã (ví dụ 6109.10), bấm <b>Tra cứu</b>.</li>
+  <li>Bấm <b>Chép</b> cạnh mã cần dùng rồi dán vào cột Mã HS.</li>
+</ol>
+<div class="note">Mã HS chỉ để tham khảo: cùng tên hàng nhưng khác chất liệu, công dụng có thể ra mã khác. Người gửi tự đối chiếu với hàng thực tế; chưa chắc thì hỏi CS trước khi khai. Thuế nhập khẩu không hiển thị trên portal.</div>
+
+<nav class="pager"><a class="prev" href="#s3"><small>Phần trước</small><span>Tạo đơn hàng</span></a><a class="next" href="#s5"><small>Phần tiếp</small><span>Đơn nháp và cấp bill</span></a></nav>
+
+<h2 id="s5" class="section">5. Đơn nháp và cấp bill</h2>
+<p>Một đơn đi qua 4 trạng thái; chỉ khi in &amp; cấp bill đơn mới có mã bill và bị khóa sửa.</p>
+<ol>
+  <li><b>Tạo đơn</b>: nhập thông tin trên form.</li>
+  <li><b>Đơn nháp &amp; chưa in</b>: đơn đã lưu nhưng chưa có mã bill; sửa, xóa thoải mái.</li>
+  <li><b>In &amp; cấp bill</b>: Việt An cấp mã bill, đơn bị khóa, mở trang in chứng từ.</li>
+  <li><b>Đơn hàng của tôi</b>: đơn đã có bill, theo dõi hành trình và in lại khi cần.</li>
+</ol>
+
+<h3 id="s5-1">Làm việc với đơn nháp</h3>
+<ul>
+  <li>Mở <b>Quản lý đơn hàng → Đơn nháp &amp; chưa in</b>. Số trên menu là số đơn đang chờ in.</li>
+  <li>Bấm vào đơn để mở lại form và sửa tiếp, hoặc xóa đơn không dùng.</li>
+  <li>Khi mở lại nháp: chọn lại <b>Chi nhánh gửi</b>, kiểm tra lại <b>Dịch vụ thêm</b> và điều kiện thuế <b>DDU / DDP</b> vì các lựa chọn này không được lưu trong nháp.</li>
+  <li>Bị tự đăng xuất khi đang tạo đơn: đơn dở đã nằm sẵn trong danh sách nháp.</li>
+  <li>Tài khoản con chỉ thấy nháp do mình tạo; tài khoản chính thấy tất cả.</li>
+</ul>
+
+<h3 id="s5-2">In &amp; cấp bill</h3>
+<ol>
+  <li>Chọn một hoặc nhiều đơn nháp (hoặc bấm <b>In &amp; cấp bill</b> ngay trên form tạo đơn).</li>
+  <li>Chọn chứng từ cần in: bill A4, invoice, công văn cam kết, nhãn A6.</li>
+  <li>Portal cấp mã bill cho từng đơn rồi mở trang in ở tab mới (cách in: mục 7).</li>
+</ol>
+<div class="note">Sau khi cấp bill, đơn không sửa được trên portal. Cần sửa thông tin, gửi yêu cầu hoặc gọi CS (mục 9).</div>
+
+<nav class="pager"><a class="prev" href="#s4"><small>Phần trước</small><span>Khai invoice</span></a><a class="next" href="#s6"><small>Phần tiếp</small><span>Đơn hàng của tôi</span></a></nav>
+
+<h2 id="s6" class="section">6. Đơn hàng của tôi</h2>
+<p><b>Quản lý đơn hàng → Đơn hàng của tôi</b> liệt kê mọi đơn đã cấp bill, kèm trạng thái vận chuyển, và là nơi in lại chứng từ hoặc xuất bảng kê.</p>
+
+<h3 id="s6-1">Tìm kiếm</h3>
+<ul>
+  <li>Gõ vào ô tìm kiếm: mã bill, VA Bill, số tham chiếu, tên / địa chỉ / điện thoại người nhận, nước đến, dịch vụ, tên hàng.</li>
+  <li>Tìm không phân biệt chữ hoa / thường và không cần gõ dấu: gõ nguyen van a vẫn ra Nguyễn Văn A; gõ một phần tên cũng ra.</li>
+  <li>Muốn tìm đúng một trường, chọn thẻ trường (Tên người nhận, VA Bill, Số tham chiếu, Nước đến, Dịch vụ) rồi gõ giá trị.</li>
+</ul>
+
+<h3 id="s6-2">Lọc</h3>
+<ul>
+  <li>Theo ngày: <b>Từ ngày</b> – đến ngày.</li>
+  <li>Theo trạng thái: <b>Chưa đi</b>, <b>Đã đi</b>, <b>Chưa phát</b>, <b>Đã phát</b>, <b>Tất cả</b>.</li>
+  <li>Thanh tổng trên cùng hiện số đơn và tổng cân của kết quả đang lọc.</li>
+</ul>
+
+<h3 id="s6-3">Xem chi tiết đơn</h3>
+<p>Bấm biểu tượng con mắt cuối dòng để mở khung chi tiết: người gửi, người nhận, kiện hàng, invoice và <b>Hành trình</b> vận chuyển của hãng. Từ đây có thể:</p>
+<ul>
+  <li>In lại chứng từ.</li>
+  <li>Sao chép đơn để tạo đơn mới giống vậy.</li>
+  <li><b>Báo sự cố</b> để gửi yêu cầu hỗ trợ gắn sẵn mã bill (mục 9).</li>
+</ul>
+
+<h3 id="s6-4">In hàng loạt và xuất bảng kê</h3>
+<ol>
+  <li>Tick chọn các đơn cần in hoặc xuất (hoặc để nguyên kết quả đang lọc).</li>
+  <li>Bấm <b>In bill</b> và chọn loại chứng từ: In vận đơn (Bill A4), In hóa đơn (Invoice), Công văn cam kết (CVCK), In nhãn (A6).</li>
+  <li>Hoặc bấm <b>Xuất bảng kê</b> để tải file Excel danh sách đơn.</li>
+</ol>
+
+<nav class="pager"><a class="prev" href="#s5"><small>Phần trước</small><span>Đơn nháp và cấp bill</span></a><a class="next" href="#s7"><small>Phần tiếp</small><span>In chứng từ</span></a></nav>
+
+<h2 id="s7" class="section">7. In chứng từ</h2>
+<p>Trang in mở ở tab mới và hiện mẫu để xem trước; kiểm tra xong mới bấm nút in trên thanh màu xanh ở đầu trang.</p>
+
+<h3 id="s7-1">Các loại chứng từ</h3>
+<table>
+  <tr><th>Chứng từ</th><th>Khổ giấy</th><th>Nội dung</th><th>Bấm để in</th></tr>
+  <tr><td>Bill A4 (vận đơn)</td><td>A4 ngang</td><td>3 liên (người gửi lưu, bưu cục gốc, bưu cục phát); mỗi trang 2 nửa: vận đơn và điều khoản dịch vụ</td><td><b>In</b></td></tr>
+  <tr><td>Commercial invoice</td><td>A4 dọc</td><td>3 bản invoice tiếng Anh để thông quan</td><td><b>In</b></td></tr>
+  <tr><td>Công văn cam kết (CVCK)</td><td>A4 dọc</td><td>Cam kết nội dung hàng xuất gửi hải quan</td><td><b>In</b></td></tr>
+  <tr><td>Nhãn A6</td><td>105 × 148 mm hoặc A4 ngang</td><td>1 trang vận đơn A6 Liên 1, sau đó 1 shipping mark cho mỗi kiện để dán thùng</td><td><b>In máy A6</b> hoặc <b>In giấy A4 ngang (2 nhãn / tờ)</b></td></tr>
+</table>
+<p>Chọn nhiều loại cùng lúc thì trang in hiện từng loại theo thứ tự; bấm <b>In lần lượt tất cả</b> (mỗi loại một hộp thoại in, vì khổ giấy khác nhau) hoặc nút in riêng của từng loại. Đơn chứng từ (DOC) không in invoice.</p>
+
+<h3 id="s7-2">In nhãn A6</h3>
+<ul>
+  <li><b>In máy A6</b>: dùng máy in nhãn A6 / máy in nhiệt; mỗi nhãn một trang đúng khổ 105 × 148 mm.</li>
+  <li><b>In giấy A4 ngang (2 nhãn / tờ)</b>: dùng máy in A4 thường; mỗi tờ 2 nhãn cạnh nhau, giữ đúng cỡ A6, có viền nét đứt để cắt.</li>
+  <li><b>Ẩn / hiện người gửi</b>: bấm một lần để bỏ mục Sender khỏi shipping mark (khi không muốn người nhận thấy thông tin người gửi), bấm lại để hiện.</li>
+  <li>Khi in gộp nhiều loại, bật nút <b>Nhãn A6: in giấy A4 ngang</b> trước khi in nếu dùng giấy A4.</li>
+</ul>
+
+<h3 id="s7-3">Cài đặt hộp thoại in (Chrome / Edge)</h3>
+<ol>
+  <li><b>Destination</b>: chọn máy in, hoặc <b>Save as PDF</b> để lưu file. Tên file mặc định: Việt An Express - bill online - mã bill.</li>
+  <li><b>Paper size / Khổ giấy</b>: khớp với chứng từ ở bảng trên (A4 hoặc A6).</li>
+  <li><b>Scale</b>: để Default (100%), không chọn Fit to page.</li>
+  <li><b>More settings → Headers and footers</b>: bỏ tick để không in ngày giờ, đường dẫn lên giấy.</li>
+  <li><b>Background graphics</b>: tick để in thanh tiêu đề màu xanh trên bill.</li>
+</ol>
+
+<h3 id="s7-4">Nội dung in theo đơn</h3>
+<ul>
+  <li>Đơn tạo trên portal: mục người gửi in tên tài khoản, nước, 2 dòng địa chỉ, điện thoại, người liên hệ, email.</li>
+  <li>Đơn của hệ thống cũ: in đúng thứ tự dòng như bill cũ, kể cả địa chỉ nhân viên ghi ở cột Email.</li>
+  <li>Cân quy đổi in trên bill đã làm tròn lên 0,5 kg, giống số trên form tạo đơn.</li>
+</ul>
+
+<nav class="pager"><a class="prev" href="#s6"><small>Phần trước</small><span>Đơn hàng của tôi</span></a><a class="next" href="#s8"><small>Phần tiếp</small><span>Tạo đơn hàng loạt từ Excel</span></a></nav>
+
+<h2 id="s8" class="section">8. Tạo đơn hàng loạt từ Excel</h2>
+<p>Nhiều đơn cùng lúc: điền file Excel mẫu, tải lên, portal kiểm tra từng dòng rồi tạo đơn và cấp số vận đơn cho các dòng hợp lệ.</p>
+<ol>
+  <li>Mở <b>Tạo đơn → Tạo đơn từ Excel</b>, bấm <b>Tải file mẫu</b> (Mau_Excel_Tao_Don.xlsx) và đọc <b>Hướng dẫn điền file mẫu</b>.</li>
+  <li>Mỗi đơn là 1 dòng trong sheet DATA, điền từ dòng 3; giữ nguyên dòng tiêu đề và dòng chú thích (dòng 2). Cột ghi bắt buộc phải có dữ liệu.</li>
+  <li>Tải file .xlsx lên (giới hạn số đơn và dung lượng mỗi lần hiện ngay dưới ô tải file).</li>
+  <li>Portal báo số dòng hợp lệ / lỗi và lý do từng lỗi. Sửa trong file rồi bấm <b>Kiểm tra lại</b>, hoặc tiếp tục với các dòng hợp lệ.</li>
+  <li>Bấm <b>Tạo n đơn</b>. Chỉ dòng hợp lệ được tạo đơn; dòng lỗi bị bỏ qua.</li>
+  <li>Bấm <b>Xem đơn hàng</b>: đơn mới nằm trong <b>Đơn hàng của tôi</b>, in bill và invoice ngay tại đó.</li>
+</ol>
+<div class="note">Kiểm tra cảnh báo (nếu có) trước khi tạo đơn: đơn tạo từ Excel đã có số vận đơn nên không sửa lại trên portal được.</div>
+
+<nav class="pager"><a class="prev" href="#s7"><small>Phần trước</small><span>In chứng từ</span></a><a class="next" href="#s9"><small>Phần tiếp</small><span>Hỗ trợ, góp ý và thông báo</span></a></nav>
+
+<h2 id="s9" class="section">9. Hỗ trợ, góp ý và thông báo</h2>
+<p>Mọi trao đổi với CS về một vấn đề nằm trong một yêu cầu, hiển thị dạng chat và cập nhật ngay khi CS trả lời.</p>
+
+<h3 id="s9-1">Gửi yêu cầu</h3>
+<ol>
+  <li>Mở <b>Hỗ trợ → Hỗ trợ &amp; góp ý</b>, bấm tạo yêu cầu mới.</li>
+  <li>Chọn loại:
+    <ul>
+      <li><b>Hỗ trợ &amp; sự cố</b>: giao chậm, thất lạc, hư hỏng, phát sai địa chỉ, cước &amp; phụ phí, hỗ trợ tạo đơn, sửa thông tin người gửi / người nhận… Mã vận đơn không bắt buộc.</li>
+      <li><b>Góp ý</b>: về dịch vụ, nhân viên, phần mềm.</li>
+    </ul>
+  </li>
+  <li>Chọn mức độ: <b>Thường</b>, <b>Gấp</b>, <b>Rất gấp</b>; nhập nội dung, đính kèm ảnh nếu có (ảnh được gửi qua email tới nhân viên phụ trách).</li>
+  <li>Bấm gửi. Yêu cầu có mã dạng TRB-số để tra lại.</li>
+</ol>
+<p>Trên một đơn cụ thể, bấm <b>Báo sự cố</b> trong <b>Đơn hàng của tôi</b> để mở form với mã bill điền sẵn.</p>
+
+<h3 id="s9-2">Trạng thái yêu cầu</h3>
+<table>
+  <tr><th>Trạng thái</th><th>Ý nghĩa</th><th>Bạn cần làm</th></tr>
+  <tr><td>Mới</td><td>CS chưa nhận</td><td>Chờ</td></tr>
+  <tr><td>Đang xử lý</td><td>CS đang kiểm tra</td><td>Chờ; gấp thì gọi hotline</td></tr>
+  <tr><td>Chờ bạn (Chờ khách phản hồi)</td><td>CS cần thêm thông tin</td><td>Trả lời trong ô <b>Trả lời CS</b>, <kbd>Ctrl</kbd> + <kbd>Enter</kbd> để gửi</td></tr>
+  <tr><td>Đã xử lý</td><td>Đã xong</td><td>Vấn đề mới thì bấm <b>Tạo yêu cầu mới</b></td></tr>
+</table>
+<p>Danh sách có bộ lọc <b>Cần bạn trả lời</b>, <b>Đang xử lý</b>, <b>Đã xử lý</b>, <b>Tất cả yêu cầu</b>; số trên menu là số yêu cầu đang chờ bạn.</p>
+
+<h3 id="s9-3">Đọc lịch sử trao đổi</h3>
+<ul>
+  <li>Tin của bạn nằm bên phải, nền xanh dương nhạt; tin của CS Việt An nằm bên trái, nền xanh lá nhạt.</li>
+  <li>Tin mới nhất có nhãn <b>Mới nhất</b> và viền đậm hơn.</li>
+</ul>
+
+<h3 id="s9-4">Thông báo</h3>
+<p><b>Hỗ trợ → Thông báo</b> chứa tin Việt An gửi khách: thay đổi dịch vụ, lịch nghỉ, chương trình ưu đãi… Tin ghim nằm trên cùng; số trên menu là số tin chưa đọc; bấm <b>Xem chi tiết</b> để mở nội dung đầy đủ.</p>
+
+<h3 id="s9-5">Liên hệ trực tiếp</h3>
+<table>
+  <tr><th>Kênh</th><th>Thông tin</th></tr>
+  <tr><td>Hotline CS</td><td>0909 805 845</td></tr>
+  <tr><td>Zalo</td><td>0909 805 845</td></tr>
+  <tr><td>Email hỗ trợ</td><td>cskh@vietanexpress.com.vn</td></tr>
+  <tr><td>Giờ làm việc</td><td>Thứ 2 – Thứ 7, 08:00 – 18:00</td></tr>
+</table>
+
+<nav class="pager"><a class="prev" href="#s8"><small>Phần trước</small><span>Tạo đơn hàng loạt từ Excel</span></a><a class="next" href="#s10"><small>Phần tiếp</small><span>Tài khoản (tài khoản chính)</span></a></nav>
+
+<h2 id="s10" class="section">10. Tài khoản (tài khoản chính)</h2>
+<p>Nhóm <b>Tài khoản</b> chỉ hiện với tài khoản chính của khách, dùng để cấp tài khoản cho nhân viên và cài trang tra cứu mang thương hiệu riêng.</p>
+
+<h3 id="s10-1">Tài khoản nhân viên</h3>
+<ol>
+  <li>Mở <b>Tài khoản → Tài khoản nhân viên</b>.</li>
+  <li>Thêm nhân viên: nhập họ tên, tên đăng nhập, mật khẩu, để trạng thái hoạt động.</li>
+  <li>Gửi tên đăng nhập và mật khẩu cho nhân viên; nhân viên đăng nhập ở tab <b>Khách hàng</b> như tài khoản chính.</li>
+  <li>Đặt lại mật khẩu hoặc tạm khóa ngay trên danh sách khi cần. Xóa tài khoản chỉ gỡ quyền đăng nhập, đơn nhân viên đó đã tạo vẫn còn.</li>
+</ol>
+<table>
+  <tr><th>Quyền</th><th>Tài khoản chính</th><th>Tài khoản nhân viên</th></tr>
+  <tr><td>Tạo đơn, in, xuất bảng kê, hỗ trợ</td><td>Có</td><td>Có</td></tr>
+  <tr><td>Xem đơn, nháp, đơn e-commerce</td><td>Tất cả của công ty</td><td>Chỉ đơn mình tạo</td></tr>
+  <tr><td>Tài khoản nhân viên, MyTracking, đổi mật khẩu</td><td>Có</td><td>Không</td></tr>
+</table>
+
+<h3 id="s10-2">MyTracking cá nhân</h3>
+<p>MyTracking là trang tra cứu hành trình mang logo, màu sắc và kênh liên hệ của chính khách, để khách gửi link cho người nhận hàng của mình. Mục này chỉ mở khi Việt An đã bật cho tài khoản; chưa thấy menu, liên hệ CS.</p>
+<ol>
+  <li>Mở <b>Tài khoản → MyTracking cá nhân</b>.</li>
+  <li>Cài thương hiệu: logo, website, 2 màu chủ đạo, tên công ty, địa chỉ, điện thoại hiển thị (để trống thì lấy theo hồ sơ tài khoản).</li>
+  <li>Cài nội dung: kênh liên lạc (Zalo, Facebook…), ưu đãi, ảnh nền, banner.</li>
+  <li>Lưu, rồi sao chép link tra cứu hoặc mã nhúng để đặt lên website. Khi gửi cho người nhận, thay phần mã bill mẫu trong link bằng mã bill thật.</li>
+</ol>
+
+<h3 id="s10-3">Sổ địa chỉ</h3>
+<p>Người nhận của các đơn đã gửi được lưu lại; khi tạo đơn, bấm <b>Sổ địa chỉ</b> ở phần người nhận để chọn và tự điền.</p>
+
+<nav class="pager"><a class="prev" href="#s9"><small>Phần trước</small><span>Hỗ trợ, góp ý và thông báo</span></a><a class="next" href="#s11"><small>Phần tiếp</small><span>Dành cho nhân viên Việt An</span></a></nav>
+
+<h2 id="s11" class="section">11. Dành cho nhân viên Việt An</h2>
+<p>Nhân viên CS / sale đăng nhập bằng tài khoản phần mềm Việt An, chọn khách rồi dùng chính các trang của khách để tạo đơn giúp; đơn ghi lại nhân viên nào đã tạo.</p>
+
+<h3 id="s11-1">Đăng nhập</h3>
+<ol>
+  <li>Ở trang đăng nhập, chọn tab <b>Nhân viên Việt An</b>.</li>
+  <li>Nhập tên đăng nhập và mật khẩu của phần mềm Việt An (phân biệt chữ hoa / thường).</li>
+  <li>Nhập mã 6 số gửi về email công việc; lần đăng nhập nào cũng cần mã, mã có hiệu lực 5 phút.</li>
+</ol>
+<p>Mỗi nhân viên chỉ có 1 phiên: đăng nhập trên máy mới thì máy cũ tự bị đăng xuất.</p>
+
+<h3 id="s11-2">Phạm vi khách</h3>
+<table>
+  <tr><th>Nhân viên</th><th>Thấy khách nào</th></tr>
+  <tr><td>Có vai trò Administrator, hoặc được bật quyền quản trị / xem mọi khách trên phần mềm Việt An</td><td>Toàn bộ khách</td></tr>
+  <tr><td>Các vai trò khác (Sale, CS…)</td><td>Chỉ khách được giao phụ trách</td></tr>
+</table>
+<p>Nhân viên không vào được nhóm Tài khoản của khách (MyTracking, tài khoản nhân viên, đổi mật khẩu).</p>
+
+<h3 id="s11-3">Chọn khách để tạo đơn giúp</h3>
+<ol>
+  <li>Sau khi đăng nhập, trang <b>Chọn khách để tạo đơn giúp</b> hiện danh sách khách trong phạm vi. Gõ mã, tên hoặc tên đăng nhập để tìm.</li>
+  <li>Chọn khách. Thanh trên cùng báo "Nhân viên … đang làm cho khách mã — tên" để tránh nhầm khách.</li>
+  <li>Tạo đơn, lưu nháp, in &amp; cấp bill như khách (mục 3 – 7).</li>
+  <li>Bấm <b>Về trang quản trị</b> để rời khách và chọn khách khác.</li>
+</ol>
+
+<h3 id="s11-4">Đơn khách phụ trách</h3>
+<p><b>Quản lý đơn hàng → Đơn khách phụ trách</b> giống trang Đơn hàng của tôi nhưng gộp đơn của mọi khách trong phạm vi, không cần chọn khách trước.</p>
+<ul>
+  <li>Mỗi đơn hiện thêm mã và tên khách dưới mã bill.</li>
+  <li>Cột <b>Người tạo</b> ghi tên đăng nhập của tài khoản đã tạo đơn (nhân viên Việt An, tài khoản nhân viên hoặc tài khoản chính của khách). Khách không thấy cột này.</li>
+  <li>Tìm theo tên khách (gõ vài ký tự, không dấu vẫn ra) hoặc chọn thẻ <b>Tên khách hàng</b>.</li>
+  <li>Chỉ xem, in và xuất bảng kê (bảng kê có thêm cột Khách hàng). Muốn tạo / book bill, chọn khách như bước trên.</li>
+</ul>
+
+<h3 id="s11-5">Quản lý hỗ trợ &amp; góp ý</h3>
+<p><b>Hỗ trợ → Hỗ trợ &amp; góp ý</b> với nhân viên là trang quản lý yêu cầu của các khách phụ trách:</p>
+<ol>
+  <li>Mở yêu cầu, đọc trao đổi (tin CS bên phải, tin khách bên trái).</li>
+  <li>Trả lời khách và đổi trạng thái: <b>Đang xử lý</b>, <b>Chờ khách phản hồi</b> (khách mới trả lời được), <b>Đã xử lý</b>.</li>
+  <li>Khi khách trả lời, yêu cầu tự về Đang xử lý và nhân viên phụ trách nhận email báo.</li>
+</ol>
+<p>Sửa thông tin người gửi theo yêu cầu của khách được làm trên phần mềm Việt An.</p>
+
+<nav class="pager"><a class="prev" href="#s10"><small>Phần trước</small><span>Tài khoản (tài khoản chính)</span></a><a class="next" href="#s12"><small>Phần tiếp</small><span>Câu hỏi thường gặp và xử lý sự cố</span></a></nav>
+
+<h2 id="s12" class="section">12. Câu hỏi thường gặp và xử lý sự cố</h2>
+<table>
+  <tr><th>Tình huống</th><th>Cách xử lý</th></tr>
+  <tr><td>Không nhận được mã OTP</td><td>Xem thư mục Spam; đợi 1 phút rồi bấm <b>gửi lại mã</b>; mã cũ hết hạn sau 5 phút</td></tr>
+  <tr><td>Bị đăng xuất khi đang tạo đơn</td><td>Đăng nhập lại, đơn dở nằm trong <b>Đơn nháp &amp; chưa in</b></td></tr>
+  <tr><td>Không thấy dịch vụ / hub cần dùng</td><td>Kiểm tra đã chọn đúng <b>Nước đến</b>; hãng không phục vụ nước đó sẽ bị ẩn; vẫn thiếu thì hỏi CS</td></tr>
+  <tr><td>Cân tính cước lớn hơn cân thực</td><td>Cân quy đổi (D × R × C / 5000) lớn hơn cân thực, và đã làm tròn lên 0,5 kg (mục 3)</td></tr>
+  <tr><td>Không sửa được đơn</td><td>Đơn đã cấp bill bị khóa; gửi yêu cầu <b>Hỗ trợ &amp; sự cố</b> kèm mã bill</td></tr>
+  <tr><td>Bấm In không thấy hộp thoại in</td><td>Cho phép trình duyệt mở cửa sổ mới (pop-up) cho portal; tải lại trang bằng <kbd>Ctrl</kbd> + <kbd>F5</kbd> rồi in lại</td></tr>
+  <tr><td>Bill in bị nhỏ, lệch hoặc mất chân trang</td><td>Chọn đúng khổ giấy, Scale = Default, bỏ Headers and footers (mục 7)</td></tr>
+  <tr><td>Nhãn A6 in ra giấy A4 bị nhỏ hoặc 1 nhãn / tờ</td><td>Dùng nút <b>In giấy A4 ngang (2 nhãn / tờ)</b> và chọn khổ A4 ngang trong hộp thoại in</td></tr>
+  <tr><td>Dấu tiếng Việt hiển thị sai khi gõ chữ hoa</td><td>Bấm <kbd>Ctrl</kbd> + <kbd>F5</kbd> để tải lại portal bản mới</td></tr>
+  <tr><td>File Excel báo lỗi nhiều dòng</td><td>Dùng đúng file mẫu mới nhất, điền từ dòng 3, không đổi tên cột; sửa theo lý do từng dòng</td></tr>
+  <tr><td>Không thấy menu MyTracking</td><td>Chỉ tài khoản chính, và Việt An phải bật cho tài khoản; liên hệ CS</td></tr>
+  <tr><td>Quên mật khẩu</td><td>Tài khoản nhân viên: nhờ tài khoản chính đặt lại; tài khoản chính: liên hệ CS Việt An</td></tr>
+</table>
+<p>Còn vướng mắc, gửi yêu cầu ở <b>Hỗ trợ → Hỗ trợ &amp; góp ý</b> hoặc gọi hotline <b>0909 805 845</b> trong giờ làm việc.</p>
+
+<nav class="pager"><a class="prev" href="#s11"><small>Phần trước</small><span>Dành cho nhân viên Việt An</span></a><span></span></nav>
+
+<div class="footer">Việt An Express · Hướng dẫn sử dụng Portal · Phiên bản 1.0 · 05/11/2026</div>
+</main></div>
+</body>
+</html>

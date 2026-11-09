@@ -18,6 +18,9 @@ internal static class ModuleRegistration
     public static readonly Assembly[] ModuleAssemblies =
         [IdentityModule.Assembly, CustomersModule.Assembly, ShipmentsModule.Assembly, EcommerceModule.Assembly];
 
+    /// <summary>Endpoint không phải controller của các module (hub SignalR) — gọi sau MapControllers.</summary>
+    public static IEndpointRouteBuilder MapModuleEndpoints(this IEndpointRouteBuilder app) => app.MapIdentityHubs();
+
     public static IServiceCollection AddModules(this IServiceCollection services, IConfiguration configuration)
     {
         services

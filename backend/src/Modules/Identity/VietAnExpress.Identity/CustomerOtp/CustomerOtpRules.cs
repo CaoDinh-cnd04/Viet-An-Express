@@ -1,5 +1,6 @@
 using System.Globalization;
 using VietAnExpress.Identity.Auth;
+using VietAnExpress.Identity.Shared;
 using VietAnExpress.Identity.VietAnStaff;
 using VietAnExpress.SharedKernel.Application;
 using VietAnExpress.SharedKernel.Results;
@@ -65,16 +66,9 @@ internal static class CustomerOtpRules
             .FirstOrDefault(e => e is not null && !e.EndsWith("@vietanexpress.com", StringComparison.OrdinalIgnoreCase)
                 && !e.EndsWith("@vietanexpress.com.vn", StringComparison.OrdinalIgnoreCase));
 
-    public static EmailMessage Email(string to, string name, string code) => new(
-        $"Mã đăng nhập portal Việt An: {code}",
-        string.Join('\n',
-            $"Chào {name},",
-            "",
-            $"Mã OTP đăng nhập portal Việt An Express của bạn là: {code}",
-            $"Mã có hiệu lực {CustomerOtpStore.Lifetime.TotalMinutes.ToString(CultureInfo.InvariantCulture)} phút và chỉ dùng được 1 lần.",
-            "",
-            "Nếu không phải bạn đang đăng nhập, hãy đổi mật khẩu trong trang Tài khoản của portal và báo nhân viên Việt An phụ trách."),
-        To: [to]);
+    public static EmailMessage Email(string to, string name, string code, EmailCompany company) =>
+        OtpEmail.Build(to, name, code, CustomerOtpStore.Lifetime,
+            "Nếu không phải bạn đang đăng nhập, hãy đổi mật khẩu trong trang Tài khoản của portal và báo nhân viên Việt An phụ trách.", company);
 }
 
 internal static class CustomerOtpErrors

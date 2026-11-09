@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useFormContext, useFormState, useWatch } from 'react-hook-form';
-import { useSession } from '@/features/auth';
+import { AssignManagerButton, useSession } from '@/features/auth';
 import { useSearchParams } from 'react-router-dom';
 import { BRANCHES } from '@/shared/config/domain';
 import { useI18n } from '@/shared/i18n';
@@ -41,12 +41,14 @@ export function ShipperSection() {
     if (clean !== value) setValue(name, clean, { shouldDirty: true });
   };
 
-  // Điền sẵn từ hồ sơ khách. Tài khoản chính: tên công ty và địa chỉ lấy hàng chỉ đọc (theo hồ sơ);
-  // tài khoản con (nhân viên) sửa được — gửi hộ người khác / lấy hàng ở địa chỉ khác.
+  // Điền sẵn từ hồ sơ khách. Tài khoản chính: tên công ty chỉ đọc (theo hồ sơ); tài khoản con (nhân viên) sửa được — gửi hộ người khác.
+  // Khách mới (nhân viên Việt An bấm "Tạo khách mới"): hồ sơ trống, mọi ô sửa được — lưu đơn thì backend ghi người gửi vào hồ sơ khách.
+  // Địa chỉ lấy hàng mọi tài khoản sửa được (05/11/2026) — lấy hàng ở địa chỉ khác hồ sơ; chỉ lưu vào đơn, hồ sơ khách không đổi.
   const session = useSession();
   const profile = session.data?.status === 'authenticated' ? session.data.user : null;
   const [params] = useSearchParams();
-  const lockCompany = profile?.accountType !== 'staff' && !params.has('from');
+  const newCustomer = profile?.newCustomer === true;
+  const lockCompany = profile?.accountType !== 'staff' && !params.has('from') && !newCustomer;
 
   // Tài khoản con: gõ tên công ty / người gửi → gợi ý người gửi đã dùng ở đơn trước; chọn → điền lại cả người gửi.
   const [senderQuery, setSenderQuery] = useState<string | null>(null);
@@ -94,6 +96,9 @@ export function ShipperSection() {
       {/* Ô nhập luôn giữ trong form (chỉ ẩn) để giá trị và kiểm tra lỗi không bị mất khi thu gọn. */}
       {/* 2 ô 1 hàng: tên · shipper gốc / liên hệ · điện thoại / địa chỉ lấy hàng (cả hàng) / MST · email / quốc gia · link sửa hồ sơ. */}
       <div id="shipper-fields" hidden={!expanded}>
+      {newCustomer && (
+        <p className={styles.newCustomerHint}>{t('Khách mới: thông tin người gửi sẽ lưu vào hồ sơ khách khi lưu nháp / in, CS hoàn thiện sau ở CMS.')}</p>
+      )}
       <FormGrid>
         <div className={styles.suggestCell}>
           <TextField
@@ -130,7 +135,6 @@ export function ShipperSection() {
         <TextField
           label="Địa chỉ lấy hàng"
           required
-          readOnly={lockCompany}
           wide
           maxLength={RULES.shipperAddressMax}
           aside={`${address.length}/${RULES.shipperAddressMax}`}
@@ -140,9 +144,15 @@ export function ShipperSection() {
         <TextField label="Email" type="email" {...bind('shipper.email')} />
         <TextField label="Quốc gia gửi" required {...bind('shipper.country')} />
         {/* Hồ sơ người gửi (tên công ty, địa chỉ) do CS sửa: gửi yêu cầu hỗ trợ — cùng hàng với quốc gia, không thêm dòng */}
-        {profile?.accountType !== 'staff' && (
+        {profile?.accountType !== 'staff' && !newCustomer && (
           <div className={styles.profileLink}>
             <LinkButton to="/troubles?new=sender-info" size="sm" variant="ghost">{t('Sửa hồ sơ người gửi')}</LinkButton>
+          </div>
+        )}
+        {/* Khách mới: góc dưới (chỗ "Sửa hồ sơ người gửi") là nút gán / đổi nhân viên phụ trách — chỉ quản trị / CS thấy */}
+        {newCustomer && (
+          <div className={styles.profileLink}>
+            <AssignManagerButton />
           </div>
         )}
       </FormGrid>

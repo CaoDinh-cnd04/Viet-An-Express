@@ -90,6 +90,9 @@ internal static partial class HsLookupRules
     /// </summary>
     public static HsLookupItemDto? Present(HsLookupItemDto x)
     {
+        // Mặt hàng đã xác minh (website) chưa có mã của nước: giữ nếu có HS6 hợp lệ, mã quốc gia để trống.
+        if (x.NationalCode is null)
+            return CleanCode(x.Hs6) is { } hs6 ? x with { NameVi = Text(x.NameVi) ?? "", NameEn = Text(x.NameEn) ?? "", Hs6 = hs6, Path = [] } : null;
         if (CleanCode(x.NationalCode) is not { } code) return null;
         var name = Text(x.NameEn)?.TrimEnd(':').TrimEnd() ?? "";
         var description = Text(x.NationalDescription);

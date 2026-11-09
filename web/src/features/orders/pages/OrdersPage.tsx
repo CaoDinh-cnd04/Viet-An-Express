@@ -11,11 +11,17 @@ import { OrderSummaryBar, PageSizeSelect } from '../components/OrderSummaryBar';
 import { OrdersTable } from '../components/OrdersTable';
 import { useOrderFilters } from '../hooks/useOrderFilters';
 import { useExportOrders, usePrintDocuments } from '../mutations';
+import { useOrdersSource } from '../source';
 import type { Order, OrderActions, OrderSortField } from '../types';
 import styles from './OrdersPage.module.css';
 
+/**
+ * "Đơn hàng của tôi". Bọc trong OrdersSourceContext = 'managed' (ManagedOrdersPage) thì thành trang đơn mọi khách
+ * nhân viên Việt An phụ trách: cùng giao diện, không báo sự cố (tạo / copy đơn vẫn chọn khách như cũ).
+ */
 export default function OrdersPage() {
   const { t } = useI18n();
+  const managed = useOrdersSource() === 'managed';
   const print = usePrintDocuments();
   const exportOrders = useExportOrders();
   const { filters, update, reset } = useOrderFilters();
@@ -115,7 +121,7 @@ export default function OrdersPage() {
 
       <OrderDrawer order={openOrder} onClose={closeDrawer} actions={actions} />
       <OrderPhotosDialog order={photoOrder} onClose={() => setPhotoOrder(null)} />
-      {issueOrder && (
+      {issueOrder && !managed && (
         <NewSupportRequestDialog open preset={{ kind: 'ho_tro', bill: issueOrder.bill }} onClose={() => setIssueOrder(null)} />
       )}
     </>

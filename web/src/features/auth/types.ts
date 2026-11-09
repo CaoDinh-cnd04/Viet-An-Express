@@ -27,6 +27,14 @@ export interface SessionUser {
   /** Nhân viên Việt An đang làm thay khách (accountType = vietan): tên đăng nhập / họ tên của nhân viên. customerCode trống = chưa chọn khách. */
   agentUserName?: string | null;
   agentName?: string | null;
+  /** Khách mới nhân viên Việt An vừa tạo (TCustomer.CustomerSource "Portal - Khách mới"): người gửi để trống, sửa được, lưu đơn thì ghi vào hồ sơ. */
+  newCustomer?: boolean;
+  /** Nhân viên Việt An là quản trị / CS — gán được nhân viên phụ trách cho khách mới. */
+  canAssignManager?: boolean;
+  /** Khách mới chưa được gán người phụ trách (Staff_ID còn là người tạo). */
+  managerPending?: boolean;
+  /** dbo.TCustomer.CustomerID của khách đang đăng nhập / làm thay (0 = nhân viên Việt An chưa chọn khách). */
+  customerId?: number;
 }
 
 /**
@@ -46,6 +54,18 @@ export interface ActableCustomer {
   address?: string | null;
   /** Tên đăng nhập của khách (TCustomer.Login_UserName). */
   loginUserName?: string | null;
+  /** Khách mới tạo trên portal, CS chưa hoàn thiện ở CMS. */
+  isNew?: boolean;
+  /** Nhân viên phụ trách (TCustomer.Staff_ID → USERS). */
+  managerId?: number | null;
+  managerName?: string | null;
+}
+
+/** Nhân viên sales / CS để gán phụ trách khách mới — GET /auth/vietan/support-staff. */
+export interface SupportStaff {
+  id: number;
+  userName: string;
+  fullName: string;
 }
 
 /** Nhân viên Việt An đúng mật khẩu → đã gửi mã OTP tới email (đã che bớt); nhập mã ở bước 2. */

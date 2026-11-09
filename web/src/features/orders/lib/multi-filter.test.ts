@@ -27,6 +27,11 @@ describe('thẻ tìm kiếm', () => {
     expect(serializeTags(all)).toBe('cnee:Ms Uyen\nct:United States');
     expect(parseTags(serializeTags(all))).toEqual(all);
   });
+  it('thẻ tên khách hàng (trang đơn khách phụ trách) giữ trường kh qua URL', () => {
+    const tags = addTags([], 'kh', ['Saigonbay']);
+    expect(serializeTags(tags)).toBe('kh:Saigonbay');
+    expect(parseTags('kh:Saigonbay')).toEqual(tags);
+  });
   it('link cũ không có tiền tố → dùng trường mặc định', () => {
     expect(parseTags('6010839', 'bill')).toEqual([{ field: 'bill', value: '6010839' }]);
     expect(parseTags('foo:bar')).toEqual([{ field: 'all', value: 'foo:bar' }]);

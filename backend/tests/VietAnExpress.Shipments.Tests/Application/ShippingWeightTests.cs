@@ -25,10 +25,10 @@ public class ShippingWeightTests
         Assert.Equal(5000m, ShippingRules.VolumetricDivisor);
         var p = new OrderPayload { Service = new() { Carrier = carrier }, Packages = [Package("6"), Package("2", "30", "50", "10")] };
         var order = LegacyOrderFactory.FromPayload(p, new(1, "Test", null, null, null), 100, new DateTime(2026, 10, 13));
-        Assert.Equal(9m, order.WeightKg);
+        Assert.Equal(8m, order.WeightKg); // MaVanDon.Trong_Luong = cân thực tổng như hệ thống cũ (6 + 2); cân tính cước ở dòng kiện
         var lines = LegacyOrderFactory.PackageLines(p, 100);
         Assert.Equal(8m, lines.Sum(x => x.WeightKg));
-        Assert.Equal(7.8m, lines.Sum(x => x.VolumetricKg));
+        Assert.Equal(8m, lines.Sum(x => x.VolumetricKg)); // 4,8 → 5 và 3 — quy đổi mỗi dòng làm tròn lên 0,5 kg
         Assert.Equal(9m, lines.Sum(x => x.ChargeableKg));
     }
 
@@ -37,7 +37,7 @@ public class ShippingWeightTests
     [InlineData("UPS|VN Expedited", "1.1", "3", 6)]
     [InlineData("DHL - VN", "1.1", "3", 4.5)]
     [InlineData("Fedex - VN", "1.1", "3", 3.5)]
-    [InlineData("Chuyên tuyến - Singapore", "1.1", "3", 3.3)]
+    [InlineData("Chuyên tuyến - Singapore", "1.1", "3", 3.5)] // 3,3 → 3,5
     [InlineData("UPS - VN Saver", "1.5001", "1", 2)]
     [InlineData("UPS - VN Saver", "1.5", "1", 1.5)]
     public void Lam_tron_dung_tung_kien_hay_tong_lo(string service, string weight, string qty, double expected) =>
@@ -59,8 +59,8 @@ public class ShippingWeightTests
     {
         Assert.Equal(20m * 21 * 21 / 5000, ShippingRules.Volume(20.1m, 20.5m, 20.9m, ShippingRules.Rule("UPS")));
         Assert.Equal(21m * 21 * 21 / 5000, ShippingRules.Volume(20.1m, 20.5m, 20.9m, ShippingRules.Rule("Fedex")));
-        var stored = new LegacyPackageLine { Quantity = 2, LengthCm = 21, WidthCm = 21, HeightCm = 21, WeightKg = 2, VolumetricKg = 3.45m, ChargeableKg = 4 };
-        Assert.Equal(3.45m, LegacyOrderView.ToPackageDto(stored).VolumetricWeight);
+        var stored = new LegacyPackageLine { Quantity = 2, LengthCm = 21, WidthCm = 21, HeightCm = 21, WeightKg = 1, VolumetricKg = 1.725m, ChargeableKg = 2 }; // số 1 kiện
+        Assert.Equal(3.45m, LegacyOrderView.ToPackageDto(stored).VolumetricWeight); // cả dòng = 1 kiện × SoLuong
         Assert.Equal(4m, LegacyOrderView.ToPackageDto(stored).ChargeableWeight);
         var print = LegacyOrderLinesReader.ToPrint(stored);
         Assert.Equal(3.45m, print.VolumeKg);

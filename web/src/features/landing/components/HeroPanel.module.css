@@ -60,6 +60,8 @@
   flex: 1;
   min-width: 0;
   height: 44px;
+  /* Bằng chiều cao ô: line-height nhỏ hơn thì Chrome cắt dấu chồng chữ hoa (NGUYỄN hiện NGUYÊN). */
+  line-height: 44px;
   border: 0;
   outline: 0;
   background: none;

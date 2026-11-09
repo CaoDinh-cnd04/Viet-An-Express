@@ -55,7 +55,7 @@ internal sealed class SupportRequestsController : ApiControllerBase
     public async Task<IActionResult> Answer(string id, SupportAnswerRequest body, CancellationToken ct) =>
         FromResult(await Sender.Send(new AnswerSupportRequestCommand(id, body.Text), ct), "Đã gửi phản hồi cho CS Việt An");
 
-    /// <summary>Nhân viên Việt An: yêu cầu của khách mình phụ trách (IS_ADMIN / VIEW_CUSTOMER_ALL: mọi khách) — như GET /admin/troubles.</summary>
+    /// <summary>Nhân viên Việt An: yêu cầu của khách mình phụ trách (vai trò Administrator: mọi khách) — như GET /admin/troubles.</summary>
     [HttpGet("manage")]
     [HasPermission(IdentityPermissions.ManageSupportRequests)]
     [ProducesResponseType<ApiResponse<IReadOnlyList<AdminSupportRequestDto>>>(StatusCodes.Status200OK)]

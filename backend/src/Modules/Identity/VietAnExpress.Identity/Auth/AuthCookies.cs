@@ -14,6 +14,10 @@ internal static class AuthCookies
     public const string Access = "va_access";
     public const string Refresh = "va_refresh";
 
+    /// <summary>Nhân viên Việt An đã nhập OTP hôm nay — đăng xuất không xóa (<see cref="VietAnStaff.VietAnOtpDayPass"/>).</summary>
+    public const string OtpDayPass = "va_otp_day";
+    public const string VietAnPath = "/api/v1/auth/vietan";
+
     /// <summary>Refresh token chỉ gửi kèm các request tới /api/.../auth — giảm bề mặt lộ.</summary>
     private const string RefreshPath = "/api/v1/auth";
 
@@ -23,6 +27,7 @@ internal static class AuthCookies
         DateTimeOffset? expires = session.IsPersistent ? session.RefreshTokenExpiresAt : null;
         response.Cookies.Append(Access, session.AccessToken, Options(jwt, "/", expires));
         response.Cookies.Append(Refresh, session.RefreshToken, Options(jwt, RefreshPath, expires));
+        if (session.OtpDayPass is { } pass) response.Cookies.Append(OtpDayPass, pass.Token, Options(jwt, VietAnPath, pass.ExpiresAt));
     }
 
     public static void Clear(HttpResponse response, JwtOptions jwt)

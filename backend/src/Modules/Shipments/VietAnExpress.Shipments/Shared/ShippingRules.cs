@@ -29,8 +29,21 @@ internal static class ShippingRules
         if (name == "DHL" || name.StartsWith("DHL ") || name.StartsWith("DHL|")) return new("none", 0.5m, 0.5m, 30m, 1m);
         if (name == "FEDEX" || name.StartsWith("FEDEX ") || name.StartsWith("FEDEX|"))
             return new("up", 0, 0.5m, name.Contains("FICP") ? 32.5m : 20.5m, 1m);
-        return new("none", 0, 0);
+        // Mặc định (Chuyên tuyến, Aramex, SEA, chưa chọn hãng — 05/11/2026): mỗi dòng kiện lấy cân lớn hơn, làm tròn lên 0,5 kg; tổng cũng lên 0,5 kg.
+        return new("none", 0, 0.5m, LineStep: 0.5m);
     }
+
+    /// <summary>
+    /// Cân quy đổi của dòng kiện (SL × D×R×C/5000) làm tròn LÊN bậc 0,5 kg như bill A4 hệ thống cũ (05/11/2026): 1,1 / 1,2 → 1,5; 1,6 → 2.
+    /// Làm tròn cả dòng, không từng kiện — nhiều kiện nhỏ không bị đội cân. Khớp frontend shared/lib/shipping-weight.ts.
+    /// </summary>
+    public const decimal VolumeStep = 0.5m;
+
+    public static decimal LineVolume(int qty, decimal volumePerPiece) => RoundUp(qty * volumePerPiece, VolumeStep);
+
+    /// <summary>Cân tính cước của dòng kiện = SL × cân 1 kiện (đã làm tròn theo hãng), rồi làm tròn theo <see cref="WeightRule.LineStep"/>.</summary>
+    public static decimal LineWeight(int qty, decimal actual, decimal volumePerPiece, WeightRule rule) =>
+        RoundUp(qty * PieceWeight(actual, volumePerPiece, rule), rule.LineStep);
 
     public static decimal Dimension(decimal cm, WeightRule rule) => rule.Dimension switch
     {
@@ -50,4 +63,4 @@ internal static class ShippingRules
         Round(RoundUp(kg, rule.Threshold is { } threshold && kg > threshold ? rule.AboveStep : rule.ShipmentStep));
 }
 
-internal sealed record WeightRule(string Dimension, decimal PieceStep, decimal ShipmentStep, decimal? Threshold = null, decimal AboveStep = 0);
+internal sealed record WeightRule(string Dimension, decimal PieceStep, decimal ShipmentStep, decimal? Threshold = null, decimal AboveStep = 0, decimal LineStep = 0);

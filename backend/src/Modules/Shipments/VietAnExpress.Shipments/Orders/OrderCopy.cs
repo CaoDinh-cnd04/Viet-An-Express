@@ -40,13 +40,13 @@ internal static class OrderCopy
             Shipment = new()
             {
                 Type = doc ? "DOC" : "PACK", Pieces = N(packages.Count > 0 ? packages.Sum(p => p.Quantity) : o.Pieces),
-                GrossWeight = N(packages.Count > 0 ? packages.Sum(p => p.WeightKg) : o.WeightKg)
+                GrossWeight = N(packages.Count > 0 ? packages.Sum(p => p.LineWeightKg) : o.WeightKg)
             },
             Goods = new() { Description = doc ? "" : S(o.GoodsName), DocContent = doc ? S(o.GoodsName) : "" },
             Packages = packages.Select(p => new OrderPayload.PackagePart
             {
                 Type = S(p.PackType), Packaging = Packaging(p.PackType), Qty = N(p.Quantity), Length = N(p.LengthCm), Width = N(p.WidthCm), Height = N(p.HeightCm),
-                Weight = N(p.Quantity > 0 ? p.WeightKg / p.Quantity : p.WeightKg), Category = LegacyOrderFactory.MultiCategory, Description = S(o.GoodsName)
+                Weight = N(p.WeightKg), Category = LegacyOrderFactory.MultiCategory, Description = S(o.GoodsName)
             }).ToList(),
             Invoice = new()
             {

@@ -165,15 +165,17 @@ export function ReceiverSection() {
     />
   );
 
-  // ---------- Gợi ý địa chỉ (Geoapify) khi khách gõ Địa chỉ 1 → điền địa chỉ, thành phố, tỉnh / bang, mã bưu chính ----------
+  // ---------- Gợi ý địa chỉ (Geoapify) khi khách gõ Địa chỉ 1 → điền địa chỉ; thành phố, tỉnh / bang, mã bưu chính chỉ điền ô trống ----------
   const [addrQuery, setAddrQuery] = useState<string | null>(null);
   const scheduleAddr = useDebouncedCallback((value: string | null) => setAddrQuery(value), 350);
   const addressSuggestions = useAddressSuggestions(countryCode, addrQuery);
   const addrBox = useCombobox(addrQuery ? addressSuggestions.data ?? [] : [], (s: AddressSuggestion) => {
     scheduleAddr.cancel();
     const opts = { shouldDirty: true, shouldValidate: true } as const;
-    suggestionFields(s).forEach(([field, value]) => setValue(`receiver.${field}`, value, opts));
-    pickedPostal.current = normalizePostal(s.postalCode ?? '');
+    const current = { city: getValues('receiver.city'), state: getValues('receiver.state'), postal: getValues('receiver.postal') };
+    const fields = suggestionFields(s, current);
+    fields.forEach(([field, value]) => setValue(`receiver.${field}`, value, opts));
+    if (fields.some(([field]) => field === 'postal')) pickedPostal.current = normalizePostal(s.postalCode ?? '');
     setAddrQuery(null);
   });
   const addr1Extra: AddressFieldExtra = {

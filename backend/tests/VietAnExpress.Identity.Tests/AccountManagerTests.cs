@@ -1,4 +1,5 @@
 using VietAnExpress.Customers.Contracts;
+using VietAnExpress.Customers.NewCustomers;
 using VietAnExpress.Customers.Shared;
 using VietAnExpress.Customers.VietAnUsers;
 using Xunit;
@@ -30,15 +31,72 @@ public class AccountManagerTests
     }
 
     [Fact]
-    public void Nhan_vien_dang_nhap_portal_khi_ACTIVE_chua_xoa_co_mat_khau_xem_moi_khach_khi_IS_ADMIN_hoac_VIEW_CUSTOMER_ALL()
+    public void Nhan_vien_dang_nhap_portal_khi_ACTIVE_chua_xoa_co_mat_khau_IS_ADMIN_VIEW_CUSTOMER_ALL_khong_mo_rong_pham_vi()
     {
         var u = new VietAnUser { Id = 7, UserName = "vo.hanh", Status = "ACTIVE", Password = "246810" };
         Assert.Equal(new VietAnUserLogin(7, "vo.hanh", "vo.hanh", false, "246810"), CustomersApi.ToLogin(u));
-        Assert.True(CustomersApi.ToLogin(new VietAnUser { Id = 7, UserName = "a", Status = "ACTIVE", Password = "1", IsAdmin = true })!.ViewAllCustomers);
-        Assert.True(CustomersApi.ToLogin(new VietAnUser { Id = 7, UserName = "a", Status = "ACTIVE", Password = "1", ViewCustomerAll = 1 })!.ViewAllCustomers);
+        // Dữ liệu cũ bật IS_ADMIN / VIEW_CUSTOMER_ALL cho cả sale → không dùng; phạm vi chỉ theo vai trò (06/11/2026).
+        Assert.False(CustomersApi.ToLogin(new VietAnUser { Id = 7, UserName = "a", Status = "ACTIVE", Password = "1", IsAdmin = true }, ["Sale", "ALL"])!.ViewAllCustomers);
+        Assert.False(CustomersApi.ToLogin(new VietAnUser { Id = 7, UserName = "a", Status = "ACTIVE", Password = "1", ViewCustomerAll = 1 }, ["Sale"])!.ViewAllCustomers);
         Assert.Null(CustomersApi.ToLogin(new VietAnUser { Id = 7, UserName = "a", Status = "INACTIVE", Password = "1" }));
         Assert.Null(CustomersApi.ToLogin(new VietAnUser { Id = 7, UserName = "a", Status = "ACTIVE", Password = "1", Deleted = true }));
         Assert.Null(CustomersApi.ToLogin(new VietAnUser { Id = 7, UserName = "a", Status = "ACTIVE", Password = "" }));
+    }
+
+    [Theory]
+    [InlineData(1157, null, 1157, false, true)]             // sale phụ trách (Staff_ID)
+    [InlineData(20, "1157|", 1157, true, true)]             // CS được gán ở SubTer (như CMS)
+    [InlineData(20, "1157|", 1157, false, false)]           // sale không tính SubTer
+    [InlineData(20, "1158|1157|1159|", 1157, true, true)]
+    [InlineData(20, "1158| 1157 |1159", 1157, true, true)]  // khoảng trắng, thiếu "|" cuối
+    [InlineData(20, "11570|1158|", 1157, true, false)]      // không khớp 1 phần mã
+    [InlineData(20, "", 1157, true, false)]
+    [InlineData(20, null, 1157, true, false)]
+    public void Pham_vi_khach_Staff_ID_chi_CS_tinh_them_SubTer(int staffId, string? subTer, int agent, bool cs, bool expected) =>
+        Assert.Equal(expected, VietAnExpress.Customers.Profiles.CustomerScope.Matches(staffId, subTer, agent, cs));
+
+    [Fact]
+    public void CS_co_vai_tro_ALL_xem_moi_khach_sale_co_ALL_thi_khong()
+    {
+        Assert.True(VietAnRoles.SeesAllCustomers(["CS", " all "]));
+        Assert.False(VietAnRoles.SeesAllCustomers(["CS"]));
+        Assert.False(VietAnRoles.SeesAllCustomers(["Sale", "ALL"]));
+        Assert.True(VietAnRoles.UsesSubTer(["cs"]));
+        Assert.False(VietAnRoles.UsesSubTer(["Sale", "ALL"]));
+    }
+
+    [Fact]
+    public void Vai_tro_Administrator_o_ACL_ROLES_xem_moi_khach()
+    {
+        Assert.True(VietAnRoles.SeesAllCustomers(["Sale", " administrator "]));
+        Assert.True(VietAnRoles.SeesAllCustomers(["Sale", "CS", "ALL", null]));
+        Assert.False(VietAnRoles.SeesAllCustomers([]));
+
+        var sale = new VietAnUser { Id = 7, UserName = "a", Status = "ACTIVE", Password = "1" };
+        Assert.False(CustomersApi.ToLogin(sale)!.ViewAllCustomers);
+        Assert.True(CustomersApi.ToLogin(sale, ["Administrator"])!.ViewAllCustomers);
+    }
+
+    [Fact]
+    public void Admin_va_CS_gan_nguoi_phu_trach_khach_moi()
+    {
+        var u = new VietAnUser { Id = 7, UserName = "a", Status = "ACTIVE", Password = "1" };
+        Assert.False(CustomersApi.ToLogin(u, ["Sale"])!.CanAssignManager);
+        Assert.True(CustomersApi.ToLogin(u, [" cs "])!.CanAssignManager);
+        Assert.True(CustomersApi.ToLogin(u, ["Administrator"])!.CanAssignManager);
+        Assert.False(CustomersApi.ToLogin(new VietAnUser { Id = 7, UserName = "a", Status = "ACTIVE", Password = "1", IsAdmin = true }, ["Sale"])!.CanAssignManager);
+
+        Assert.True(NewCustomerRules.IsSupportStaff(["Accounting", "Sale"]));
+        Assert.True(NewCustomerRules.IsSupportStaff(["CS"]));
+        Assert.False(NewCustomerRules.IsSupportStaff(["Accounting", null]));
+        Assert.True(NewCustomerRules.IsNew(" portal - khách mới "));
+        Assert.False(NewCustomerRules.IsNew("Tự tìm"));
+
+        var clean = NewCustomerRules.Clean(new NewCustomerInfo("  ABC  ", "", null, new string('x', 300), " 0312 ", "a@b.vn"));
+        Assert.Equal("ABC", clean.CompanyName);
+        Assert.Null(clean.ContactName);
+        Assert.Equal(250, clean.Address!.Length);
+        Assert.Equal("0312", clean.TaxCode);
     }
 
     [Theory]

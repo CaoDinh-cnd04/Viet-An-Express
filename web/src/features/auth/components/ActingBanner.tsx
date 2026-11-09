@@ -3,10 +3,11 @@ import { useI18n } from '@/shared/i18n';
 import { LinkButton } from '@/shared/ui';
 import { useSession } from '../api';
 import { CHOOSE_CUSTOMER_PATH, isVietAnAgent } from '../lib/session';
+import { BackToAdminButton } from './BackToAdminButton';
 import styles from './ActingBanner.module.css';
 
 /**
- * Thanh luôn hiện khi nhân viên Việt An làm thay khách: ai đang làm cho khách nào + nút đổi khách.
+ * Thanh luôn hiện khi nhân viên Việt An làm thay khách: ai đang làm cho khách nào + nút đổi khách / về trang quản trị (bỏ khách).
  * Tài khoản khách và trang chọn khách: không hiện.
  */
 export function ActingBanner() {
@@ -19,11 +20,16 @@ export function ActingBanner() {
   return (
     <div className={styles.bar} role="status">
       <span>
-        {user.customerCode
+        {user.customerCode && user.newCustomer
+          ? t('Nhân viên {agent} đang làm cho khách mới — {name}', { agent: user.agentName ?? user.agentUserName ?? '', name: user.companyName || t('(chưa có tên)') })
+          : user.customerCode
           ? t('Nhân viên {agent} đang làm cho khách {code} — {name}', { agent: user.agentName ?? user.agentUserName ?? '', code: user.customerCode, name: user.companyName })
           : t('Nhân viên {agent} — chưa chọn khách', { agent: user.agentName ?? user.agentUserName ?? '' })}
       </span>
-      <LinkButton to={CHOOSE_CUSTOMER_PATH} size="sm">{t(user.customerCode ? 'Đổi khách' : 'Chọn khách')}</LinkButton>
+      <span className={styles.actions}>
+        {user.customerCode && <BackToAdminButton />}
+        <LinkButton to={CHOOSE_CUSTOMER_PATH} size="sm">{t(user.customerCode ? 'Đổi khách' : 'Chọn khách')}</LinkButton>
+      </span>
     </div>
   );
 }

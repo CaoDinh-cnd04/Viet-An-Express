@@ -6,6 +6,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using VietAnExpress.Customers.Contracts;
 using VietAnExpress.Identity.Auth;
+using VietAnExpress.Identity.Shared;
 using VietAnExpress.SharedKernel.Application;
 using VietAnExpress.SharedKernel.Results;
 
@@ -14,15 +15,16 @@ namespace VietAnExpress.Identity.VietAnStaff;
 /// <summary>
 /// Nhân viên Việt An đăng nhập portal bằng USER_NAME / USER_PASSWORD của dbo.USERS (như CMS). Đúng mật khẩu thì chưa cấp phiên:
 /// gửi mã OTP 6 số tới email USERS.EMAIL1, nhập đúng mã ở <see cref="VerifyVietAnOtpCommand"/> mới vào (phiên chưa gắn khách,
-/// chọn khách ở bước sau — <see cref="ActAsCustomerCommand"/>).
+/// chọn khách ở bước sau — <see cref="ActAsCustomerCommand"/>). Hôm nay đã nhập OTP trên trình duyệt này (<see cref="VietAnOtpDayPass"/>) thì cấp phiên luôn.
 /// </summary>
-internal sealed record VietAnLoginCommand(string UserName, string Password, bool Remember) : IRequest<Result<VietAnOtpChallengeDto>>;
+internal sealed record VietAnLoginCommand(string UserName, string Password, bool Remember, string? OtpDayPass = null) : IRequest<Result<VietAnLoginOutcome>>;
 
 internal sealed class VietAnLoginHandler(
-    ICustomersApi customers, LoginAttemptGuard guard, VietAnOtpStore otps, IEmailSender email, IHostEnvironment env, ILogger<VietAnLoginHandler> logger)
-    : IRequestHandler<VietAnLoginCommand, Result<VietAnOtpChallengeDto>>
+    ICustomersApi customers, LoginAttemptGuard guard, VietAnOtpStore otps, IEmailSender email, EmailCompany company, IHostEnvironment env, ILogger<VietAnLoginHandler> logger,
+    SessionService sessions, VietAnOtpDayPass dayPass, VietAnSessionRegistry? activeSessions = null)
+    : IRequestHandler<VietAnLoginCommand, Result<VietAnLoginOutcome>>
 {
-    public async Task<Result<VietAnOtpChallengeDto>> Handle(VietAnLoginCommand cmd, CancellationToken ct)
+    public async Task<Result<VietAnLoginOutcome>> Handle(VietAnLoginCommand cmd, CancellationToken ct)
     {
         // Khóa tạm riêng (tiền tố vietan:) — không lẫn với tên đăng nhập của khách. Nhập sai OTP cũng tính vào đây.
         var key = VietAnOtp.GuardKey(cmd.UserName);
@@ -38,6 +40,14 @@ internal sealed class VietAnLoginHandler(
             return AuthErrors.InvalidCredentials;
         }
 
+        if (dayPass.IsValid(cmd.OtpDayPass, agent))
+        {
+            guard.Succeeded(key);
+            // Vẫn giữ 1 phiên / nhân viên: máy đang đăng nhập trước đó bị đá ra.
+            activeSessions?.Renew(agent.Id);
+            return new VietAnLoginOutcome(null, sessions.Start(agent, null, cmd.Remember));
+        }
+
         var to = VietAnOtp.ValidEmail(agent.Email);
         // Dev trên laptop: USERS chưa có email / chưa cấu hình SMTP → ghi mã ra log backend để thử được. Máy chủ (Production) bắt buộc gửi email.
         var logOnly = env.IsDevelopment() && (to is null || !email.IsConfigured);
@@ -48,18 +58,18 @@ internal sealed class VietAnLoginHandler(
         if (logOnly)
         {
             logger.LogWarning("[Dev] Mã OTP đăng nhập của nhân viên {UserName}: {Code}", agent.UserName, code);
-            return new VietAnOtpChallengeDto(challengeId, to is null ? "log backend (dev)" : VietAnOtp.Mask(to), (int)VietAnOtpStore.Lifetime.TotalSeconds);
+            return new VietAnLoginOutcome(new VietAnOtpChallengeDto(challengeId, to is null ? "log backend (dev)" : VietAnOtp.Mask(to), (int)VietAnOtpStore.Lifetime.TotalSeconds));
         }
         try
         {
-            await email.SendAsync(VietAnOtp.Email(to!, agent.FullName, code), ct);
+            await email.SendAsync(VietAnOtp.Email(to!, agent.FullName, code, company), ct);
         }
         catch (Exception e) when (e is not OperationCanceledException)
         {
             logger.LogError(e, "Không gửi được email OTP cho nhân viên {UserName}", agent.UserName);
             return VietAnStaffErrors.OtpEmailFailed;
         }
-        return new VietAnOtpChallengeDto(challengeId, VietAnOtp.Mask(to!), (int)VietAnOtpStore.Lifetime.TotalSeconds);
+        return new VietAnLoginOutcome(new VietAnOtpChallengeDto(challengeId, VietAnOtp.Mask(to!), (int)VietAnOtpStore.Lifetime.TotalSeconds));
     }
 }
 
@@ -95,14 +105,7 @@ internal static class VietAnOtp
         return (name.Length <= 2 ? name[..1] : name[..2]) + "***" + email[at..];
     }
 
-    public static EmailMessage Email(string to, string fullName, string code) => new(
-        $"Mã đăng nhập portal Việt An: {code}",
-        string.Join('\n',
-            $"Chào {fullName},",
-            "",
-            $"Mã OTP đăng nhập portal Việt An Express của bạn là: {code}",
-            $"Mã có hiệu lực {VietAnOtpStore.Lifetime.TotalMinutes.ToString(CultureInfo.InvariantCulture)} phút và chỉ dùng được 1 lần.",
-            "",
-            "Nếu không phải bạn đang đăng nhập, hãy đổi mật khẩu trên phần mềm Việt An ngay và báo quản trị."),
-        To: [to]);
+    public static EmailMessage Email(string to, string fullName, string code, EmailCompany company) =>
+        OtpEmail.Build(to, fullName, code, VietAnOtpStore.Lifetime,
+            "Nếu không phải bạn đang đăng nhập, hãy đổi mật khẩu trên phần mềm Việt An ngay và báo quản trị.", company);
 }

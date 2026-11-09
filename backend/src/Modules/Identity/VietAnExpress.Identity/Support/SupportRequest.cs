@@ -126,11 +126,13 @@ internal sealed class SupportRequest
         UpdatedAt = now;
     }
 
-    /// <summary>Khách trả lời khi CS đang chờ: nối vào cuối nội dung, chuyển lại "Đang xử lý" để CS xem tiếp.</summary>
+    /// <summary>
+    /// Khách nhắn tiếp: nối vào cuối nội dung; yêu cầu CS chưa xem (Mới) giữ nguyên, còn lại (chờ khách, đã xử lý…) chuyển "Đang xử lý" để CS xem tiếp.
+    /// </summary>
     public void AddCustomerReply(string text, DateTime now)
     {
         Description += SupportThread.Block(SupportThread.FromCustomer, text, now);
-        Status = SupportRequestStatus.Doing;
+        if (Status != SupportRequestStatus.New) Status = SupportRequestStatus.Doing;
         UpdatedAt = now;
     }
 

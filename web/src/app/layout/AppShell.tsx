@@ -2,7 +2,7 @@ import { Suspense, useEffect, useRef, useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { useLocalStorage } from '@/shared/lib/useLocalStorage';
 import { cx } from '@/shared/lib/cx';
-import { ActingBanner, IdleLogout, useSession } from '@/features/auth';
+import { ActingBanner, IdleLogout, MANAGED_ORDERS_PATH, useSession } from '@/features/auth';
 import { LoginNotices } from '@/features/notifications';
 import { OnboardingTour, useOnboardingTour } from '@/features/onboarding';
 import { useI18n } from '@/shared/i18n';
@@ -11,8 +11,11 @@ import { Topbar } from './Topbar';
 import styles from './AppShell.module.css';
 
 const MOBILE_QUERY = '(max-width: 1040px)';
-/** Trang bảng nhiều cột dùng hết chiều ngang màn hình (bỏ giới hạn 1560px); cả trang cuộn bình thường. */
-const FULL_SCREEN_PATHS = ['/orders'];
+/**
+ * Trang bảng nhiều cột (Đơn hàng của tôi, Đơn khách phụ trách) dùng hết chiều ngang màn hình (bỏ giới hạn 1560px);
+ * cả trang cuộn bình thường, cuộn xuống thì tự thu gọn menu.
+ */
+const FULL_SCREEN_PATHS = ['/orders', MANAGED_ORDERS_PATH];
 /** Cuộn quá mốc này (px) thì thu gọn menu; cuộn lên lại không tự mở — rê chuột vào menu mới hiện. */
 const SCROLL_COLLAPSE_AT = 120;
 
@@ -37,7 +40,7 @@ export function AppShell() {
     setPeek(false);
   }, [pathname]);
 
-  // Trang bảng (Đơn hàng của tôi): cuộn xuống → thu gọn tạm menu cho bảng rộng hơn. Cuộn lên không mở lại;
+  // Trang bảng (Đơn hàng của tôi, Đơn khách phụ trách): cuộn xuống → thu gọn tạm menu cho bảng rộng hơn. Cuộn lên không mở lại;
   // rê chuột vào menu thì hiện đè lên nội dung, bấm nút menu / Ctrl+B thì mở hẳn.
   useEffect(() => {
     if (!FULL_SCREEN_PATHS.includes(pathname)) return;

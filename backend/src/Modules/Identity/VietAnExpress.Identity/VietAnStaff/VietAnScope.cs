@@ -6,8 +6,8 @@ namespace VietAnExpress.Identity.VietAnStaff;
 internal sealed record VietAnContext(VietAnUserLogin Agent, CustomerSummary? Customer);
 
 /// <summary>
-/// Phạm vi khách của nhân viên Việt An như quy tắc CMS: <c>IS_ADMIN</c> / <c>VIEW_CUSTOMER_ALL</c> = 1 làm thay mọi khách,
-/// còn lại chỉ khách có <c>TCustomer.Staff_ID</c> = USERS.ID.
+/// Phạm vi khách của nhân viên Việt An theo vai trò (dbo.ACL_ROLES_USERS, 06/11/2026): Administrator làm thay mọi khách,
+/// còn lại khách có <c>TCustomer.Staff_ID</c> = USERS.ID (sale) hoặc USERS.ID nằm trong <c>TCustomer.SubTer</c> (CS, như CMS).
 /// </summary>
 internal static class VietAnScope
 {
@@ -18,7 +18,7 @@ internal static class VietAnScope
     public static async Task<CustomerSummary?> CustomerInScopeAsync(this ICustomersApi customers, VietAnUserLogin agent, long customerId, CancellationToken ct)
     {
         if (customerId <= 0) return null;
-        if (!agent.ViewAllCustomers && (await customers.GetAccountManagerAsync(customerId, ct))?.Id != agent.Id) return null;
+        if (!agent.ViewAllCustomers && !await customers.IsCustomerOfStaffAsync(customerId, agent.Id, ct)) return null;
         return await customers.GetByIdAsync(customerId, ct);
     }
 

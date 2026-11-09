@@ -1,7 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiUrl, http, toError } from '@/shared/api/http';
+import { useLiveEvent } from '@/shared/api/live';
 import type { NotificationItem } from '@/features/notifications';
-import type { SupportStatus, SupportTicket } from '@/features/support';
+import { SUPPORT_LIVE_EVENT, type SupportStatus, type SupportTicket } from '@/features/support';
 
 /**
  * Trang quản trị Việt An (/admin): token riêng giữ trong sessionStorage, gửi bằng header Authorization —
@@ -241,6 +242,12 @@ export function useAdminSupportTickets(enabled: boolean, source: SupportSource =
     enabled,
     refetchInterval: 60_000
   });
+}
+
+/** Trang CS (nhân viên Việt An đăng nhập portal): khách gửi / trả lời yêu cầu → máy chủ báo qua SignalR, tải lại danh sách ngay. */
+export function useManagedSupportLive() {
+  const qc = useQueryClient();
+  useLiveEvent(SUPPORT_LIVE_EVENT, () => void qc.invalidateQueries({ queryKey: supportKey('managed') }));
 }
 
 /**

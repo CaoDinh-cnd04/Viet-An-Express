@@ -75,7 +75,7 @@ internal static class CommitmentLetter
     }
 
     public const string Css = """
-        .cvck { font-family: Aptos, "Aptos Body", Arial, Helvetica, sans-serif; font-size: 15px; line-height: 1.35; }
+        .cvck { font-family: "Times New Roman", Times, serif; font-size: 15px; line-height: 1.35; }
         .cvck .c { text-align: center; }
         .cvck .title { font-weight: 700; margin-top: 6mm; }
         .cvck .subtitle { font-weight: 700; font-style: italic; }

@@ -1,12 +1,13 @@
-import { Fragment, useEffect } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import { get, useFieldArray, useFormContext, useWatch } from 'react-hook-form';
 import { isPerPackageInvoice } from '@/shared/config/domain';
 import { useI18n } from '@/shared/i18n';
 import { cx } from '@/shared/lib/cx';
 import { Button, Card, Icon, Notice, SelectField, TextField } from '@/shared/ui';
 import { CURRENCIES, DUTY_TERMS } from '../constants';
-import { EXPORT_TYPES, RULES, invoiceTotal, lineTotal, copyPreviousPackage, invoicePackageCount, packageGroups, syncPackageItems, emptyInvoiceItem, type CreateOrderValues } from '@/features/order-form';
+import { EXPORT_TYPES, RULES, invoiceTotal, lineTotal, copyPreviousPackage, invoicePackageCount, packageGroups, syncPackageItems, emptyInvoiceItem, writeInvoiceItems, type CreateOrderValues } from '@/features/order-form';
 import { useFieldBinder } from '../hooks/useFieldBinder';
+import { InvoicePaste } from './InvoicePaste';
 import { SectionTitle } from './SectionTitle';
 import { UnitCell } from './UnitCell';
 import { decimalField, onCellArrows } from '../hooks/cellNavigation';
@@ -36,6 +37,10 @@ export function InvoiceSection() {
     if (next) replace(next);
   }, [perPackage, count, getValues, replace]);
   const rootError = get(formState.errors, 'invoice.items.root')?.message as string | undefined;
+  // Ô "Dán dữ liệu Excel" (như hệ thống cũ): copy các ô trong Excel rồi dán → thêm dòng invoice.
+  const [pasting, setPasting] = useState(false);
+  const addPasted = (list: ReturnType<typeof emptyInvoiceItem>[], pkg: number) =>
+    replace(writeInvoiceItems(getValues('invoice.items') ?? [], list, 'append', perPackage ? Math.min(pkg, count) : undefined));
   const exportType = useWatch({ control, name: 'invoice.exportType' });
   const exportTypes = [...EXPORT_TYPES, ...(exportType && !EXPORT_TYPES.some(o => o.value === exportType) ? [{ value: exportType, label: exportType }] : [])];
   const currencies = CURRENCIES.some(c => c === currency) || !currency ? CURRENCIES : [...CURRENCIES, currency];
@@ -167,13 +172,19 @@ export function InvoiceSection() {
             </div>
           )}
 
-          {!perPackage && (
-            <div className={styles.tableFooter}>
+          <div className={styles.tableFooter}>
+            {!perPackage && (
               <Button size="sm" onClick={() => append(emptyInvoiceItem())}>
                 <Icon name="plus" size={15} /> {t('Thêm mặt hàng')}
               </Button>
-            </div>
-          )}
+            )}
+            {!pasting && (
+              <Button size="sm" onClick={() => setPasting(true)} title={t('Copy các ô trong Excel rồi dán vào để thêm nhiều mặt hàng')}>
+                {t('Dán từ Excel')}
+              </Button>
+            )}
+          </div>
+          {pasting && <InvoicePaste onItems={addPasted} packageCount={perPackage ? count : undefined} onClose={() => setPasting(false)} />}
         </>
       )}
 

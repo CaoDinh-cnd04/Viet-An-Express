@@ -9,8 +9,11 @@ import type { SessionUser } from '../types';
 /** Nhân viên Việt An chọn / đổi khách để làm thay. */
 export const CHOOSE_CUSTOMER_PATH = '/chon-khach';
 
+/** Đơn của mọi khách nhân viên Việt An phụ trách — giao diện như "Đơn hàng của tôi". */
+export const MANAGED_ORDERS_PATH = '/orders/managed';
+
 /** Các trang nhân viên Việt An vào được khi chưa chọn khách. */
-const NO_CUSTOMER_PATHS = new Set([CHOOSE_CUSTOMER_PATH, '/troubles']);
+const NO_CUSTOMER_PATHS = new Set([CHOOSE_CUSTOMER_PATH, '/troubles', MANAGED_ORDERS_PATH]);
 
 /** Nhân viên Việt An (dbo.USERS) đang đăng nhập portal để làm thay khách. */
 export function isVietAnAgent(user: SessionUser | null | undefined): boolean {

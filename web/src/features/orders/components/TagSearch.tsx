@@ -2,6 +2,7 @@ import { useRef, useState, type ClipboardEvent, type KeyboardEvent } from 'react
 import { useI18n } from '@/shared/i18n';
 import { SEARCH_FIELDS } from '../constants';
 import { addTags, MAX_TERMS, pastedValues, TAG_SEPARATOR, tokenize, type SearchTag } from '../lib/multi-filter';
+import { useOrdersSource } from '../source';
 import type { OrderSearchField } from '../types';
 import styles from './TagSearch.module.css';
 
@@ -20,7 +21,8 @@ const TAG_LABEL: Record<OrderSearchField, string> = {
   bill: 'Bill',
   ref: 'Ref',
   ct: 'Nước đến',
-  svc: 'Dịch vụ'
+  svc: 'Dịch vụ',
+  kh: 'Khách'
 };
 
 /**
@@ -33,6 +35,8 @@ export function TagSearch({ tags, onTagsChange, field, onFieldChange }: TagSearc
   const { t } = useI18n();
   const [text, setText] = useState('');
   const input = useRef<HTMLInputElement>(null);
+  const managed = useOrdersSource() === 'managed';
+  const fields = SEARCH_FIELDS.filter(f => managed || !f.managedOnly);
 
   const commit = (raw: string) => {
     const values = tokenize(raw);
@@ -74,7 +78,7 @@ export function TagSearch({ tags, onTagsChange, field, onFieldChange }: TagSearc
     <div className={styles.wrap}>
       <div className={styles.group}>
         <select aria-label={t('Trường tìm kiếm')} className={styles.field} value={field} onChange={e => onFieldChange(e.target.value as OrderSearchField)}>
-          {SEARCH_FIELDS.map(f => (
+          {fields.map(f => (
             <option key={f.value} value={f.value}>
               {t(f.label)}
             </option>

@@ -10,7 +10,7 @@ const WAIT_MS = 2 * 60 * 1000;
 
 /**
  * Tab in /print/:job (mở bằng noopener từ usePrintDocuments): đợi lệnh in trong localStorage,
- * tải trang in từ backend rồi thay toàn bộ tài liệu — trang in tự mở hộp thoại in.
+ * tải trang in từ backend rồi thay toàn bộ tài liệu — trang hiện mẫu để xem trước, bấm "In" trên thanh công cụ mới in.
  */
 export default function PrintPage() {
   const { job = '' } = useParams();
@@ -35,7 +35,7 @@ export default function PrintPage() {
         window.close();
         return;
       }
-      fetchPrintHtml(j.bills, j.doc, j.duty)
+      fetchPrintHtml(j.bills, j.doc, j.duty, j.managed ? 'managed' : 'mine')
         .then(html => {
           document.open();
           document.write(html);

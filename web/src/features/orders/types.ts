@@ -39,9 +39,23 @@ export interface Order {
   receiver?: OrderReceiver | null;
   /** Nhân viên Việt An tạo giúp khách (MaVanDon.CreateUser > 0). */
   createdByVietAn?: boolean;
+  /** Khách của đơn — chỉ có ở trang "Đơn khách phụ trách" của nhân viên Việt An (GET /vietan/orders). */
+  customer?: OrderCustomer | null;
 }
 
-export type OrderSearchField = 'all' | 'cnee' | 'bill' | 'ref' | 'ct' | 'svc';
+/** Khách của đơn: `id` = TCustomer.CustomerID, `code` = mã khách, `name` = tên công ty. */
+export interface OrderCustomer {
+  id: string;
+  code: string;
+  name: string;
+  /** Tên đăng nhập tài khoản đã tạo đơn (nhân viên Việt An / tài khoản con / tài khoản chính) — chỉ có ở trang Đơn khách phụ trách. */
+  createdBy?: string | null;
+  /** Tên người gửi ghi trên vận đơn (MaVanDon.SenderName) — cột "Người gửi" ở trang Đơn khách phụ trách. */
+  senderName?: string | null;
+}
+
+/** `kh` = khách của đơn — chỉ trang "Đơn khách phụ trách" của nhân viên Việt An. */
+export type OrderSearchField = 'all' | 'cnee' | 'bill' | 'ref' | 'ct' | 'svc' | 'kh';
 export type SortDir = 'asc' | 'desc';
 export type OrderSortField = 'seq' | 'ref' | 'bill' | 'cnee' | 'ct' | 'sent' | 'pod' | 'created';
 

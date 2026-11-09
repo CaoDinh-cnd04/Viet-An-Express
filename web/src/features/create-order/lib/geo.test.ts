@@ -66,6 +66,12 @@ describe('suggestionFields', () => {
     expect(suggestionFields({ label: 'Austin, TX', address1: '', city: 'Austin', state: 'Texas', postalCode: null, countryCode: 'US' }))
       .toEqual([['city', 'Austin'], ['state', 'Texas']]);
   });
+  it('không ghi đè thành phố / tỉnh / mã bưu chính khách đã có, chỉ điền ô trống', () => {
+    expect(suggestionFields(
+      { label: 'Ras Al Khor Industrial 3, Dubai', address1: 'Ras Al Khor Industrial 3', city: 'Dubai', state: 'Dubai Emirate', postalCode: '00000', countryCode: 'AE' },
+      { city: 'Dubai', state: '', postal: '34530 85864' }
+    )).toEqual([['addr1', 'Ras Al Khor Industrial 3'], ['state', 'Dubai Emirate']]);
+  });
 });
 
 describe('postalOptions', () => {

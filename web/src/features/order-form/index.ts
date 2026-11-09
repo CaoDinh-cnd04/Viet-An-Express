@@ -1,4 +1,5 @@
-/** Mô hình form đơn hàng (schema, hằng số, quy tắc tính cân / invoice / thuế EU) — feature nền, chỉ phụ thuộc shared/. */
+/** Mô hình form đơn hàng (schema, hằng số, quy tắc tính cân / invoice / thuế EU, danh mục dịch vụ) — feature nền, chỉ phụ thuộc shared/. */
+export { useServiceCatalog, type ServiceCarrier } from './api';
 export { EXPORT_TYPES, MULTI_CATEGORY, PACKAGE_ITEM_DESCRIPTION, RULES } from './constants';
 export { hasMaxDecimals } from './lib/decimal';
 export { copyPreviousPackage, invoicePackageCount, packageGroups, syncPackageItems, writeInvoiceItems } from './lib/package-invoice';

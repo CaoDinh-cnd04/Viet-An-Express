@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { SupportTicket } from '../types';
-import { canAnswer, historyOf } from './history';
+import { historyOf, lastMessage, unansweredCount } from './history';
 
 const ticket = (over: Partial<SupportTicket>) => ({ id: 'TRB-12', date: '26/10/2026 08:40', status: 'new', ...over }) as SupportTicket;
 
@@ -23,9 +23,22 @@ describe('lịch sử yêu cầu', () => {
     expect(historyOf(ticket({}))).toEqual([{ at: '26/10/2026 08:40', kind: 'sent' }]);
   });
 
-  it('chỉ trả lời được khi CS đang chờ khách', () => {
-    expect(canAnswer({ status: 'waitc' })).toBe(true);
-    expect(canAnswer({ status: 'doing' })).toBe(false);
-    expect(canAnswer({ status: 'done' })).toBe(false);
+  it('tin mới = các tin cuối của bên kia người xem chưa trả lời; đã xử lý thì không đánh dấu', () => {
+    const t = ticket({ status: 'doing', thread: [
+      { from: 'cs', at: '27/10/2026 10:15', text: 'Nhờ chị gửi ảnh kiện.' },
+      { from: 'customer', at: '27/10/2026 10:20', text: 'Dạ' },
+      { from: 'customer', at: '27/10/2026 10:21', text: 'Em gửi rồi' }
+    ] });
+    expect(unansweredCount(t, 'cs')).toBe(2);
+    expect(unansweredCount(t, 'customer')).toBe(0);
+    expect(unansweredCount(ticket({ status: 'new' }), 'cs')).toBe(1); // yêu cầu mới chưa ai trả lời
+    expect(unansweredCount(ticket({ status: 'new' }), 'customer')).toBe(0);
+    expect(unansweredCount({ ...t, status: 'done' }, 'cs')).toBe(0);
+  });
+
+  it('tin gần nhất trên thẻ: lần trả lời cuối, chưa ai trả lời thì nội dung khách gửi', () => {
+    expect(lastMessage(ticket({ desc: 'Hàng chưa tới', thread: [{ from: 'cs', at: '27/10/2026 10:15', text: 'Nhờ chị gửi ảnh kiện.' }] })))
+      .toEqual({ from: 'cs', text: 'Nhờ chị gửi ảnh kiện.' });
+    expect(lastMessage(ticket({ desc: 'Hàng chưa tới' }))).toEqual({ from: 'customer', text: 'Hàng chưa tới' });
   });
 });

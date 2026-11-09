@@ -1,0 +1,98 @@
+/* 4 ô trạng thái: icon trong ô màu nhạt + nhãn + số; ô đang chọn nền nhạt, viền và chữ theo màu trạng thái */
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(var(--tile-count, 4), minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.tile {
+  --tone: var(--color-text-muted);
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 10px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.12s, border-color 0.12s;
+}
+
+.tile:hover {
+  border-color: color-mix(in srgb, var(--tone) 45%, var(--color-border));
+}
+
+.tile:focus-visible {
+  outline: 2px solid var(--tone);
+  outline-offset: 2px;
+}
+
+.icon {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--tone) 12%, var(--color-surface));
+  color: var(--tone);
+}
+
+.text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.label {
+  overflow: hidden;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.count {
+  font-size: 19px;
+  font-weight: 600;
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
+}
+
+.arrow {
+  position: absolute;
+  top: 50%;
+  right: 14px;
+  margin-top: -7px;
+  color: var(--tone);
+}
+
+.on,
+.on:hover {
+  border-color: color-mix(in srgb, var(--tone) 40%, var(--color-border));
+  background: color-mix(in srgb, var(--tone) 8%, var(--color-surface));
+}
+
+.on .label {
+  color: var(--tone);
+}
+
+.on .icon {
+  background: color-mix(in srgb, var(--tone) 16%, var(--color-surface));
+}
+
+@media (max-width: 900px) {
+  .tiles {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-2);
+  }
+
+  .tile {
+    padding: 12px 14px;
+  }
+}

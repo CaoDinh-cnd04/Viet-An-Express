@@ -1,9 +1,9 @@
-import { AdminSupport } from '../components/AdminSupport';
+import { ManagedSupport } from '../components/ManagedSupport';
 
 /**
- * Hỗ trợ &amp; góp ý khi nhân viên Việt An đăng nhập portal: trang quản lý như tab hỗ trợ của /admin
- * nhưng chỉ yêu cầu của khách mình phụ trách (IS_ADMIN / VIEW_CUSTOMER_ALL: mọi khách) — trả lời như CS Việt An, đổi trạng thái.
+ * Hỗ trợ & góp ý khi nhân viên Việt An đăng nhập portal: cùng bố cục trang của khách, chỉ yêu cầu của khách mình phụ trách
+ * (vai trò Administrator: mọi khách) — trả lời như CS Việt An, đổi trạng thái. Đã chọn khách → mặc định chỉ khách đó.
  */
-export default function ManagedSupportPage() {
-  return <AdminSupport source="managed" />;
+export default function ManagedSupportPage({ customerCode, companyName }: { customerCode?: string; companyName?: string }) {
+  return <ManagedSupport actingCustomer={customerCode ? { code: customerCode, name: companyName ?? '' } : undefined} />;
 }

@@ -8,6 +8,8 @@ internal static class LegacyOrderProjections
     public static readonly Expression<Func<LegacyOrder, LegacyOrder>> List = o => new LegacyOrder
     {
         Id = o.Id, OrderNumber = o.OrderNumber, VaBill = o.VaBill, CustomerBill = o.CustomerBill, BillConnect = o.BillConnect,
+        CustomerId = o.CustomerId, CustomerName = o.CustomerName, CreateUser = o.CreateUser, CustomerStaffId = o.CustomerStaffId,
+        SenderName = o.SenderName,
         ConsigneeName = o.ConsigneeName, ConsigneeContactName = o.ConsigneeContactName,
         ConsigneePhone = o.ConsigneePhone, ConsigneeCountry = o.ConsigneeCountry,
         ConsigneeCity = o.ConsigneeCity, ConsigneePostalCode = o.ConsigneePostalCode,
@@ -18,6 +20,18 @@ internal static class LegacyOrderProjections
         ServiceName = o.ServiceName, CreateDate = o.CreateDate, SentDate = o.SentDate,
         GoodsName = o.GoodsName, Pieces = o.Pieces, WeightKg = o.WeightKg, Pod = o.Pod, PodEstimate = o.PodEstimate,
         RemoteAreaFedEx = o.RemoteAreaFedEx, RemoteAreaUps = o.RemoteAreaUps, RemoteArea = o.RemoteArea
+    };
+
+    /// <summary>Bảng kê gửi hàng (Printing/OrderSheet) — chỉ cột in ra, không kéo cả dòng MaVanDon (hàng chục cột) khi xuất tới 10.000 đơn.</summary>
+    public static readonly Expression<Func<LegacyOrder, LegacyOrder>> Export = o => new LegacyOrder
+    {
+        Id = o.Id, OrderNumber = o.OrderNumber, CustomerBill = o.CustomerBill, BillConnect = o.BillConnect,
+        CustomerId = o.CustomerId, CustomerName = o.CustomerName,
+        ConsigneeName = o.ConsigneeName, ConsigneeContactName = o.ConsigneeContactName, ConsigneePhone = o.ConsigneePhone,
+        ConsigneeAddress1 = o.ConsigneeAddress1, ConsigneeAddress2 = o.ConsigneeAddress2, ConsigneeAddress3 = o.ConsigneeAddress3,
+        ConsigneeCity = o.ConsigneeCity, ConsigneeCountry = o.ConsigneeCountry, ServiceName = o.ServiceName,
+        CreateDate = o.CreateDate, SentDate = o.SentDate, Pod = o.Pod,
+        Pieces = o.Pieces, WeightKg = o.WeightKg, GoodsName = o.GoodsName, GoodsValue = o.GoodsValue, Currency = o.Currency
     };
 
     public static readonly Expression<Func<LegacyOrder, LegacyOrder>> Tracking = o => new LegacyOrder

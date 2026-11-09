@@ -90,13 +90,18 @@ export function addressQuery(input: string | undefined): string | null {
   return text.length >= 3 && text.length <= 120 ? text : null;
 }
 
-/** Ô cần điền khi khách chọn 1 gợi ý — bỏ phần gợi ý không có (không xoá chữ khách đã nhập ở ô đó). */
-export function suggestionFields(s: AddressSuggestion): Array<['addr1' | 'city' | 'state' | 'postal', string]> {
+/** Ô cần điền khi khách chọn 1 gợi ý — bỏ phần gợi ý không có; thành phố / tỉnh / mã bưu chính đã có thì giữ nguyên. */
+export function suggestionFields(
+  s: AddressSuggestion,
+  current: Partial<Record<'city' | 'state' | 'postal', string>> = {}
+): Array<['addr1' | 'city' | 'state' | 'postal', string]> {
+  // Thành phố / tỉnh / mã bưu chính khách đã có (gõ tay hoặc chọn từ GeoNames) thì giữ nguyên — chỉ điền ô đang trống.
+  const empty = (field: 'city' | 'state' | 'postal') => !current[field]?.trim();
   const entries: Array<['addr1' | 'city' | 'state' | 'postal', string | null | undefined]> = [
     ['addr1', s.address1],
-    ['city', s.city],
-    ['state', s.state],
-    ['postal', s.postalCode]
+    ['city', empty('city') ? s.city : null],
+    ['state', empty('state') ? s.state : null],
+    ['postal', empty('postal') ? s.postalCode : null]
   ];
   return entries.filter((e): e is ['addr1' | 'city' | 'state' | 'postal', string] => !!e[1]?.trim());
 }

@@ -17,7 +17,9 @@ export const PERMISSIONS = {
   /** Nhân viên Việt An: chọn / đổi khách để làm thay. */
   actForCustomer: 'vietan.act',
   /** Nhân viên Việt An: Hỗ trợ & góp ý thành trang quản lý yêu cầu của khách mình phụ trách. */
-  manageSupport: 'vietan.troubles'
+  manageSupport: 'vietan.troubles',
+  /** Nhân viên Việt An: xem đơn của mọi khách mình phụ trách (trang /orders/managed), có cả khi chưa chọn khách. */
+  managedOrders: 'vietan.orders'
 } as const;
 
 export type Permission = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];

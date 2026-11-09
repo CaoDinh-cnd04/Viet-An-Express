@@ -65,8 +65,8 @@ public class OrderQuerySqlServerTests(SqlServerQueryFixture fixture) : IClassFix
         commands.Reads.Clear();
 
         var response = await new GetOrdersHandler(db, Access(db), Clock).Handle(q, TestContext.Current.CancellationToken);
-        // Lọc từ 2 nhóm trạng thái (nhóm trùng nhau) cần thêm 1 lần đếm trên tập đã lọc
-        Assert.Equal(OrderSummaryQuery.Totals.NeedsRecount(OrderListFilter.Statuses(status)) ? 3 : 2, commands.Reads.Count);
+        // 1 lần gom nhóm trạng thái (mọi tổ hợp tab tính ở bộ nhớ) + 1 lần lấy trang
+        Assert.Equal(2, commands.Reads.Count);
         Assert.Equal(expectedTotal, response.Total);
         Assert.Equal((int)Math.Ceiling(expectedTotal / 3d), response.TotalPages);
         foreach (var pair in counts) Assert.Equal(pair.Value, response.Summary.StatusCounts[pair.Key]);
@@ -97,8 +97,8 @@ public class OrderQuerySqlServerTests(SqlServerQueryFixture fixture) : IClassFix
         Assert.Equal(expectedTotal, response.Total);
         Assert.Equal(expectedAll, response.Summary.StatusCounts["all"]);
         Assert.Equal(expectedIds, response.Items.Select(o => o.Seq));
-        // "wait,fly" = 2 nhóm → thêm 1 lần đếm trên tập đã lọc
-        Assert.Equal(expectedIds.Count > 0 ? 3 : 2, commands.Reads.Count);
+        // Có bộ lọc, kết quả ít: 1 lượt quét dòng gọn (đếm + sắp xếp + phân trang ở bộ nhớ) + 1 lần đọc đúng trang theo ID
+        Assert.Equal(expectedIds.Count > 0 ? 2 : 1, commands.Reads.Count);
     }
 
     [Theory(Skip = "Set VIETAN_TEST_SQLSERVER to run disposable SQL Server integration tests", SkipUnless = nameof(SqlServerAvailable))]
@@ -186,6 +186,121 @@ public class OrderQuerySqlServerTests(SqlServerQueryFixture fixture) : IClassFix
         Assert.True(denied.IsFailure);
     }
 
+    [Fact(Skip = "Set VIETAN_TEST_SQLSERVER to run disposable SQL Server integration tests", SkipUnless = nameof(SqlServerAvailable))]
+    public async Task Managed_orders_cover_only_customers_of_the_agent_and_attach_customer()
+    {
+        await using var db = fixture.CreateDb(new ReadCounter());
+        var ct = TestContext.Current.CancellationToken;
+        var customers = new Mock<ICustomersApi>();
+        customers.Setup(c => c.GetVietAnUserAsync(7, It.IsAny<CancellationToken>())).ReturnsAsync(new VietAnUserLogin(7, "nv", "NV", false, "x"));
+        customers.Setup(c => c.GetCustomerIdsOfManagerAsync(7, It.IsAny<CancellationToken>())).ReturnsAsync([43L]);
+        customers.Setup(c => c.GetByIdsAsync(It.IsAny<IReadOnlyCollection<long>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([new CustomerSummary(43, "KH43", "Công ty 43", null, null, null, null, null)]);
+        var user = new Mock<ICurrentUser>();
+        user.SetupGet(u => u.CustomerId).Returns(42); // đang chọn khách 42 — trang phụ trách không phụ thuộc khách đang chọn
+        user.SetupGet(u => u.VietAnUserId).Returns(7);
+        var access = new OrderAccess(user.Object, customers.Object);
+
+        var managed = await new GetOrdersHandler(db, access, Clock).Handle(Query(size: 50) with { Managed = true }, ct);
+        var item = Assert.Single(managed.Items);
+        Assert.Equal(new OrderCustomerDto("43", "KH43", "Công ty 43"), item.Customer);
+        Assert.Equal(1, managed.Summary.StatusCounts["all"]);
+
+        // Tìm 1 đơn (chi tiết / hành trình dùng chung OrderLookup) theo phạm vi phụ trách.
+        var events = new GetOrderEventsHandler(db, access, NoHubEz.Instance, NoOrderTracking.Instance);
+        Assert.True((await events.Handle(new GetOrderEventsQuery("OTHER-CUSTOMER", Managed: true), ct)).IsSuccess);
+        // Đơn của khách 42 (đang chọn, nhưng không do nhân viên phụ trách) không có ở trang phụ trách.
+        Assert.True((await events.Handle(new GetOrderEventsQuery("CARRIER-1", Managed: true), ct)).IsFailure);
+        Assert.True((await events.Handle(new GetOrderEventsQuery("CARRIER-1"), ct)).IsSuccess);
+        // Tìm theo khách (thẻ "kh"): khớp mã / tên khách qua module Customers.
+        customers.Setup(c => c.SearchCustomersAsync(It.IsAny<string?>(), null, It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
+        customers.Setup(c => c.SearchCustomersAsync("KH43", null, It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([new CustomerSummary(43, "KH43", "Công ty 43", null, null, null, null, null)]);
+        var byCustomer = await new GetOrdersHandler(db, access, Clock).Handle(Query(size: 50) with { Q = "kh:KH43", Managed = true }, ct);
+        Assert.Single(byCustomer.Items);
+        var noMatch = await new GetOrdersHandler(db, access, Clock).Handle(Query(size: 50) with { Q = "kh:không có", Managed = true }, ct);
+        Assert.Empty(noMatch.Items);
+
+        // "Đơn hàng của tôi" giữ nguyên phạm vi khách đang chọn, không gắn khách.
+        var mine = await new GetOrdersHandler(db, access, Clock).Handle(Query(size: 50), ct);
+        Assert.All(mine.Items, o => Assert.Null(o.Customer));
+        Assert.DoesNotContain(mine.Items, o => o.Cnee == "Other customer");
+    }
+
+    [Fact(Skip = "Set VIETAN_TEST_SQLSERVER to run disposable SQL Server integration tests", SkipUnless = nameof(SqlServerAvailable))]
+    public async Task Search_ignores_case_and_vietnamese_accents_on_search_fields()
+    {
+        await using var db = fixture.CreateDb(new ReadCounter());
+        var ct = TestContext.Current.CancellationToken;
+        var order = new LegacyOrder
+        {
+            CustomerId = 44, OrderNumber = 91000001, ConsigneeName = "Công ty Đức Thịnh", ConsigneeContactName = "Nguyễn Văn Bình",
+            ConsigneeCity = "Đà Nẵng", ConsigneePhone = "0905 123 456", ConsigneeAddress1 = "12 Lê Lợi", GoodsName = "Xoài sấy dẻo",
+            ServiceName = "Chuyên tuyến|Singapore", ConsigneeCountry = "Singapore", CreateDate = new(2026, 10, 1)
+        };
+        db.LegacyOrders.Add(order);
+        await db.SaveChangesAsync(ct);
+        try
+        {
+            var user = new Mock<ICurrentUser>();
+            user.SetupGet(u => u.CustomerId).Returns(44);
+            var handler = new GetOrdersHandler(db, new OrderAccess(user.Object, Mock.Of<ICustomersApi>()), Clock);
+            async Task<int> Count(string q) => (await handler.Handle(Query(size: 50) with { Q = q }, ct)).Total;
+
+            foreach (var q in new[] { "duc thinh", "CÔNG TY", "nguyen van", "đức THỊNH", "singapore", "chuyen tuyen - singapore",
+                         "svc:chuyen tuyen", "cnee:binh", "ct:SINGAPORE", "9100" })
+                Assert.True(await Count(q) == 1, q);
+            // "Tất cả" = các trường của ô chọn (06/11/2026): không tìm thành phố / tên hàng / địa chỉ / SĐT nữa.
+            foreach (var q in new[] { "hanoi", "da nang", "xoai say", "le loi", "123 456" })
+                Assert.True(await Count(q) == 0, q);
+        }
+        finally
+        {
+            db.LegacyOrders.Remove(order);
+            await db.SaveChangesAsync(ct);
+        }
+    }
+
+    [Fact(Skip = "Set VIETAN_TEST_SQLSERVER to run disposable SQL Server integration tests", SkipUnless = nameof(SqlServerAvailable))]
+    public async Task Loc_DOC_bang_SQL_khop_cot_Loai_hien_thi()
+    {
+        await using var db = fixture.CreateDb(new ReadCounter());
+        var ct = TestContext.Current.CancellationToken;
+        string[] names = ["Documents", "DOC", "doc", "docs", "Doc giấy", "giấy docs", "hồ sơ docs xin visa", "Chứng từ", "CHỨNG TỪ gốc",
+            "Hồ sơ", "document", "Doctor bag", "docx", "Quần áo", "adoc", "doc.", "Giấy tờ", "chung tu"];
+        var orders = names.Select((n, i) => new LegacyOrder { CustomerId = 45, OrderNumber = 92000000 + i, GoodsName = n }).ToList();
+        db.LegacyOrders.AddRange(orders);
+        await db.SaveChangesAsync(ct);
+        try
+        {
+            var sql = await db.LegacyOrders.AsNoTracking().Where(o => o.CustomerId == 45).Where(LegacyDocumentRule.IsDocument)
+                .Select(o => o.GoodsName!).ToListAsync(ct);
+            Assert.Equal(names.Where(LegacyDocumentRule.Matches).Order(), sql.Order());
+            var pack = await db.LegacyOrders.AsNoTracking().Where(o => o.CustomerId == 45).Where(LegacyDocumentRule.IsNotDocument).CountAsync(ct);
+            Assert.Equal(names.Count(n => !LegacyDocumentRule.Matches(n)), pack);
+        }
+        finally
+        {
+            db.LegacyOrders.RemoveRange(orders);
+            await db.SaveChangesAsync(ct);
+        }
+    }
+
+    [Fact(Skip = "Set VIETAN_TEST_SQLSERVER to run disposable SQL Server integration tests", SkipUnless = nameof(SqlServerAvailable))]
+    public async Task Dan_nhieu_bill_tim_dung_so_VA_ma_VA_va_ma_hang()
+    {
+        await using var db = fixture.CreateDb(new ReadCounter());
+        var ct = TestContext.Current.CancellationToken;
+        var handler = new GetOrdersHandler(db, Access(db), Clock);
+        // Fixture khách 42: OrderNumber 90000000 + i, mã hãng "CARRIER-" + i (i = 2 không có số bill → không hiện).
+        // Mã VA thật 7 chữ số (VAHCM6003585US): đơn mẫu 8 chữ số nên mã VA của nó không đọc ra số → so thẳng VA_Bill (để trống) → không khớp.
+        var q = string.Join((char)10, "90000001", "VAHCM90000003SG", "90000004/2", "carrier-5", "khong-co");
+        var r = await handler.Handle(Query(size: 50) with { Q = q, SearchField = "bill" }, ct);
+        Assert.Equal([90000005L, 90000004, 90000001], r.Items.Select(o => long.Parse(o.Bill)));
+        Assert.Equal(3, r.Total);
+    }
+
     private sealed class FixedClock : TimeProvider
     {
         public override DateTimeOffset GetUtcNow() => new(2026, 10, 3, 5, 0, 0, TimeSpan.Zero);
@@ -233,7 +348,7 @@ public sealed class SqlServerQueryFixture : IAsyncLifetime
                     SenderCountryId = 231, SenderEmail = "sender@example.test", GoodsValue = 123m
                 });
             }
-            rows.Add(new LegacyOrder { CustomerId = 43, BillConnect = "OTHER-CUSTOMER", ConsigneeName = "Other customer", Pieces = 999, WeightKg = 999 });
+            rows.Add(new LegacyOrder { CustomerId = 43, OrderNumber = 99000043, BillConnect = "OTHER-CUSTOMER", ConsigneeName = "Other customer", Pieces = 999, WeightKg = 999 });
             schema.AddRange(rows);
             await schema.SaveChangesAsync();
             foreach (var row in rows.Where(o => o.Id % 3 == 0 || o.CustomerId == 43))

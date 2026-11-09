@@ -6,8 +6,10 @@ import { applyDocWeightRule, buildDraftPayload, goodsName, invoiceTotal, isDocOv
 const pkg = (over: Partial<ReturnType<typeof emptyPackage>>) => ({ ...emptyPackage(), ...over });
 
 describe('volumetricWeight', () => {
-  it('D×R×C/5000 nhân số lượng', () => {
-    expect(volumetricWeight(pkg({ qty: '1', length: '30', width: '20', height: '15' }))).toBe(1.8);
+  it('D×R×C/5000 nhân số lượng, làm tròn lên 0,5 kg', () => {
+    expect(volumetricWeight(pkg({ qty: '1', length: '30', width: '20', height: '15' }))).toBe(2); // 1,8 → 2
+    expect(volumetricWeight(pkg({ qty: '1', length: '31', width: '27', height: '22' }))).toBe(4); // 3,68 → 4
+    expect(volumetricWeight(pkg({ qty: '1', length: '25', width: '22', height: '10' }))).toBe(1.5); // 1,1 → 1,5
     expect(volumetricWeight(pkg({ qty: '2', length: '50', width: '40', height: '30' }))).toBe(24);
   });
   it('thiếu kích thước thì bằng 0', () => {

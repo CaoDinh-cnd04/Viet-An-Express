@@ -9,7 +9,7 @@ internal static class DraftStore
 {
     /// <summary>Đơn chưa in (bỏ bộ lọc ẩn nháp của LegacyOrder).</summary>
     public static IQueryable<LegacyOrder> Drafts(this ShipmentsDbContext db) =>
-        db.LegacyOrders.IgnoreQueryFilters().Where(o => o.Status == LegacyOrder.DraftStatus);
+        db.LegacyOrders.IgnoreQueryFilters().Where(LegacyOrder.IsUnprinted);
 
     /// <summary>Kiện + dòng hàng của các đơn (theo MaVanDon.ID).</summary>
     public static async Task<(ILookup<int, LegacyPackageLine> Packages, ILookup<int, LegacyInvoiceLine> Items)> LinesAsync(
@@ -28,7 +28,7 @@ internal static class DraftStore
     /// </summary>
     public static async Task<bool> LockAsync(ShipmentsDbContext db, long id, CancellationToken ct) =>
         await db.Database.SqlQuery<int>(
-                $"SELECT COUNT(*) AS [Value] FROM dbo.MaVanDon WITH (UPDLOCK, ROWLOCK, HOLDLOCK) WHERE ID = {id} AND Status = {LegacyOrder.DraftStatus}")
+                $"SELECT COUNT(*) AS [Value] FROM dbo.MaVanDon WITH (UPDLOCK, ROWLOCK, HOLDLOCK) WHERE ID = {id} AND (Status = {LegacyOrder.DraftStatus} OR OrderNumber IS NULL)")
             .SingleAsync(ct) > 0;
 
     /// <summary>Xoá kiện / dòng hàng cũ của 1 đơn (sửa nháp ghi lại từ form, xoá nháp).</summary>

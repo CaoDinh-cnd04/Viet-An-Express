@@ -11,7 +11,7 @@ describe('kiện hàng', () => {
   });
   it('cân quy đổi cả dòng', () => expect(lineVolume(pkg(2, 50, 40, 30, 5))).toBe(24));
   it('tổng: cân tính cước = max(thực, quy đổi)', () => {
-    expect(summarizePackages([pkg(2, 50, 40, 30, 5), pkg(1, 10, 10, 10, 3)])).toEqual({ pieces: 3, gross: 13, volume: 24.2, chargeable: 27 });
+    expect(summarizePackages([pkg(2, 50, 40, 30, 5), pkg(1, 10, 10, 10, 3)])).toEqual({ pieces: 3, gross: 13, volume: 24.5, chargeable: 27 });
     expect(summarizePackages([])).toEqual({ pieces: 0, gross: 0, volume: 0, chargeable: 0 });
   });
 });

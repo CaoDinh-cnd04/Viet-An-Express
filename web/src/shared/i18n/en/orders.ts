@@ -46,6 +46,7 @@ export const orders: Record<string, string> = {
   'Tìm theo': 'Search by',
   'Trường tìm kiếm': 'Search field',
   'Tên người nhận': 'Receiver name',
+  'Tên khách hàng': 'Customer name',
   'Xóa lọc': 'Clear filters',
 
   // Tổng hợp & thao tác

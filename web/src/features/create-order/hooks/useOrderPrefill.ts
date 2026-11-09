@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { useWatch, type UseFormReturn } from 'react-hook-form';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
-import { CARRIER_HUBS, CARRIERS, defaultHub } from '@/shared/config/domain';
+import { defaultHub } from '@/shared/config/domain';
 import { useDebouncedCallback } from '@/shared/lib/useDebouncedCallback';
 import { useToast } from '@/shared/ui';
 import { useDrafts } from '@/features/drafts';
 import { useOrderCopy } from '../api';
 import { cleanLoadedContacts, copyOrderValues } from '../lib/copy-order';
-import { defaultValues, type CreateOrderValues } from '@/features/order-form';
+import { defaultValues, useServiceCatalog, type CreateOrderValues } from '@/features/order-form';
 
 /**
  * Khóa bản tự lưu theo tài khoản đang đăng nhập (mã khách + tên đăng nhập) — admin đăng xuất, nhân viên đăng nhập
@@ -70,6 +70,7 @@ export function useOrderPrefill(form: UseFormReturn<CreateOrderValues>, storageK
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const toast = useToast();
+  const catalog = useServiceCatalog();
   const draftId = params.get('draft');
   // Đơn mới và từng đơn nháp có bản tự lưu riêng.
   const fromBill = params.get('from');
@@ -121,14 +122,14 @@ export function useOrderPrefill(form: UseFormReturn<CreateOrderValues>, storageK
   useEffect(() => {
     if (draftId || fromBill || !carrier || applied.current === `carrier:${carrier}`) return;
     applied.current = `carrier:${carrier}`;
-    const name = CARRIERS.find(c => carrier.startsWith(c)) ?? carrier;
+    const name = Object.keys(catalog).find(c => carrier.startsWith(c)) ?? carrier;
     // Hub tự được chọn theo hãng trong ServiceSection
-    if (CARRIER_HUBS[name]) {
+    if (catalog[name]) {
       form.setValue('service.carrier', name, { shouldDirty: true });
-      form.setValue('service.hub', defaultHub(name), { shouldDirty: true });
+      form.setValue('service.hub', defaultHub(name, undefined, catalog), { shouldDirty: true });
     }
     if (country) form.setValue('receiver.country', country);
-  }, [draftId, fromBill, carrier, country, form]);
+  }, [draftId, fromBill, carrier, country, form, catalog]);
 
   // Tự lưu trong phiên — cả đơn mới lẫn đơn nháp đang sửa (mỗi nháp 1 khóa), chỉ khi có thay đổi chưa lưu.
   const values = useWatch({ control: form.control });

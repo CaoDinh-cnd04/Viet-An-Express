@@ -9,6 +9,7 @@ namespace VietAnExpress.Identity.VietAnStaff;
 /// <summary>
 /// Nhân viên Việt An chọn / đổi khách để làm thay → cấp lại phiên gắn khách đó (giữ "ghi nhớ" và mốc nhập mật khẩu của phiên đang dùng).
 /// Mật khẩu của khách không cần và không đổi.
+/// <c>CustomerId</c> = 0 → bỏ khách đang làm, về phiên nhân viên chưa gắn khách (nút "Về trang quản trị": không có tạo đơn / book bill).
 /// </summary>
 internal sealed record ActAsCustomerCommand(long CustomerId, string? RefreshToken) : IRequest<Result<AuthSession>>;
 
@@ -25,6 +26,7 @@ internal sealed class ActAsCustomerHandler(ICustomersApi customers, SessionServi
         if (context is null) return AuthErrors.SessionExpired;
         // Máy đã bị đá ra (nhân viên đăng nhập ở thiết bị khác) / mật khẩu đã đổi → không cho chọn khách để lấy phiên mới.
         if (!JwtTokenService.FixedTimeEquals(sessions.VietAnStamp(context.Agent), current.PasswordStamp)) return AuthErrors.SessionExpired;
+        if (cmd.CustomerId == 0) return sessions.Start(context.Agent, null, current.IsPersistent, current.AuthTime);
         if (context.Customer is null) return VietAnStaffErrors.CustomerOutOfScope;
         return sessions.Start(context.Agent, context.Customer, current.IsPersistent, current.AuthTime);
     }

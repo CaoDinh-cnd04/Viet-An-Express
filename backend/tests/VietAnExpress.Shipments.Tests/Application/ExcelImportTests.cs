@@ -58,7 +58,8 @@ public class ExcelImportTests
         Assert.True(r.IsValid, string.Join("; ", r.Errors));
         Assert.Equal(8m, r.GrossKg);
         Assert.Equal(9m, r.ChargeableKg);
-        Assert.Equal(r.ChargeableKg, LegacyOrderFactory.FromPayload(r.Payload, Ctx.Customer, 1, new DateTime(2026, 10, 13)).WeightKg);
+        // MaVanDon.Trong_Luong = cân thực tổng (hệ thống cũ đọc làm GrossWeight); cân tính cước nằm ở MaVanDon_PCS_DIM.ChargeWeight.
+        Assert.Equal(r.GrossKg, LegacyOrderFactory.FromPayload(r.Payload, Ctx.Customer, 1, new DateTime(2026, 10, 13)).WeightKg);
     }
 
     [Theory]
@@ -70,7 +71,7 @@ public class ExcelImportTests
         var r = Parse(c => { c["qty_pack_1"] = "3"; c["gw_1"] = "3.3"; c["l_1"] = "1"; c["w_1"] = "1"; c["h_1"] = "1"; }, Ctx with { Service = carrier, Hub = hub });
         Assert.True(r.IsValid, string.Join("; ", r.Errors));
         Assert.Equal((decimal)expected, r.ChargeableKg);
-        Assert.Equal(r.ChargeableKg, LegacyOrderFactory.FromPayload(r.Payload, Ctx.Customer, 1, new DateTime(2026, 10, 13)).WeightKg);
+        Assert.Equal(r.GrossKg, LegacyOrderFactory.FromPayload(r.Payload, Ctx.Customer, 1, new DateTime(2026, 10, 13)).WeightKg);
     }
 
     [Fact]
@@ -136,7 +137,7 @@ public class ExcelImportTests
         var item = Assert.Single(p.Invoice.Items);
         Assert.Equal(("DRESS (100% COTTON)", "ĐẦM", "111111", "VN", "10", "PCS", "10"), (item.DescEn, item.DescVi, item.Hs, item.Origin, item.Qty, item.Unit, item.Price));
         Assert.Equal(100, r.Value);                             // Invoice_Value trống → tổng sản phẩm
-        Assert.Equal(7.2m, r.ChargeableKg);                     // max(5, 40×30×30/5000)
+        Assert.Equal(7.5m, r.ChargeableKg);                     // max(5, 40×30×30/5000 = 7,2) → làm tròn lên 0,5 kg
         Assert.Equal(5, r.GrossKg);
     }
 
@@ -273,7 +274,7 @@ public class ExcelImportTests
         Assert.Equal("1", o.ConsigneePhoneCode);
         Assert.Equal("TX", o.ConsigneeState);
         Assert.Equal(1, o.Pieces);
-        Assert.Equal(7.2m, o.WeightKg);
+        Assert.Equal(5m, o.WeightKg); // cân thực tổng (cân tính cước 7,5 nằm ở dòng kiện)
         Assert.Equal(100, o.GoodsValue);
         Assert.Equal("GIFT", o.ExportReason);
         Assert.Equal("ABC12345", o.CustomerBill);

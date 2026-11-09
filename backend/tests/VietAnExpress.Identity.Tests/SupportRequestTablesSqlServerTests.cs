@@ -43,11 +43,11 @@ public class SupportRequestTablesSqlServerTests
                 .ReturnsAsync(new BillSummary(Bill, "Daniel Nowotnik", "Norway"));
             f.Customers.Setup(c => c.GetByIdsAsync(It.IsAny<IReadOnlyCollection<long>>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync([new CustomerSummary(IdentityFixture.CustomerId, "SaigonbayHN", "SGB EXPRESS HN", null, null, null, null, null)]);
-            var create = new CreateSupportRequestHandler(db, f.CurrentUser.Object, f.Customers.Object, shipments.Object, f.Jobs, f.Company, f.Clock);
+            var create = new CreateSupportRequestHandler(db, f.CurrentUser.Object, f.Customers.Object, shipments.Object, f.Jobs, f.Company, f.Clock, f.Hub.Live);
             var mine = new GetSupportRequestsHandler(db, f.CurrentUser.Object);
             var adminList = new GetAdminSupportRequestsHandler(db, f.Customers.Object);
-            var reply = new ReplySupportRequestHandler(db, f.Customers.Object, f.Clock);
-            var answer = new AnswerSupportRequestHandler(db, f.CurrentUser.Object, f.Customers.Object, f.Jobs, f.Company, f.Clock);
+            var reply = new ReplySupportRequestHandler(db, f.Customers.Object, f.Clock, f.Hub.Live);
+            var answer = new AnswerSupportRequestHandler(db, f.CurrentUser.Object, f.Customers.Object, f.Jobs, f.Company, f.Clock, f.Hub.Live);
 
             // 1. Hỗ trợ & sự cố có mã vận đơn → TContact "Portal - Hỗ trợ", Des01 = bill, KeyWord = vấn đề, CustID = khách.
             var withBill = await Ok(create.Handle(new CreateSupportRequestCommand(

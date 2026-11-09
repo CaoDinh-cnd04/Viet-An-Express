@@ -17,13 +17,35 @@ public class OrderQueryTranslationTests
     public void Summary_is_a_single_SQL_aggregate_with_customer_filter()
     {
         using var db = CreateDb();
-        var sql = OrderSummaryQuery.Build(db.LegacyOrders.Where(o => o.CustomerId == 201008),
-            new DateTime(2026, 10, 3)).ToQueryString();
+        var sql = OrderSummaryQuery.Build(db.LegacyOrders.Where(o => o.CustomerId == 201008)).ToQueryString();
         Assert.Contains("COUNT", sql);
         Assert.Contains("SUM", sql);
         Assert.Contains("GROUP BY", sql);
         Assert.Contains("[CustomerID]", sql);
         Assert.DoesNotContain("[ConsigneeName]", sql);
+    }
+
+    [Fact]
+    public void Tim_kiem_so_nhi_phan_chu_in_hoa_chi_dong_co_dau_moi_so_bo_dau()
+    {
+        using var db = CreateDb();
+        var sql = OrderListFilter.Apply(db.LegacyOrders.Where(o => o.CustomerId == 201008),
+            new GetOrdersQuery("Uyen", "cnee", null, "DOC", null, null, null, null, 1, 20, null, null)).ToQueryString();
+        Assert.Contains("UPPER([m].[ConsigneeName]) COLLATE Latin1_General_100_BIN2 LIKE", sql);
+        Assert.Contains("COLLATE Latin1_General_100_CI_AI LIKE", sql);
+        Assert.Contains("UPPER([m].[Ten_hang]) COLLATE Latin1_General_100_BIN2 LIKE N'%DOCUMENT%'", sql);
+        Assert.DoesNotContain("[ConsigneeAddress1]", sql[sql.IndexOf("WHERE", StringComparison.Ordinal)..]); // chỉ ô "Tên người nhận"
+    }
+
+    [Fact]
+    public void Tim_so_bill_chi_so_nhi_phan_khong_so_bo_dau()
+    {
+        using var db = CreateDb();
+        var sql = OrderListFilter.Apply(db.LegacyOrders.Where(o => o.CustomerId == 201008),
+            new GetOrdersQuery("6010", "all", null, null, null, null, null, null, 1, 20, null, null)).ToQueryString();
+        // Từ khóa không có chữ cái: so bỏ dấu cho ra y như so nhị phân → không dùng collation bỏ dấu (đắt) ở cột nào.
+        Assert.DoesNotContain("CI_AI", sql);
+        Assert.Contains("BIN2", sql);
     }
 
     [Fact]

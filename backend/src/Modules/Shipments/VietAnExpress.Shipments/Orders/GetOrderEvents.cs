@@ -11,14 +11,14 @@ using VietAnExpress.Shipments.Tracking;
 
 namespace VietAnExpress.Shipments.Orders;
 
-internal sealed record GetOrderEventsQuery(string Bill) : IRequest<Result<IReadOnlyList<OrderEventDto>>>;
+internal sealed record GetOrderEventsQuery(string Bill, bool Managed = false) : IRequest<Result<IReadOnlyList<OrderEventDto>>>;
 
 internal sealed class GetOrderEventsHandler(ShipmentsDbContext db, OrderAccess access, IHubEzTracking hubEz, IOrderTracking orderTracking)
     : IRequestHandler<GetOrderEventsQuery, Result<IReadOnlyList<OrderEventDto>>>
 {
     public async Task<Result<IReadOnlyList<OrderEventDto>>> Handle(GetOrderEventsQuery q, CancellationToken ct)
     {
-        var order = await OrderLookup.FindByBillAsync(db, access, q.Bill, ct, eventsOnly: true);
+        var order = await OrderLookup.FindByBillAsync(db, access, q.Bill, ct, eventsOnly: true, managed: q.Managed);
         if (order is null) return Result.Failure<IReadOnlyList<OrderEventDto>>(OrderErrors.NotFound(q.Bill));
         var events = LegacyOrderView.Events(order, hideSigner: false);
         // Hành trình hãng ở dbo.Order_Tracking (như trang tracking cũ) và HUB-EZ khi đơn đi HUB-EZ (HUB-EZ lỗi → giữ hành trình cũ).

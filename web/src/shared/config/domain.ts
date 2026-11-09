@@ -21,7 +21,10 @@ export const COUNTRIES = [
   'United Arab Emirates', 'Saudi Arabia', 'India', 'Philippines', 'Indonesia', 'Cambodia', 'Laos', 'Bolivia'
 ] as const;
 
-/** Tên hub theo hãng — đúng danh sách của hệ thống cũ. */
+/**
+ * Danh sách DỰ PHÒNG hãng → hub (chép từ hệ thống cũ) — chỉ dùng khi chưa đọc được danh mục thật
+ * (GET /services/hubs đọc dbo.TGroupBaseCode / dbo.TBaseCode, 06/11/2026; vd laptop chưa có 2 bảng, mạng lỗi).
+ */
 const HUB_NAMES: Record<string, readonly string[]> = {
   Aramex: ['Dubai'],
   DHL: ['VN', 'SIN VIP', 'Singapore', 'UK', 'Dubai'],
@@ -38,17 +41,26 @@ const HUB_NAMES: Record<string, readonly string[]> = {
 };
 
 /**
- * Hãng / dịch vụ → hub. Giá trị hub dạng "Hãng - Hub" (vd "DHL - Singapore"); backend ghi MaVanDon.Dich_Vu = "DHL|Singapore".
- * Backend sẽ trả qua GET /services/hubs; tạm khai ở đây.
+ * Danh mục hãng / dịch vụ → hub. Giá trị hub dạng "Hãng - Hub" (vd "DHL - Singapore"); backend ghi MaVanDon.Dich_Vu = "DHL|Singapore"
+ * — tên phải trùng đúng chữ danh mục cũ (proc in bill / CMS khớp theo chuỗi). Thứ tự khóa = thứ tự hãng.
  */
-export const CARRIER_HUBS: Record<string, readonly string[]> = Object.fromEntries(
+export type ServiceCatalog = Readonly<Record<string, readonly string[]>>;
+
+/** Danh mục dự phòng (xem HUB_NAMES). */
+export const CARRIER_HUBS: ServiceCatalog = Object.fromEntries(
   Object.entries(HUB_NAMES).map(([carrier, hubs]) => [carrier, hubs.map(h => `${carrier} - ${h}`)])
 );
 export const CARRIERS = Object.keys(CARRIER_HUBS);
 
-/** "Chuyên tuyến - USA - Sea" → "USA - Sea" (tên hub hiển thị trong ô chọn). */
-export function hubLabel(hub: string): string {
-  const carrier = CARRIERS.find(c => hub.startsWith(`${c} - `));
+/** Dữ liệu GET /services/hubs → danh mục; rỗng (backend chưa đọc được bảng) → danh mục dự phòng. Hàm thuần — có test. */
+export function toServiceCatalog(rows: ReadonlyArray<{ carrier: string; hubs: ReadonlyArray<{ name: string }> }> | undefined): ServiceCatalog {
+  if (!rows?.length) return CARRIER_HUBS;
+  return Object.fromEntries(rows.map(r => [r.carrier, r.hubs.map(h => `${r.carrier} - ${h.name}`)]));
+}
+
+/** "Chuyên tuyến - USA - Sea" → "USA - Sea" (tên hub hiển thị trong ô chọn). Hãng tên dài khớp trước. */
+export function hubLabel(hub: string, catalog: ServiceCatalog = CARRIER_HUBS): string {
+  const carrier = Object.keys(catalog).sort((a, b) => b.length - a.length).find(c => hub.startsWith(`${c} - `));
   return carrier ? hub.slice(carrier.length + 3) : hub;
 }
 
@@ -56,27 +68,28 @@ export function hubLabel(hub: string): string {
  * Hub của hãng đi được tới nước đến (mã ISO-2) theo bảng CS điền (HUB_COUNTRIES) và danh sách nước hãng không / ngưng phục vụ
  * (CARRIER_EXCLUDED). Chưa biết mã nước → mọi hub của hãng; hub chưa có trong bảng → coi như đi mọi nước. Hàm thuần — có test.
  */
-export function hubsFor(carrier: string, countryCode?: string): readonly string[] {
-  const hubs = CARRIER_HUBS[carrier] ?? [];
+export function hubsFor(carrier: string, countryCode?: string, catalog: ServiceCatalog = CARRIER_HUBS): readonly string[] {
+  const hubs = catalog[carrier] ?? [];
   const code = countryCode?.trim().toUpperCase();
   if (!code || code.length !== 2) return hubs;
   if (CARRIER_EXCLUDED[carrier]?.includes(code)) return [];
   return hubs.filter(hub => {
-    const countries = HUB_COUNTRIES[`${carrier}|${hubLabel(hub)}`] ?? '*';
+    const countries = HUB_COUNTRIES[`${carrier}|${hubLabel(hub, catalog)}`] ?? '*';
     return countries === '*' || countries.includes(code);
   });
 }
 
 /** Hãng có ít nhất 1 hub đi được tới nước đến (ẩn hãng không phục vụ nước đó). Hàm thuần — có test. */
-export const carriersFor = (countryCode?: string): string[] => CARRIERS.filter(c => hubsFor(c, countryCode).length > 0);
+export const carriersFor = (countryCode?: string, catalog: ServiceCatalog = CARRIER_HUBS): string[] =>
+  Object.keys(catalog).filter(c => hubsFor(c, countryCode, catalog).length > 0);
 
 /** Lựa chọn cho ô Hub (lọc theo nước đến nếu có): giá trị đầy đủ, nhãn chỉ tên hub. */
-export const hubOptions = (carrier: string, countryCode?: string) =>
-  hubsFor(carrier, countryCode).map(value => ({ value, label: hubLabel(value) }));
+export const hubOptions = (carrier: string, countryCode?: string, catalog: ServiceCatalog = CARRIER_HUBS) =>
+  hubsFor(carrier, countryCode, catalog).map(value => ({ value, label: hubLabel(value, catalog) }));
 
 /** Hub mặc định khi đổi hãng / nước: chỉ còn 1 hub thì chọn luôn, nhiều hub thì để khách chọn. */
-export function defaultHub(carrier: string, countryCode?: string): string {
-  const hubs = hubsFor(carrier, countryCode);
+export function defaultHub(carrier: string, countryCode?: string, catalog: ServiceCatalog = CARRIER_HUBS): string {
+  const hubs = hubsFor(carrier, countryCode, catalog);
   return hubs.length === 1 ? hubs[0]! : '';
 }
 
